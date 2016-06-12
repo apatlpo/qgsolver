@@ -7,7 +7,8 @@ script='test_basic'
 #os.system('mpirun -np 8  python  '+script+'.py  -mf -nx 100 -ny 100 -nz 4 -kplt 2')
 #os.system('mpirun-openmpi-gcc49 -np 8  python2.7  '+script+'.py  -mf -nx 10 -ny 10 -nz 4')
 print 'export PYTHONPATH=\"$PYTHONPATH:/Users/aponte/Current_projects/copernicus/dimup/work/qgsolver/\";'
-print('mpirun-openmpi-gcc49 -np 8  python2.7  '+script+'.py  -mf -nx 10 -ny 10 -nz 4')
+print('python2.7 setup.py')
+print('mpirun-openmpi-gcc49 -np 8  python2.7  ./dev/'+script+'.py  -mf -nx 10 -ny 10 -nz 4')
 
 print 'All done'
 

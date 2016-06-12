@@ -4,7 +4,7 @@
 
 import sys
 import petsc4py
-petsc4py.init(sys.argv)
+#petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 #from .grid import *
@@ -18,13 +18,13 @@ class pvinversion():
     """ PV inversion, parallel
     """
     
-    def __init__(self, grid):
+    def __init__(self, qg):
         
         # get petsc options from command line
-        OptDB = PETSc.Options()
+        #OptDB = PETSc.Options()
 
         # determine the tile decomposition        
-        n  = OptDB.getInt('n', 16)
+        #n  = OptDB.getInt('n', 16)
         #nx = OptDB.getInt('nx', n)
         #ny = OptDB.getInt('ny', n)
         #nz = OptDB.getInt('nz', n)
@@ -35,14 +35,20 @@ class pvinversion():
         ### setup the solver
         
         #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-        da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz], stencil_width=2)
-        comm = da.getComm()
-        rank = comm.getRank()
+        #da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz], stencil_width=2)
+        #comm = da.getComm()
+        #rank = comm.getRank()
         
         # create the operator
-        L = da.createMat()
-        print 'Operator L created'
+        #print dir(qg)
+        self.L = qg.da.createMat()
+        
+        if qg._verbose>0:
+            print 'Operator L declared \n'
+
+        # Fill in operator values
 #         set_L()
+
 #         
 #         # create solver
 #         ksp = PETSc.KSP()

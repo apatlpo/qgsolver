@@ -10,10 +10,14 @@ PV inversion of an analytical PV distribution
 from qgsolver.qg import qg
 
 if __name__ == "__main__":
+    
     #qg = qg()
     #qg = qg(grid_uniform_input = {'Lx':1.e8})
     qg = qg(grid_uniform_input = {'Nx':10, 'Ny':15, 'Nz':2 })
-    print qg.grid.H
     qg.set_psi()
-    print dir(qg)
+
+    if qg._verbose:
+        #print '%e \n' % qg.grid.H
+        #print dir(qg)
+        pass
 
