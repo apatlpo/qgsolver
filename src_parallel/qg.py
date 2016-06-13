@@ -5,9 +5,11 @@ from .grid import *
 from .solver import *
 
 import petsc4py
-from Cython.Compiler.Main import verbose
+#from Cython.Compiler.Main import verbose
 petsc4py.init(sys.argv)
 from petsc4py import PETSc
+
+import numpy as np
 
 
 class qg():
@@ -36,7 +38,9 @@ class qg():
         #if grid_uniform_input is None:
         #    grid_uniform_input = grid_uniform_input_default
         #else:
-        for key, value in grid_uniform_input:
+        #for key in grid_uniform_input:
+        #    grid_input[key]=grid_uniform_input[key]
+        for key, value in grid_uniform_input.items():
             grid_input[key]=value
         if grid_lonlat_file is None:
             #print 'The grid is uniform'
@@ -54,7 +58,7 @@ class qg():
         OptDB = PETSc.Options()
 
         # determine the tile decomposition        
-        n  = OptDB.getInt('n', 16)
+        #n  = OptDB.getInt('n', 16)
         #nx = OptDB.getInt('nx', n)
         #ny = OptDB.getInt('ny', n)
         #nz = OptDB.getInt('nz', n)        
@@ -62,7 +66,8 @@ class qg():
         
         # setup tiling
         #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-        self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz], stencil_width=2)
+        self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
+                                      stencil_width=2)
         self.comm = self.da.getComm()
         self.rank = self.comm.getRank()
         
@@ -81,13 +86,25 @@ class qg():
             # print out grid parameters
             print 'The grid is uniform with:'            
             print 'Nx=%i ,Ny= %i, Nz=%i' % (self.grid.Nx, self.grid.Ny, self.grid.Nz)
-            print 'Lx=%e ,Ly= %e, H=%e' % (self.grid.Lx, self.grid.Ly, self.grid.H)
-            print 'dx=%e ,dy= %e, dz=%e \n' % (self.grid.dx, self.grid.dy, self.grid.dz)
+            print 'Lx=%e km ,Ly= %e km , H=%e m' % (self.grid.Lx/1e3, self.grid.Ly/1e3, self.grid.H)
+            print 'dx=%e , dy= %e , dz=%e \n' % (self.grid.dx, self.grid.dy, self.grid.dz)
 
         ### vertical stratification
         self.N2 = N2
-                
-        # initiate pv inversion solver
+
+        ### declare petsc vectors
+        # PV
+        self.Q = self.da.createGlobalVec()
+        # streamfunction
+        self.PSI = self.da.createGlobalVec()
+        # local vectors
+        #self._localQ  = self.da.createLocalVec()
+        #self._localPSI  = self.da.createLocalVec()
+#        # for plotting purposes
+#        PSIn = da.createNaturalVec()
+#        Qn = da.createNaturalVec()
+
+        ### initiate pv inversion solver
         self.pvinv=pvinversion(self)
 
         
@@ -96,13 +113,30 @@ class qg():
         """
         if self._verbose:
             print 'Set psi to ... \n'
+        #if analytical_psi:
+            
 
-    def set_q(self, analytical_q=True, file_psi=None):
+    def set_q(self, analytical_q=True, file_q=None):
         """ Set q to a given value
         """
-        if self._verbose:
-            print 'Set q to ... \n'
-    
+        #""" Initialized potential vorticity along with boundary conditions """
+        #
+        #
+        q = self.da.getVecArray(self.Q)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #print 'xs=', xs, 'xe=', xe, 'mx=', mx, 'ys=', ys, 'ye=', ye, 'my=', my, 'zs=', zs, 'ze=', ze, 'mz=', mz
+        #
+        if analytical_q:
+            if self._verbose:
+                print 'Set q analytically \n'
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        q[i, j, k] = 10.*np.exp(-((i/float(mx-1)-0.5)**2 
+                                                  + (j/float(my-1)-0.5)**2)/0.1**2)
+                        q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
+                        q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi) 
     
     def setup_time_stepping(self):
         """ Setup the time stepping

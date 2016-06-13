@@ -3,12 +3,11 @@
 
 
 import sys
-import petsc4py
-#petsc4py.init(sys.argv)
-from petsc4py import PETSc
+#import petsc4py
+#from petsc4py import PETSc
 
 #from .grid import *
-
+from .set_L import *
 
 #
 #==================== Serial solver ============================================
@@ -42,28 +41,35 @@ class pvinversion():
         # create the operator
         #print dir(qg)
         self.L = qg.da.createMat()
-        
+        #
         if qg._verbose>0:
             print 'Operator L declared \n'
 
         # Fill in operator values
-#         set_L()
+        self.L = set_L(self.L, qg.da)
+        #
+        if qg._verbose>0:
+            print 'Operator L filled \n'
 
-#         
-#         # create solver
-#         ksp = PETSc.KSP()
-#         ksp.create(PETSc.COMM_WORLD)
-#         ksp.setOperators(L)
-#         # use conjugate gradients
-#         ksp.setType('cg')
-#         #ksp.setType('gmres')
-#         # and incomplete Cholesky for preconditionning
-#         #ksp.getPC().setType('icc')
-#         # set tolerances
-#         #ksp.setTolerances(rtol=1e-10) # nope
-#         ksp.setFromOptions()
-#         
-#         
+        # local vectors
+        self._localQ  = qg.da.createLocalVec()
+        self._localPSI  = qg.da.createLocalVec()
+
+
+        # create solver
+        self.ksp = PETSc.KSP()
+        self.ksp.create(PETSc.COMM_WORLD)
+        self.ksp.setOperators(self.L)
+        # use conjugate gradients
+        self.ksp.setType('cg')
+        #self.ksp.setType('gmres')
+        # and incomplete Cholesky for preconditionning
+        #self.ksp.getPC().setType('icc')
+        # set tolerances
+        #self.ksp.setTolerances(rtol=1e-10) # nope
+        self.ksp.setFromOptions()
+         
+         
 #         ### setup time stepping
 #         
 #         # 4 steps explicit RungeKutta
@@ -98,8 +104,13 @@ class pvinversion():
 #         # compute corresponding PSI
 #         Q.copy(Qinv) # copies Q into Qinv
 #         set_qinv_bdy()
-#         ksp.solve(Qinv, PSI)
 
+    def solve(self, qg):
+        """ Compute the PV inversion
+        """
+        self.ksp.solve(qg.Q, qg.PSI)
+        if qg._verbose>0:
+            print 'Inversion done'
 
 
 

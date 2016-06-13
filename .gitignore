@@ -13,6 +13,9 @@ __pycache__/
 .pydevproject
 .settings/
 
+# data files
+*.nc
+
 # fig and movies
 *.jpg
 *.pdf
