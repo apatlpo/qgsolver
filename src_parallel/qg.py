@@ -19,7 +19,7 @@ class qg():
     def __init__(self,
                  grid_uniform_input = None,
                  grid_lonlat_file = None,
-                 N2 = 1e-4,
+                 N2 = 1e-4, f0=7e-5,
                  verbose = 1,
                  ):
         """ QG object creation
@@ -89,12 +89,15 @@ class qg():
             print 'Lx=%e km ,Ly= %e km , H=%e m' % (self.grid.Lx/1e3, self.grid.Ly/1e3, self.grid.H)
             print 'dx=%e , dy= %e , dz=%e \n' % (self.grid.dx, self.grid.dy, self.grid.dz)
 
-        ### vertical stratification
+        ### vertical stratification and Coriolis
         self.N2 = N2
+        self.f0 = f0
+        self._sparam = self.f0**2/self.N2
 
         ### declare petsc vectors
         # PV
         self.Q = self.da.createGlobalVec()
+        self._Qinv = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
         # local vectors
@@ -107,6 +110,10 @@ class qg():
         ### initiate pv inversion solver
         self.pvinv=pvinversion(self)
 
+        ### initiate time stepper
+        _dt=86400.*1e2
+        self.tstepper = time_stepper(self, _dt)
+        
         
     def set_psi(self, analytical_psi=True, file_psi=None):
         """ Set psi to a given value
@@ -133,10 +140,88 @@ class qg():
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = 10.*np.exp(-((i/float(mx-1)-0.5)**2 
+                        q[i, j, k] = 1.e-6*np.exp(-((i/float(mx-1)-0.5)**2 
                                                   + (j/float(my-1)-0.5)**2)/0.1**2)
                         q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
-                        q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi) 
+                        q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
+
+    def set_q_bdy(self):
+        """ Reset q at boundaries such that dq/dn=0 """
+        #
+        q = self.da.getVecArray(self.Q)
+        #
+        mx, my, mz = self.da.getSizes()
+        #
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #
+        # south bdy
+        if (ys==0):
+            j=0
+            for k in range(zs, ze):
+                for i in range(xs, xe):
+                    q[i, j, k] = q[i,j+1,k]
+        # north bdy
+        if (ye==my):
+            j=my-1
+            for k in range(zs, ze):
+                for i in range(xs, xe):
+                    q[i, j, k] = q[i,j-1,k]
+        # west bdy
+        if (xs==0):
+            i=0
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    q[i, j, k] = q[i+1,j,k]
+        # east bdy
+        if (xe==mx):
+            i=mx-1
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    q[i, j, k] = q[i-1,j,k]                
+
+
+    def set_qinv_bdy(self):    
+        q = self.da.getVecArray(self._Qinv)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
+        ### set q to 0 along boundaries for inversion, may be an issue for time stepping
+        # bottom bdy
+        if (zs==0):
+            k=0
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.
+        # upper bdy
+        if (ze==mz):
+            k=mz-1
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.   
+#         # south bdy
+#         if (ys==0):
+#             j=0
+#             for k in range(zs, ze):
+#                 for i in range(xs, xe):
+#                     q[i, j, k] = 0.
+#         # north bdy
+#         if (ye==my):
+#             j=my-1
+#             for k in range(zs, ze):
+#                 for i in range(xs, xe):
+#                     q[i, j, k] = 0.
+#         # west bdy
+#         if (xs==0):
+#             i=0
+#             for k in range(zs, ze):
+#                 for j in range(ys, ye):
+#                     q[i, j, k] = 0.
+#         # east bdy
+#         if (xe==mx):
+#             i=mx-1
+#             for k in range(zs, ze):
+#                 for j in range(ys, ye):
+#                     q[i, j, k] = 0.
+
     
     def setup_time_stepping(self):
         """ Setup the time stepping

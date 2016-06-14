@@ -14,10 +14,13 @@ if __name__ == "__main__":
     
     #qg = qg()
     #qg = qg(grid_uniform_input = {'Lx':1.e8})
-    qg = qg(grid_uniform_input = {'Nx':100, 'Ny':150, 'Nz':10 })
+    qg = qg(grid_uniform_input = {'Nx':100, 'Ny':150, 'Nz':5 })
     qg.set_q()
     qg.pvinv.solve(qg)
-    write_nc(qg.PSI,'psi','psi.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['q', 'psi'], 'output0.nc', qg)
+    qg.tstepper.go(qg, 5)
+    #write_nc(qg.PSI,'psi','psi.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['q', 'psi'], 'output1.nc', qg)
 
     if qg._verbose:
         #print '%e \n' % qg.grid.H
