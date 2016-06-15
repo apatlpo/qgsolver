@@ -18,28 +18,10 @@ class pvinversion():
     """
     
     def __init__(self, qg):
-        
-        # get petsc options from command line
-        #OptDB = PETSc.Options()
-
-        # determine the tile decomposition        
-        #n  = OptDB.getInt('n', 16)
-        #nx = OptDB.getInt('nx', n)
-        #ny = OptDB.getInt('ny', n)
-        #nz = OptDB.getInt('nz', n)
-        
-        #kplt = OptDB.getInt('kplt', nz//2)
-        
-        
-        ### setup the solver
-        
-        #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-        #da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz], stencil_width=2)
-        #comm = da.getComm()
-        #rank = comm.getRank()
-        
+        """ Setup the PV inversion solver
+        """
+                
         # create the operator
-        #print dir(qg)
         self.L = qg.da.createMat()
         #
         if qg._verbose>0:
@@ -51,6 +33,9 @@ class pvinversion():
         if qg._verbose>0:
             print 'Operator L filled \n'
 
+        # global vector
+        self._Qinv = qg.da.createGlobalVec()
+        
         # local vectors
         self._localQ  = qg.da.createLocalVec()
         self._localPSI  = qg.da.createLocalVec()
@@ -68,53 +53,37 @@ class pvinversion():
         #self.ksp.setTolerances(rtol=1e-10) # nope
         self.ksp.setFromOptions()
          
-         
-#         ### setup time stepping
-#         
-
-#         
-#         # vector containing PV
-#         Q = da.createGlobalVec()
-#         Q0 = da.createGlobalVec()
-#         Q1 = da.createGlobalVec()
-#         # RHS
-#         dQ = da.createGlobalVec()
-#         # PV inv RHS vector
-#         Qinv = da.createGlobalVec()
-#         # vector containing the streamfunction
-#         PSI = da.createGlobalVec()
-#         U = da.createGlobalVec()
-#         V = da.createGlobalVec()
-#         # local vectors
-#         localQ  = da.createLocalVec()
-#         localdQ  = da.createLocalVec()
-#         localPSI  = da.createLocalVec()
-#         localU  = da.createLocalVec()
-#         localV  = da.createLocalVec()
-#         # for plotting purposes
-#         PSIn = da.createNaturalVec()
-#         Qn = da.createNaturalVec()
-#         
-#         # init PV
-#         init_q()
-#         set_q_bdy()
-#         # compute corresponding PSI
-#         Q.copy(Qinv) # copies Q into Qinv
-#         set_qinv_bdy()
 
     def solve(self, qg):
         """ Compute the PV inversion
         """
         # copy Q into Qinv
         #_Qinv = self.da.createGlobalVec()
-        qg.Q.copy(qg._Qinv) 
+        qg.Q.copy(self._Qinv)
         # fix boundaries
         qg.set_qinv_bdy()
-        self.ksp.solve(qg._Qinv, qg.PSI)
+        self.ksp.solve(self._Qinv, qg.PSI)
         if qg._verbose>1:
             print 'Inversion done'
 
 
+    def set_qinv_bdy(self):    
+        q = self.da.getVecArray(self._Qinv)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
+        ### set q to 0 along boundaries for inversion, may be an issue for time stepping
+        # bottom bdy
+        if (zs==0):
+            k=0
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.
+        # upper bdy
+        if (ze==mz):
+            k=mz-1
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.   
 
 
 #

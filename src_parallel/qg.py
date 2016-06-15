@@ -54,22 +54,23 @@ class qg():
 
         ### init petsc
         
-        # get petsc options from command line
-        OptDB = PETSc.Options()
-
-        # determine the tile decomposition        
-        #n  = OptDB.getInt('n', 16)
-        #nx = OptDB.getInt('nx', n)
-        #ny = OptDB.getInt('ny', n)
-        #nz = OptDB.getInt('nz', n)        
-        #kplt = OptDB.getInt('kplt', nz//2)
+#         # get petsc options from command line
+#         OptDB = PETSc.Options()
+# 
+#         # determine the tile decomposition        
+#         #n  = OptDB.getInt('n', 16)
+#         #nx = OptDB.getInt('nx', n)
+#         #ny = OptDB.getInt('ny', n)
+#         #nz = OptDB.getInt('nz', n)        
+#         #kplt = OptDB.getInt('kplt', nz//2)
+#         
+#         # setup tiling
+#         #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
+#         self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
+#                                       stencil_width=2)
+#         self.comm = self.da.getComm()
+#         self.rank = self.comm.getRank()
         
-        # setup tiling
-        #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-        self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
-                                      stencil_width=2)
-        self.comm = self.da.getComm()
-        self.rank = self.comm.getRank()
         
         # for lon/lat grids should load metric terms over tiles
         # self.grid.load_metric()
@@ -97,7 +98,7 @@ class qg():
         ### declare petsc vectors
         # PV
         self.Q = self.da.createGlobalVec()
-        self._Qinv = self.da.createGlobalVec()
+        #self._Qinv = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
         # local vectors
@@ -180,23 +181,23 @@ class qg():
                     q[i, j, k] = q[i-1,j,k]                
 
 
-    def set_qinv_bdy(self):    
-        q = self.da.getVecArray(self._Qinv)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
-        ### set q to 0 along boundaries for inversion, may be an issue for time stepping
-        # bottom bdy
-        if (zs==0):
-            k=0
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.
-        # upper bdy
-        if (ze==mz):
-            k=mz-1
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.   
+#     def set_qinv_bdy(self):    
+#         q = self.da.getVecArray(self._Qinv)
+#         mx, my, mz = self.da.getSizes()
+#         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
+#         ### set q to 0 along boundaries for inversion, may be an issue for time stepping
+#         # bottom bdy
+#         if (zs==0):
+#             k=0
+#             for j in range(ys, ye):
+#                 for i in range(xs, xe):
+#                     q[i, j, k] = 0.
+#         # upper bdy
+#         if (ze==mz):
+#             k=mz-1
+#             for j in range(ys, ye):
+#                 for i in range(xs, xe):
+#                     q[i, j, k] = 0.   
 #         # south bdy
 #         if (ys==0):
 #             j=0
@@ -230,5 +231,17 @@ class qg():
         pass
         
 
+class petsc():
 
+    def __init__(self, grid):
+
+        # get petsc options from command line
+        #OptDB = PETSc.Options()
+        
+        # setup tiling
+        self.da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz],
+                                      stencil_width=2)
+        self.comm = self.da.getComm()
+        self.rank = self.comm.getRank()     
+    
 
