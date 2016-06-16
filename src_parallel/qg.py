@@ -11,8 +11,6 @@ from petsc4py import PETSc
 
 import numpy as np
 
-#global da
-#da=[]
 
 class qg():
     """ QG object
@@ -51,24 +49,6 @@ class qg():
 
 
         ### init petsc
-        
-#         # get petsc options from command line
-#         OptDB = PETSc.Options()
-# 
-#         # determine the tile decomposition        
-#         #n  = OptDB.getInt('n', 16)
-#         #nx = OptDB.getInt('nx', n)
-#         #ny = OptDB.getInt('ny', n)
-#         #nz = OptDB.getInt('nz', n)        
-#         #kplt = OptDB.getInt('kplt', nz//2)
-#         
-#         # setup tiling
-#         #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-#         self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
-#                                       stencil_width=2)
-#         self.comm = self.da.getComm()
-#         self.rank = self.comm.getRank()
-        
 
         # setup tiling
         self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
@@ -111,7 +91,6 @@ class qg():
         self.pvinv=pvinversion(self)
 
         ### initiate time stepper
-        #_dt=86400.e2
         self.tstepper = time_stepper(self, dt)
         
     
@@ -127,13 +106,9 @@ class qg():
     def set_q(self, analytical_q=True, file_q=None):
         """ Set q to a given value
         """
-        #""" Initialized potential vorticity along with boundary conditions """
-        #
-        #
         q = self.da.getVecArray(self.Q)
         mx, my, mz = self.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        #print 'xs=', xs, 'xe=', xe, 'mx=', mx, 'ys=', ys, 'ye=', ye, 'my=', my, 'zs=', zs, 'ze=', ze, 'mz=', mz
         #
         if analytical_q:
             if self._verbose:
@@ -200,18 +175,4 @@ class qg():
         """
         pass
         
-
-class petsc():
-
-    def __init__(self, grid):
-
-        # get petsc options from command line
-        #OptDB = PETSc.Options()
-        
-        # setup tiling
-        self.da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz],
-                                      stencil_width=2)
-        self.comm = self.da.getComm()
-        self.rank = self.comm.getRank()     
-    
 
