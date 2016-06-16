@@ -21,21 +21,23 @@ class pvinversion():
         """ Setup the PV inversion solver
         """
                 
+        self._verbose = qg._verbose
+                        
         # create the operator
         self.L = qg.da.createMat()
         #
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Operator L declared \n'
 
         # Fill in operator values
         self.L = set_L(self.L, qg)
         #
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Operator L filled \n'
 
-        # global vector
+        # global vector for PV inversion
         self._Qinv = qg.da.createGlobalVec()
-        
+
         # local vectors
         self._localQ  = qg.da.createLocalVec()
         self._localPSI  = qg.da.createLocalVec()
@@ -54,24 +56,28 @@ class pvinversion():
         self.ksp.setFromOptions()
          
 
-    def solve(self, qg):
+    def solve(self, Q, PSI, da):
         """ Compute the PV inversion
         """
         # copy Q into Qinv
-        #_Qinv = self.da.createGlobalVec()
-        qg.Q.copy(self._Qinv)
+        Q.copy(self._Qinv) 
         # fix boundaries
-        qg.set_qinv_bdy()
-        self.ksp.solve(self._Qinv, qg.PSI)
-        if qg._verbose>1:
+        self.set_qinv_bdy(da)
+        # actually solves the pb
+        self.ksp.solve(self._Qinv, PSI)
+        if self._verbose>1:
             print 'Inversion done'
 
 
-    def set_qinv_bdy(self):    
-        q = self.da.getVecArray(self._Qinv)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
-        ### set q to 0 along boundaries for inversion, may be an issue for time stepping
+    def set_qinv_bdy(self, da):
+        """ Set bdy in order to implement boundary conditions
+        Set q to 0 along boundaries for inversion, may be an issue
+        for time stepping
+        """ 
+        # 
+        q = da.getVecArray(self._Qinv)
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()        
         # bottom bdy
         if (zs==0):
             k=0
@@ -96,16 +102,19 @@ class time_stepper():
     4 steps explicit RungeKutta
     """
     
-    def __init__(self, qg, dt, t0 = 0):
+    def __init__(self, qg, dt, t0 = 0.):
+        
+        self._verbose = qg._verbose
         
         ### physical parameters
         # laplacian parameter, should move outside of here
-        self.K2=1.e0
+        self.K = qg.K
         
         ### time variables
         self.dt = dt
         self._t0 = t0
         self.t = t0
+        #print 't = %e d' % (self.t/86400.)
         
         ### 4 steps explicit RungeKutta parameters
         self._a = [1./6., 1./3., 1./3., 1./6.]
@@ -117,11 +126,12 @@ class time_stepper():
         self._dQ = qg.da.createGlobalVec()
 
 
-    def go(self, qg, nt=1):
+    def go(self, qg, nt):
         """ Carry out the time stepping
         """
         _tstep=0
-        for i in xrange(nt):
+        #for i in xrange(nt):
+        while _tstep < nt:
             # update time parameters and indexes
             self.t += self.dt
             _tstep += 1
@@ -135,9 +145,9 @@ class time_stepper():
             self._Q1.copy(qg.Q) # copies Q1 into Q
             # reset q at boundaries
             qg.set_q_bdy()
-            if qg._verbose>0:
+            if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Time stepping done'
 
 
@@ -150,7 +160,7 @@ class time_stepper():
         """
     
         ### compute PV inversion to streamfunction
-        qg.pvinv.solve(qg)
+        qg.invert_pv()
         
         ### declare local vectors
         localQ  = qg.da.createLocalVec()
@@ -210,7 +220,7 @@ class time_stepper():
                         #      -(q[i-1,j+1,k]-q[i+1,j-1,k]) * (psi[i+1,j+1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5 *0.5
                         dq[i, j, k] = ( J_pp + J_pc + J_cp )/3.
                         ### Dissipation
-                        dq[i, j, k] -= self.K2*(psi[i+1,j,k]-2.*psi[i,j,k]+psi[i-1,j,k])*idx2    
+                        dq[i, j, k] -= self.K*(psi[i+1,j,k]-2.*psi[i,j,k]+psi[i-1,j,k])*idx2    
         
         
     
