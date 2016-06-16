@@ -11,6 +11,8 @@ from petsc4py import PETSc
 
 import numpy as np
 
+#global da
+#da=[]
 
 class qg():
     """ QG object
@@ -19,18 +21,14 @@ class qg():
     def __init__(self,
                  grid_uniform_input = None,
                  grid_lonlat_file = None,
-                 N2 = 1e-4, f0=7e-5,
+                 N2 = 1e-4, f0=7e-5, K=1.e2,
+                 dt = 86400.e2,
                  verbose = 1,
                  ):
         """ QG object creation
         Parameters:
         """
-        
-        # determine if run is parallel
-        #print 'The libraries assumes the code is run in parallel'
-        #self.parallel=True
-        
-        
+                
         ### horizontal and vertical global grids
         grid_uniform_input_default = {'Lx':1.e7, 'Ly':1.5e7, 'H':4.e3, 
                                       'Nx':100, 'Ny':150, 'Nz':10}
@@ -65,7 +63,6 @@ class qg():
         #kplt = OptDB.getInt('kplt', nz//2)
         
         # setup tiling
-        #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
         self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
                                       stencil_width=2)
         self.comm = self.da.getComm()
@@ -89,31 +86,27 @@ class qg():
             print 'Lx=%e km ,Ly= %e km , H=%e m' % (self.grid.Lx/1e3, self.grid.Ly/1e3, self.grid.H)
             print 'dx=%e , dy= %e , dz=%e \n' % (self.grid.dx, self.grid.dy, self.grid.dz)
 
+
         ### vertical stratification and Coriolis
         self.N2 = N2
         self.f0 = f0
         self._sparam = self.f0**2/self.N2
+        self.K = K
 
         ### declare petsc vectors
         # PV
         self.Q = self.da.createGlobalVec()
-        self._Qinv = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
-        # local vectors
-        #self._localQ  = self.da.createLocalVec()
-        #self._localPSI  = self.da.createLocalVec()
-#        # for plotting purposes
-#        PSIn = da.createNaturalVec()
-#        Qn = da.createNaturalVec()
 
         ### initiate pv inversion solver
         self.pvinv=pvinversion(self)
 
         ### initiate time stepper
-        _dt=86400.*1e2
-        self.tstepper = time_stepper(self, _dt)
+        #_dt=86400.e2
+        self.tstepper = time_stepper(self, dt)
         
+    
         
     def set_psi(self, analytical_psi=True, file_psi=None):
         """ Set psi to a given value
@@ -180,47 +173,17 @@ class qg():
                     q[i, j, k] = q[i-1,j,k]                
 
 
-    def set_qinv_bdy(self):    
-        q = self.da.getVecArray(self._Qinv)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()        
-        ### set q to 0 along boundaries for inversion, may be an issue for time stepping
-        # bottom bdy
-        if (zs==0):
-            k=0
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.
-        # upper bdy
-        if (ze==mz):
-            k=mz-1
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.   
-#         # south bdy
-#         if (ys==0):
-#             j=0
-#             for k in range(zs, ze):
-#                 for i in range(xs, xe):
-#                     q[i, j, k] = 0.
-#         # north bdy
-#         if (ye==my):
-#             j=my-1
-#             for k in range(zs, ze):
-#                 for i in range(xs, xe):
-#                     q[i, j, k] = 0.
-#         # west bdy
-#         if (xs==0):
-#             i=0
-#             for k in range(zs, ze):
-#                 for j in range(ys, ye):
-#                     q[i, j, k] = 0.
-#         # east bdy
-#         if (xe==mx):
-#             i=mx-1
-#             for k in range(zs, ze):
-#                 for j in range(ys, ye):
-#                     q[i, j, k] = 0.
+
+    def invert_pv(self):
+        """ wrapper around solver solve method
+        """
+        self.pvinv.solve(self.Q,self.PSI,self.da)
+
+
+    def tstep(self, nt=1):
+        """ Time step wrapper
+        """
+        self.tstepper.go(self, nt)
 
     
     def setup_time_stepping(self):

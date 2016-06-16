@@ -18,38 +18,25 @@ class pvinversion():
     """
     
     def __init__(self, qg):
-        
-        # get petsc options from command line
-        #OptDB = PETSc.Options()
+        """ setup the solver
+        """
 
-        # determine the tile decomposition        
-        #n  = OptDB.getInt('n', 16)
-        #nx = OptDB.getInt('nx', n)
-        #ny = OptDB.getInt('ny', n)
-        #nz = OptDB.getInt('nz', n)
-        
-        #kplt = OptDB.getInt('kplt', nz//2)
-        
-        
-        ### setup the solver
-        
-        #da = PETSc.DMDA().create([nx, ny, nz], stencil_width=2)
-        #da = PETSc.DMDA().create([grid.Nx, grid.Ny, grid.Nz], stencil_width=2)
-        #comm = da.getComm()
-        #rank = comm.getRank()
-        
+        self._verbose = qg._verbose
+                        
         # create the operator
-        #print dir(qg)
         self.L = qg.da.createMat()
         #
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Operator L declared \n'
 
         # Fill in operator values
         self.L = set_L(self.L, qg)
         #
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Operator L filled \n'
+
+        # global vector for PV inversion
+        self._Qinv = qg.da.createGlobalVec()
 
         # local vectors
         self._localQ  = qg.da.createLocalVec()
@@ -68,53 +55,41 @@ class pvinversion():
         #self.ksp.setTolerances(rtol=1e-10) # nope
         self.ksp.setFromOptions()
          
-         
-#         ### setup time stepping
-#         
 
-#         
-#         # vector containing PV
-#         Q = da.createGlobalVec()
-#         Q0 = da.createGlobalVec()
-#         Q1 = da.createGlobalVec()
-#         # RHS
-#         dQ = da.createGlobalVec()
-#         # PV inv RHS vector
-#         Qinv = da.createGlobalVec()
-#         # vector containing the streamfunction
-#         PSI = da.createGlobalVec()
-#         U = da.createGlobalVec()
-#         V = da.createGlobalVec()
-#         # local vectors
-#         localQ  = da.createLocalVec()
-#         localdQ  = da.createLocalVec()
-#         localPSI  = da.createLocalVec()
-#         localU  = da.createLocalVec()
-#         localV  = da.createLocalVec()
-#         # for plotting purposes
-#         PSIn = da.createNaturalVec()
-#         Qn = da.createNaturalVec()
-#         
-#         # init PV
-#         init_q()
-#         set_q_bdy()
-#         # compute corresponding PSI
-#         Q.copy(Qinv) # copies Q into Qinv
-#         set_qinv_bdy()
-
-    def solve(self, qg):
+    def solve(self, Q, PSI, da):
         """ Compute the PV inversion
         """
         # copy Q into Qinv
-        #_Qinv = self.da.createGlobalVec()
-        qg.Q.copy(qg._Qinv) 
+        Q.copy(self._Qinv) 
         # fix boundaries
-        qg.set_qinv_bdy()
-        self.ksp.solve(qg._Qinv, qg.PSI)
-        if qg._verbose>1:
+        self.set_qinv_bdy(da)
+        # actually solves the pb
+        self.ksp.solve(self._Qinv, PSI)
+        if self._verbose>1:
             print 'Inversion done'
 
 
+    def set_qinv_bdy(self, da):
+        """ Set bdy in order to implement boundary conditions
+        Set q to 0 along boundaries for inversion, may be an issue
+        for time stepping
+        """ 
+        # 
+        q = da.getVecArray(self._Qinv)
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()        
+        # bottom bdy
+        if (zs==0):
+            k=0
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.
+        # upper bdy
+        if (ze==mz):
+            k=mz-1
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 0.   
 
 
 #
@@ -127,16 +102,19 @@ class time_stepper():
     4 steps explicit RungeKutta
     """
     
-    def __init__(self, qg, dt, t0 = 0):
+    def __init__(self, qg, dt, t0 = 0.):
+        
+        self._verbose = qg._verbose
         
         ### physical parameters
         # laplacian parameter, should move outside of here
-        self.K2=1.e0
+        self.K = qg.K
         
         ### time variables
         self.dt = dt
         self._t0 = t0
         self.t = t0
+        #print 't = %e d' % (self.t/86400.)
         
         ### 4 steps explicit RungeKutta parameters
         self._a = [1./6., 1./3., 1./3., 1./6.]
@@ -148,11 +126,12 @@ class time_stepper():
         self._dQ = qg.da.createGlobalVec()
 
 
-    def go(self, qg, nt=1):
+    def go(self, qg, nt):
         """ Carry out the time stepping
         """
         _tstep=0
-        for i in xrange(nt):
+        #for i in xrange(nt):
+        while _tstep < nt:
             # update time parameters and indexes
             self.t += self.dt
             _tstep += 1
@@ -166,9 +145,9 @@ class time_stepper():
             self._Q1.copy(qg.Q) # copies Q1 into Q
             # reset q at boundaries
             qg.set_q_bdy()
-            if qg._verbose>0:
+            if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
-        if qg._verbose>0:
+        if self._verbose>0:
             print 'Time stepping done'
 
 
@@ -181,7 +160,7 @@ class time_stepper():
         """
     
         ### compute PV inversion to streamfunction
-        qg.pvinv.solve(qg)
+        qg.invert_pv()
         
         ### declare local vectors
         localQ  = qg.da.createLocalVec()
@@ -241,7 +220,7 @@ class time_stepper():
                         #      -(q[i-1,j+1,k]-q[i+1,j-1,k]) * (psi[i+1,j+1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5 *0.5
                         dq[i, j, k] = ( J_pp + J_pc + J_cp )/3.
                         ### Dissipation
-                        dq[i, j, k] -= self.K2*(psi[i+1,j,k]-2.*psi[i,j,k]+psi[i-1,j,k])*idx2    
+                        dq[i, j, k] -= self.K*(psi[i+1,j,k]-2.*psi[i,j,k]+psi[i-1,j,k])*idx2    
         
         
     
