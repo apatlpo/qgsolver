@@ -19,8 +19,8 @@ class qg():
     def __init__(self,
                  grid_uniform_input = None,
                  grid_lonlat_file = None,
-                 N2 = 1e-4, f0=7e-5, K=1.e2,
-                 dt = 86400.e2,
+                 N2 = 1e-3, f0=7e-5, K=1.e2,
+                 dt = 86400.e-1,
                  verbose = 1,
                  ):
         """ QG object creation
@@ -28,8 +28,8 @@ class qg():
         """
                 
         ### horizontal and vertical global grids
-        grid_uniform_input_default = {'Lx':1.e7, 'Ly':1.5e7, 'H':4.e3, 
-                                      'Nx':100, 'Ny':150, 'Nz':10}
+        grid_uniform_input_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3, 
+                                      'Nx':150, 'Ny':100, 'Nz':10}
         grid_input = grid_uniform_input_default
         #if grid_uniform_input is None:
         #    grid_uniform_input = grid_uniform_input_default
@@ -49,6 +49,8 @@ class qg():
 
 
         ### init petsc
+
+        #OptDB = PETSc.Options()
 
         # setup tiling
         self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
@@ -116,8 +118,8 @@ class qg():
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = 1.e-6*np.exp(-((i/float(mx-1)-0.5)**2 
-                                                  + (j/float(my-1)-0.5)**2)/0.1**2)
+                        q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
+                                                  + (j/float(my-1)-0.5)**2)/0.05**2)
                         q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
                         q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
 
@@ -127,7 +129,6 @@ class qg():
         q = self.da.getVecArray(self.Q)
         #
         mx, my, mz = self.da.getSizes()
-        #
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         # south bdy
@@ -156,7 +157,6 @@ class qg():
                     q[i, j, k] = q[i-1,j,k]                
 
 
-
     def invert_pv(self):
         """ wrapper around solver solve method
         """
@@ -169,10 +169,9 @@ class qg():
         self.tstepper.go(self, nt)
 
     
-    def setup_time_stepping(self):
-        """ Setup the time stepping
-        Create additional vectors
+    def get_uv(self):
+        """ Compute horizontal velocities
         """
-        pass
-        
+
+
 

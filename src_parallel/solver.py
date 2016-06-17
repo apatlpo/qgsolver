@@ -30,7 +30,7 @@ class pvinversion():
             print 'Operator L declared \n'
 
         # Fill in operator values
-        self.L = set_L(self.L, qg)
+        set_L(self.L, qg)
         #
         if self._verbose>0:
             print 'Operator L filled \n'
@@ -39,20 +39,25 @@ class pvinversion():
         self._Qinv = qg.da.createGlobalVec()
 
         # local vectors
-        self._localQ  = qg.da.createLocalVec()
-        self._localPSI  = qg.da.createLocalVec()
+        #self._localQ  = qg.da.createLocalVec()
+        #self._localPSI  = qg.da.createLocalVec()
 
         # create solver
         self.ksp = PETSc.KSP()
         self.ksp.create(PETSc.COMM_WORLD)
         self.ksp.setOperators(self.L)
         # use conjugate gradients
-        self.ksp.setType('cg')
-        #self.ksp.setType('gmres')
+        #self.ksp.setType('cg')
+        self.ksp.setType('gmres')
+        self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
         #self.ksp.getPC().setType('icc')
         # set tolerances
         #self.ksp.setTolerances(rtol=1e-10) # nope
+        #
+        #PETSc.Options().setValue('-ksp_view', None)
+        #PETSc.Options().setValue('-ksp_monitor', None)
+        #PETSc.Options().setValue('-ksp_converged_reason', None)        
         self.ksp.setFromOptions()
          
 
@@ -65,6 +70,8 @@ class pvinversion():
         self.set_qinv_bdy(da)
         # actually solves the pb
         self.ksp.solve(self._Qinv, PSI)
+        # tmp, test:
+        #self.L.mult(PSI, Q)
         if self._verbose>1:
             print 'Inversion done'
 
@@ -89,7 +96,7 @@ class pvinversion():
             k=mz-1
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    q[i, j, k] = 0.   
+                    q[i, j, k] = 0.
 
 
 #
@@ -140,15 +147,15 @@ class time_stepper():
             qg.Q.copy(self._Q1) # copies Q into Q1
             for rk in range(4):
                 self._computeRHS(qg)
-                if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt,self._dQ,self._Q0)
-                self._Q1.axpy(self._a[rk]*self.dt,self._dQ)
+                if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dQ, self._Q0)
+                self._Q1.axpy(self._a[rk]*self.dt, self._dQ)
             self._Q1.copy(qg.Q) # copies Q1 into Q
             # reset q at boundaries
             qg.set_q_bdy()
             if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
-        if self._verbose>0:
-            print 'Time stepping done'
+#         if self._verbose>0:
+#             print 'Time stepping done'
 
 
     
@@ -163,16 +170,19 @@ class time_stepper():
         qg.invert_pv()
         
         ### declare local vectors
-        localQ  = qg.da.createLocalVec()
-        localdQ  = qg.da.createLocalVec()
-        localPSI  = qg.da.createLocalVec()
+        local_Q  = qg.da.createLocalVec()
+        #local_dQ  = qg.da.createLocalVec()
+        local_PSI  = qg.da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.Q, localQ)
-        qg.da.globalToLocal(qg.PSI, localPSI)
-        q = qg.da.getVecArray(localQ)
-        psi = qg.da.getVecArray(localPSI)
+        qg.da.globalToLocal(qg.Q, local_Q)
+        qg.da.globalToLocal(qg.PSI, local_PSI)
+        #qg.da.globalToLocal(self._dQ, local_dQ)
+        #
+        q = qg.da.getVecArray(local_Q)
+        psi = qg.da.getVecArray(local_PSI)
         dq = qg.da.getVecArray(self._dQ)
+        #dq = qg.da.getVecArray(local_dQ)
         #
         mx, my, mz = qg.da.getSizes()
         dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
@@ -188,39 +198,47 @@ class time_stepper():
                         i==mx-1 or j==my-1):
                         dq[i, j, k] = 0.
                     else:
-                        q_c   = q[ i  ,  j  ,  k ] # center
-                        q_e = q[i+1 ,  j  ,  k ] # east
-                        q_w = q[i-1 ,  j  ,  k ] # west
-                        q_n = q[ i  , j+1 ,  k ] # north
-                        q_s = q[ i  , j-1 ,  k ] # south
-                        dqdx = (q_e - q_w)*0.5*idx
-                        dqdy = (q_n - q_s)*0.5*idy
+                        #q_c   = q[ i  ,  j  ,  k ] # center
+                        #q_e = q[i+1 ,  j  ,  k ] # east
+                        #q_w = q[i-1 ,  j  ,  k ] # west
+                        #q_n = q[ i  , j+1 ,  k ] # north
+                        #q_s = q[ i  , j-1 ,  k ] # south
+                        #dqdx = (q_e - q_w)*0.5*idx
+                        #dqdy = (q_n - q_s)*0.5*idy
                         #
-                        psi_c   = psi[ i  ,  j  ,  k ] # center
-                        psi_e = psi[i+1 ,  j  ,  k ] # east
-                        psi_w = psi[i-1 ,  j  ,  k ] # west
-                        psi_n = psi[ i  , j+1 ,  k ] # north
-                        psi_s = psi[ i  , j-1 ,  k ] # south
-                        dpsidx = (psi_e - psi_w)*0.5*idx
-                        dpsidy = (psi_n - psi_s)*0.5*idy
+                        #psi_c   = psi[ i  ,  j  ,  k ] # center
+                        #psi_e = psi[i+1 ,  j  ,  k ] # east
+                        #psi_w = psi[i-1 ,  j  ,  k ] # west
+                        #psi_n = psi[ i  , j+1 ,  k ] # north
+                        #psi_s = psi[ i  , j-1 ,  k ] # south
+                        #dpsidx = (psi_e - psi_w)*0.5*idx
+                        #dpsidy = (psi_n - psi_s)*0.5*idy
                         ### Jacobian
+                        #
                         # classical approach, leads to noodling (see Arakawa 1966, J_pp)
                         #dq[i, j, k] = - ( -dpsidy * dqdx + dpsidx * dqdy)
                         # 
-                        J_pp = (q[i+1,j,k]-q[i-1,j,k])*idx*0.5 * (psi[i,j+1,k]-psi[i,j-1,k])*idy*0.5 - (q[i,j+1,k]-q[i,j-1,k])*idy*0.5 * (psi[i+1,j,k]-psi[i-1,j,k])*idx*0.5
+                        # Arakawa Jacobian
+                        #
+                        J_pp = (q[i+1,j,k]-q[i-1,j,k])*idx*0.5 * (psi[i,j+1,k]-psi[i,j-1,k])*idy*0.5 
+                        - (q[i,j+1,k]-q[i,j-1,k])*idy*0.5 * (psi[i+1,j,k]-psi[i-1,j,k])*idx*0.5
+                        #
                         J_pc = q[i+1,j,k] * (psi[i+1,j+1,k]-psi[i+1,j-1,k])*idy*0.5 *idx*0.5 
-                        -q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k])*idy*0.5 *idx*0.5
-                        -q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k])*idx*0.5 *idy*0.5
-                        +q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5
-                        J_cp = q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k])*idx*0.5 *idy*0.5
-                        -q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5
-                        -q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k])*idx*0.5 *idy*0.5
-                        +q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5
+                        - q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k])*idy*0.5 *idx*0.5 
+                        - q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k])*idx*0.5 *idy*0.5 
+                        + q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5
+                        #
+                        J_cp = q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k])*idx*0.5 *idy*0.5 
+                        - q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5 
+                        - q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k])*idx*0.5 *idy*0.5 
+                        + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5
+                        #
                         #J_cc = (q[i+1,j+1,k]-q[i-1,j-1,k]) * (psi[i-1,j+1,k]-psi[i+1,j-1,k])*idx*0.5 *idy*0.5 *0.5 \
                         #      -(q[i-1,j+1,k]-q[i+1,j-1,k]) * (psi[i+1,j+1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5 *0.5
+                        #
                         dq[i, j, k] = ( J_pp + J_pc + J_cp )/3.
+                        #
                         ### Dissipation
-                        dq[i, j, k] -= self.K*(psi[i+1,j,k]-2.*psi[i,j,k]+psi[i-1,j,k])*idx2    
-        
+                        dq[i, j, k] -= self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
         
     

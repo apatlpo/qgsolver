@@ -10,6 +10,8 @@ def set_L(L, qg):
     dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
     idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
     idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
+    #print idx, idy, idz 
+    #print idx2, idy2, idz2   
     #
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
     #
@@ -59,4 +61,4 @@ def set_L(L, qg):
                         col.field = 0
                         L.setValueStencil(row, col, value)
     L.assemble()
-    return L
+    return

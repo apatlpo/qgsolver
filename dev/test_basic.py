@@ -12,15 +12,20 @@ from qgsolver.io import write_nc
 
 if __name__ == "__main__":
     
-    qg = qg(grid_uniform_input = {'Nx':100, 'Ny':150, 'Nz':3 },
-            K = 1.e1, dt = 86400.e1)
+    qg = qg(grid_uniform_input = {'Nx':150, 'Ny':100, 'Nz':3 },
+            K = 0.e0, dt = 5.*86400.e0)
     #
     qg.set_q()
     qg.invert_pv()
-    write_nc([qg.PSI, qg.Q], ['q', 'psi'], 'output.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg)
     #
-    qg.tstep(1)
-    write_nc([qg.PSI, qg.Q], ['q', 'psi'], 'output.nc', qg, create=False)
+    if False:
+        qg.tstep(1)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
+    else:
+        while qg.tstepper.t/86400. < 100 :
+            qg.tstep(1)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
 
     if qg._verbose:
         print 'Test done \n'

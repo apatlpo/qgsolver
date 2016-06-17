@@ -43,7 +43,7 @@ def write_nc(V, vname, filename, qg, create=True):
         # 3D variables
         nc_V=[]
         for name in vname:
-            nc_V.append(rootgrp.createVariable(name,dtype,('t','x','y','z',)))
+            nc_V.append(rootgrp.createVariable(name,dtype,('t','z','y','x',)))
     
     elif rank == 0:
         ### open netcdf file
@@ -63,9 +63,8 @@ def write_nc(V, vname, filename, qg, create=True):
         scatter, Vn0 = PETSc.Scatter.toZero(Vn)
         scatter.scatter(Vn, Vn0, False, PETSc.Scatter.Mode.FORWARD)
         if rank == 0:
-            Vf = Vn0[...].reshape(qg.da.sizes, order='f')
+            Vf = Vn0[...].reshape(qg.da.sizes[::-1], order='c')
             if create:
-                print 'Create'
                 nc_V[i][:] = Vf[np.newaxis,...]
             else:
                 if i==0: it=nc_V[i].shape[0]
