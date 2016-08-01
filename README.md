@@ -2,6 +2,14 @@
 This library implements a 3D z-level QG solver in regular grid or in lon/lat 
 grid.
 It relies on petsc4py for parallelized PV inversions but can also work in serial
+(not at the moment)
+
+Download and install with:
+```
+git clone https://apatlpo@bitbucket.org/apatlpo/qgsolver.git
+cd qgsolver
+python setup.py
+```
 
 
 We use conda for the python install:

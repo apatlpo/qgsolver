@@ -11,7 +11,7 @@ import shutil
 # should test the existence of cython !!!
 from distutils.core import setup
 from distutils.extension import Extension
-from Cython.Distutils import build_ext
+#from Cython.Distutils import build_ext
 
 # ------
 # tests whether peptsc4py is installed and copy the proper source
