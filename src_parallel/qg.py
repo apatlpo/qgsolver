@@ -10,7 +10,8 @@ petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 import numpy as np
-
+from .io import read_nc_petsc
+#from netCDF4 import Dataset
 
 class qg():
     """ QG object
@@ -108,20 +109,35 @@ class qg():
     def set_q(self, analytical_q=True, file_q=None):
         """ Set q to a given value
         """
+        #
+        if file_q is not None:
+            if self._verbose:
+                print 'Set q from file '+file_q+' ...\n'
+            read_nc_petsc(self.Q, 'q', file_q, self)
+        elif analytical_q:
+            if self._verbose:
+                print 'Set q analytically \n'
+            self.set_q_analytically()
+
+
+    def set_q_analytically(self):
+        """ Set q analytically
+        """
         q = self.da.getVecArray(self.Q)
         mx, my, mz = self.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
-        if analytical_q:
-            if self._verbose:
-                print 'Set q analytically \n'
-            for k in range(zs, ze):
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
-                                                  + (j/float(my-1)-0.5)**2)/0.05**2)
-                        q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
-                        q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
+        if self._verbose:
+            pass
+            #print 'Set q analytically \n'
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
+                                              + (j/float(my-1)-0.5)**2)/0.1**2)
+                    q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
+                    q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
+            
 
     def set_q_bdy(self):
         """ Reset q at boundaries such that dq/dn=0 """

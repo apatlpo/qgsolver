@@ -54,7 +54,6 @@ def write_nc(V, vname, filename, qg, create=True):
         for name in vname:
             nc_V.append(rootgrp.variables[name])
         
-    
 
     # loop around variables now and store them
     Vn = qg.da.createNaturalVec()
@@ -76,3 +75,80 @@ def write_nc(V, vname, filename, qg, create=True):
         rootgrp.close()
         
 
+
+def read_nc_petsc(V, vname, filename, qg):    
+    """ Read a variable from a netcdf file and stores it in a petsc Vector
+    Parameters:
+        V one(!) petsc vector
+        vname corresponding name in netcdf file
+        filename
+        qg object
+    """
+    v = qg.da.getVecArray(V)
+    mx, my, mz = qg.da.getSizes()
+    (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+    rootgrp = Dataset(filename, 'r')
+    for k in range(zs, ze):
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
+                # line above does not work for early versions of netcdf4 python library
+                # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
+                # https://github.com/Unidata/netcdf4-python/issues/306
+                v[i, j, k] = rootgrp.variables['q'][rootgrp.variables['q'].shape[0]-1,k,j,i]
+    rootgrp.close()
+    qg.comm.barrier()
+    #if qg.rank ==0: print 'Variable '+vname+' read from '+filename
+    if qg._verbose: print '... done'
+#     # number of variables to read
+#     Nv=len(vname)
+#     # process rank
+#     rank = qg.rank
+# 
+#     if rank == 0:
+# 
+#         ### create a netcdf file to store QG pv for inversion
+#         rootgrp = Dataset(filename, 'r')
+# 
+#         # 3D variables
+#         nc_V=[]
+#         for name in vname:
+#             nc_V.append(rootgrp.createVariable(name,dtype,('t','z','y','x',)))
+#     
+#     # loop around variables now and store them
+#     Vn = qg.da.createNaturalVec()
+#     for i in xrange(Nv):
+#         qg.da.globalToNatural(V[i], Vn)
+#         #qg.da.naturalToGlobal(Vn,V[i])
+#         scatter, Vn0 = PETSc.Scatter.toAll(Vn)
+#         if rank == 0:
+#             Vf = nc_V[i][-1,...]
+#         scatter.scatter(Vn0, Vn, False, PETSc.Scatter.Mode.FORWARD)
+#         qg.comm.barrier()
+#       
+#     if rank == 0:
+#         # close the netcdf file
+#         rootgrp.close()
+        
+        
+        
+def read_nc(vname, filename):    
+    """ Read a variable from a netcdf file
+    Parameters:
+        vname list of variable names
+        filename
+    """
+
+    # open netdc file
+    rootgrp = Dataset(filename, 'r')
+    
+    # loop around variables to load
+    V=[]
+    for name in vname:
+        V.append(rootgrp[name])
+    
+    # close the netcdf file
+    rootgrp.close()
+    
+    return V
+        
