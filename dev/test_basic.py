@@ -12,7 +12,7 @@ from qgsolver.io import write_nc
 
 if __name__ == "__main__":
     
-    qg = qg(grid_uniform_input = {'Nx':150, 'Ny':100, 'Nz':3 },
+    qg = qg(hgrid = {'Nx':150, 'Ny':100}, vgrid = {'Nz':3 },
             K = 0.e0, dt = 0.5*86400.e0)
     #
     qg.set_q()

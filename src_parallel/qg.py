@@ -18,8 +18,7 @@ class qg():
     """
     
     def __init__(self,
-                 grid_uniform_input = None,
-                 grid_lonlat_file = None,
+                 hgrid = None, vgrid=None,
                  N2 = 1e-3, f0 = 7e-5, K = 1.e2,
                  dt = 86400.e-1,
                  verbose = 1,
@@ -27,26 +26,9 @@ class qg():
         """ QG object creation
         Parameters:
         """
-                
-        ### horizontal and vertical global grids
-        grid_uniform_input_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3, 
-                                      'Nx':150, 'Ny':100, 'Nz':10}
-        grid_input = grid_uniform_input_default
-        #if grid_uniform_input is None:
-        #    grid_uniform_input = grid_uniform_input_default
-        #else:
-        #for key in grid_uniform_input:
-        #    grid_input[key]=grid_uniform_input[key]
-        for key, value in grid_uniform_input.items():
-            grid_input[key]=value
-        if grid_lonlat_file is None:
-            #print 'The grid is uniform'
-            self.flag_grid_uniform = True
-            self.grid = grid_uniform(**grid_input)
-        else:
-            print 'The grid is in lon/lat space, parallel run'
-            print 'The grid file is: '+grid_lonlat_file
-            self.grid = grid_lonlat(grid_lonlat_file)
+
+        ### Build grid object        
+        self.grid = grid(hgrid, vgrid) 
 
 
         ### init petsc
@@ -68,14 +50,11 @@ class qg():
         else:
             self._verbose=0
         #
-        if self._verbose>0 and self.flag_grid_uniform:
+        if self._verbose>0:
             # general information
             print '\nA QG model object is being created \n'
             # print out grid parameters
-            print 'The grid is uniform with:'            
-            print 'Nx=%i ,Ny= %i, Nz=%i' % (self.grid.Nx, self.grid.Ny, self.grid.Nz)
-            print 'Lx=%e km ,Ly= %e km , H=%e m' % (self.grid.Lx/1e3, self.grid.Ly/1e3, self.grid.H)
-            print 'dx=%e , dy= %e , dz=%e \n' % (self.grid.dx, self.grid.dy, self.grid.dz)
+            print self.grid
 
 
         ### vertical stratification and Coriolis
