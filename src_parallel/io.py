@@ -132,10 +132,10 @@ def read_nc_petsc(V, vname, filename, qg):
         
         
         
-def read_nc(vname, filename):    
-    """ Read a variable from a netcdf file
+def read_nc(vnames, filename):    
+    """ Read variables from a netcdf file
     Parameters:
-        vname list of variable names
+        vnames list of variable names
         filename
     """
 
@@ -144,8 +144,8 @@ def read_nc(vname, filename):
     
     # loop around variables to load
     V=[]
-    for name in vname:
-        V.append(rootgrp[name])
+    for name in vnames:
+        V.append(rootgrp.variables[name])
     
     # close the netcdf file
     rootgrp.close()

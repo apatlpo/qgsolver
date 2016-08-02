@@ -2,13 +2,14 @@
 # -*- encoding: utf8 -*-
 
 import numpy as np
-    
+from .io import read_nc
+ 
 class grid(object):
     """ Grid object
     """
     
 #
-#==================== BUilders ============================================
+#==================== Builders ============================================
 # 
     
     def __init__(self, hgrid = None, vgrid = None):
@@ -56,21 +57,41 @@ class grid(object):
         # compute metric terms
         self.dz=self.H/(self.Nz-1.)
         
+    def _build_vgrid_stretched(self,vgrid_filename):
+        V=read_nc(['zc','zf'], vgrid_filename)
+        self.zc = V[0]
+        self.zf = V[0]
+        self.dzc = np.diff(self.zc)
+        self.dzf = np.diff(self.zf)
+
+
 #
 #==================== Grid information ============================================
 #             
               
     def __str__(self):
+        
         if self._flag_hgrid_uniform:
             out = 'The horizontal grid is uniform with:\n' \
                 + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
                 + '  Lx = %e km , Ly = %e km \n' % (self.Lx/1e3, self.Ly/1e3) \
                 + '  dx = %e , dy = %e \n' % (self.dx, self.dy)
+        else:
+            out = 'The horizontal grid is curvlinear with:\n' \
+                + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
+                + '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
+                + '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
+                
         if self._flag_hgrid_uniform:
             out += 'The vertical grid is uniform with:\n' \
                 + '  Nz = %i' % (self.Nz) \
                 + ' , H = %e m' % (self.H) \
                 + ' , dz = %e \n' % (self.dz)
+        else:
+            out += 'The vertical grid is stretched with:\n' \
+                + '  Nz = %i' % (self.Nz) \
+                + '  min(dz) = %e , mean(dz) = %e, max(dz) = %e \n' % (np.min(self.dz), np.mean(self.dz), np.max(self.dz))
+        
         return out
       
                   
