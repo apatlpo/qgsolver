@@ -20,7 +20,7 @@ class qg():
     def __init__(self,
                  grid_uniform_input = None,
                  grid_lonlat_file = None,
-                 N2 = 1e-3, f0=7e-5, K=1.e2,
+                 N2 = 1e-3, f0 = 7e-5, K = 1.e2,
                  dt = 86400.e-1,
                  verbose = 1,
                  ):
@@ -79,7 +79,9 @@ class qg():
 
 
         ### vertical stratification and Coriolis
-        self.N2 = N2
+        # N2 is at w points (cell faces), N2[i] is between q[i-1] and q[i]
+        if not isinstance(N2,list):
+            self.N2 = N2*np.ones(self.grid.Nz)
         self.f0 = f0
         self._sparam = self.f0**2/self.N2
         self.K = K
@@ -91,7 +93,7 @@ class qg():
         self.PSI = self.da.createGlobalVec()
 
         ### initiate pv inversion solver
-        self.pvinv=pvinversion(self)
+        self.pvinv = pvinversion(self)
 
         ### initiate time stepper
         self.tstepper = time_stepper(self, dt)

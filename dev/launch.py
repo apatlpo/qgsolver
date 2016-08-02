@@ -9,6 +9,8 @@ script='test_basic'
 print 'On linux workstation:'
 #os.system('mpirun -np 8  python  '+script+'.py  -mf')
 #os.system('mpirun -np 8  python  '+script+'.py -mf -ksp_view -ksp_monitor -ksp_converged_reason')
+print 'bash'
+print 'source activate natl60'
 print 'export PYTHONPATH=\"$PYTHONPATH:/home/slyne/aponte/natl60/qgsolver/\";'
 print('mpirun -np 8  python  '+script+'.py -mf -ksp_view -ksp_monitor -ksp_converged_reason') 
 

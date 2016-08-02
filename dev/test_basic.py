@@ -13,13 +13,13 @@ from qgsolver.io import write_nc
 if __name__ == "__main__":
     
     qg = qg(grid_uniform_input = {'Nx':150, 'Ny':100, 'Nz':3 },
-            K = 0.e0, dt = 0.1*86400.e0)
+            K = 0.e0, dt = 0.5*86400.e0)
     #
     qg.set_q()
     qg.invert_pv()
     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg)
     #
-    test=1
+    test=2
     if test==0:
         # one time step and store
         qg.tstep(1)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         qg.tstep(1)
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output1.nc', qg, create=False)
     else:
-        while qg.tstepper.t/86400. < 10 :
+        while qg.tstepper.t/86400. < 2 :
             qg.tstep(1)
             write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
 

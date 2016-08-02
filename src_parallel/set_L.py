@@ -49,13 +49,13 @@ def set_L(L, qg):
                 else:
                     # interior pv
                     for index, value in [
-                        ((i,j,k-1), qg._sparam*idz2),
+                        ((i,j,k-1), qg._sparam[k]*idz2),
                         ((i,j-1,k), idy2),
                         ((i-1,j,k), idx2),
-                        ((i, j, k), -2.*(idx2+idy2+qg._sparam*idz2)),
+                        ((i, j, k), -2.*(idx2+idy2)-(qg._sparam[k]*idz2+qg._sparam[k+1]*idz2)),
                         ((i+1,j,k), idx2),
                         ((i,j+1,k), idy2),
-                        ((i,j,k+1), qg._sparam*idz2)
+                        ((i,j,k+1), qg._sparam[k+1]*idz2)
                         ]:
                         col.index = index
                         col.field = 0
