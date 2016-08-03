@@ -132,7 +132,7 @@ def read_nc_petsc(V, vname, filename, qg):
         
         
         
-def read_nc(vnames, filename):    
+def read_nc(vnames, filename):
     """ Read variables from a netcdf file
     Parameters:
         vnames list of variable names
