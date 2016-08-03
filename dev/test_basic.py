@@ -32,7 +32,7 @@ if __name__ == "__main__":
         qg.tstep(1)
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output1.nc', qg, create=False)
     else:
-        while qg.tstepper.t/86400. < 2 :
+        while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
             write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
 

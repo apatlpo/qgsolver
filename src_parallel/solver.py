@@ -160,7 +160,7 @@ class time_stepper():
 
     
     def _computeRHS(self,qg):
-        """ Compute the RHS of the pv evolution equation i.e: -J(psi,q)
+        """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
@@ -196,49 +196,36 @@ class time_stepper():
                 for i in range(xs, xe):
                     if (i==0    or j==0 or
                         i==mx-1 or j==my-1):
+                        # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
-                        #q_c   = q[ i  ,  j  ,  k ] # center
-                        #q_e = q[i+1 ,  j  ,  k ] # east
-                        #q_w = q[i-1 ,  j  ,  k ] # west
-                        #q_n = q[ i  , j+1 ,  k ] # north
-                        #q_s = q[ i  , j-1 ,  k ] # south
-                        #dqdx = (q_e - q_w)*0.5*idx
-                        #dqdy = (q_n - q_s)*0.5*idy
-                        #
-                        #psi_c   = psi[ i  ,  j  ,  k ] # center
-                        #psi_e = psi[i+1 ,  j  ,  k ] # east
-                        #psi_w = psi[i-1 ,  j  ,  k ] # west
-                        #psi_n = psi[ i  , j+1 ,  k ] # north
-                        #psi_s = psi[ i  , j-1 ,  k ] # south
-                        #dpsidx = (psi_e - psi_w)*0.5*idx
-                        #dpsidy = (psi_n - psi_s)*0.5*idy
                         ### Jacobian
                         #
-                        # classical approach, leads to noodling (see Arakawa 1966, J_pp)
-                        #dq[i, j, k] = - ( -dpsidy * dqdx + dpsidx * dqdy)
+                        # naive approach leads to noodling (see Arakawa 1966, J_pp)
+                        # dq[i, j, k] = - ( -dpsidy * dqdx + dpsidx * dqdy)
                         # 
                         # Arakawa Jacobian
                         #
-                        J_pp = (q[i+1,j,k]-q[i-1,j,k])*idx*0.5 * (psi[i,j+1,k]-psi[i,j-1,k])*idy*0.5 
-                        - (q[i,j+1,k]-q[i,j-1,k])*idy*0.5 * (psi[i+1,j,k]-psi[i-1,j,k])*idx*0.5
+                        J_pp =   ( q[i+1,j,k] - q[i-1,j,k] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) \
+                               - ( q[i,j+1,k] - q[i,j-1,k] ) * ( psi[i+1,j,k] - psi[i-1,j,k] )
+                        J_pp *= idx*idy*0.25
                         #
-                        J_pc = q[i+1,j,k] * (psi[i+1,j+1,k]-psi[i+1,j-1,k])*idy*0.5 *idx*0.5 
-                        - q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k])*idy*0.5 *idx*0.5 
-                        - q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k])*idx*0.5 *idy*0.5 
-                        + q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5
+                        J_pc =   q[i+1,j,k] * (psi[i+1,j+1,k]-psi[i+1,j-1,k]) \
+                               - q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k]) \
+                               - q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k]) \
+                               + q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])
+                        J_pc *= idx*idy*0.25
                         #
-                        J_cp = q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k])*idx*0.5 *idy*0.5 
-                        - q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5 
-                        - q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k])*idx*0.5 *idy*0.5 
-                        + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])*idx*0.5 *idy*0.5
-                        #
-                        #J_cc = (q[i+1,j+1,k]-q[i-1,j-1,k]) * (psi[i-1,j+1,k]-psi[i+1,j-1,k])*idx*0.5 *idy*0.5 *0.5 \
-                        #      -(q[i-1,j+1,k]-q[i+1,j-1,k]) * (psi[i+1,j+1,k]-psi[i-1,j-1,k])*idx*0.5 *idy*0.5 *0.5
+                        J_cp =   q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k]) \
+                               - q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k]) \
+                               - q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k]) \
+                               + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])
+                        J_cp *= idx*idy*0.25
                         #
                         dq[i, j, k] = ( J_pp + J_pc + J_cp )/3.
                         #
                         ### Dissipation
-                        dq[i, j, k] -= self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
+                        dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
+                                       + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
         
     
