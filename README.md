@@ -19,7 +19,7 @@ source activate natl60
 export PYTHONPATH=$PYTHONPATH:/home/slyne/aponte/natl60/python/oocgcm/
 ```
 
-Proper conda install:
+Proper conda install on Linux:
 ```
 bash /home/mulroy/slgentil/tarfiles/Miniconda2-latest-Linux-x86_64.sh
 bash
@@ -35,4 +35,10 @@ conda install basemap
 conda install -c asmeurer pango
 ```
 
-
+Proper conda install on Caparmor:
+```
+conda create --name petsc python
+source activate petsc
+conda install -c sed-pro-inria petsc4py=3.4
+conda install -y netcdf4
+```
