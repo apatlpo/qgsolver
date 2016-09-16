@@ -13,6 +13,7 @@ import numpy as np
 from .io import read_nc_petsc
 #from netCDF4 import Dataset
 
+
 class qg():
     """ QG object
     """
@@ -42,7 +43,8 @@ class qg():
         self.rank = self.comm.getRank()
         
         # for lon/lat grids should load metric terms over tiles
-        # self.grid.load_metric()
+        if not self._flag_hgrid_uniform:
+            self.grid.load_metric_terms(self.da)
 
         # print out grid information
         if self.rank is 0 and verbose>0:

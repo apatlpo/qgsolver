@@ -19,7 +19,7 @@ class grid(object):
                                       'Nx':150, 'Ny':100, 'Nz':10}
         self._flag_hgrid_uniform = False
         if hgrid is None or isinstance(hgrid,dict):
-            #
+            # uniform grid
             self._flag_hgrid_uniform = True            
             #
             hgrid_input = hgrid_uniform_default
@@ -28,7 +28,8 @@ class grid(object):
             #
             self._build_hgrid_uniform(**hgrid_input)
         else:
-            self._build_hgrid(hgrid)
+            # curvilinear grid
+            self._build_hgrid_curvilinear(hgrid)
             
         ### vertical grid
         vgrid_uniform_default = {'H':4.e3, 'Nz':10}
@@ -44,6 +45,9 @@ class grid(object):
         else:
             self._build_vgrid_stretched(vgrid)
 
+    #
+    # Uniform grids
+    #
     def _build_hgrid_uniform(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -56,13 +60,28 @@ class grid(object):
             setattr(self, key, value)
         # compute metric terms
         self.dz=self.H/(self.Nz-1.)
+    
+    #
+    # Curvilinear horizontal grid
+    #
+    def _build_hgrid_curvilinear(self, hgrid_file):
+        # store metric file but metric terms are loaded later
+        self.hgrid_file = hgrid_file
         
+    def load_metric_terms(self,):
+        # load curvilinear metric terms
+        pass
+    
+    #
+    # Vertically stretched grid
+    #
     def _build_vgrid_stretched(self,vgrid_filename):
-        V=read_nc(['zc','zf'], vgrid_filename)
+        V = read_nc(['zc','zf'], vgrid_filename)
         self.zc = V[0]
         self.zf = V[0]
         self.dzc = np.diff(self.zc)
         self.dzf = np.diff(self.zf)
+        self.Nz = len(self.zc)
 
 
 #
