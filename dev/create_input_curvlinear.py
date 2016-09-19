@@ -17,7 +17,7 @@ from scipy.fftpack._fftpack import zfft
 d2r = np.pi/180.
 
 
-def create_nc(filename, lon, lat, z):
+def create_nc(filename, lon, lat, zc, zf):
     
     ### create a netcdf file
     rootgrp = Dataset(filename, 'w',
@@ -26,17 +26,20 @@ def create_nc(filename, lon, lat, z):
     # create dimensions
     rootgrp.createDimension('x', lon.shape[1])
     rootgrp.createDimension('y', lat.shape[0])
-    rootgrp.createDimension('z', z.size)
+    rootgrp.createDimension('zc', zc.size)
+    rootgrp.createDimension('zf', zf.size)
     
     # create variables
     dtype='f8'
     nc_lon = rootgrp.createVariable('lon',dtype,('y','x'))
     nc_lat = rootgrp.createVariable('lat',dtype,('y','x'))
-    nc_z = rootgrp.createVariable('z',dtype,('z'))
+    nc_zc = rootgrp.createVariable('zc',dtype,('zc'))
+    nc_zf = rootgrp.createVariable('zf',dtype,('zf'))
     
     nc_lon[:] = lon
     nc_lat[:] = lat
-    nc_z[:] = z
+    nc_zc[:] = zc
+    nc_zf[:] = zf
         
     #rootgrp.createVariable(name,dtype,('z','y','x',)))
     return rootgrp
@@ -68,7 +71,7 @@ if __name__ == "__main__":
     #print figname+' printed'
     
     # build vertical coordinates
-    zf = -np.linspace(1,0,10)**2
+    zf = -np.linspace(1,0,11)**2
     zf = 4000*zf
     zc = (zf[:-1]+zf[1:])*0.5
     e3 = np.diff(zf)
@@ -124,20 +127,20 @@ if __name__ == "__main__":
     
         
     # store metric terms
-    zc = np.hstack((zc,zc[[-1]]))
-    rootgrp = create_nc('curv_metrics.nc', LON, LAT, zc)
+    #zc = np.hstack((zc,zc[[-1]]))
+    rootgrp = create_nc('curv_metrics.nc', LON, LAT, zc, zf)
     #
     dtype='f8'
-    nc_zf = rootgrp.createVariable('zf',dtype,('z'))
-    nc_zf[:] = zf
+    #nc_zf = rootgrp.createVariable('zf',dtype,('zf'))
+    #nc_zf[:] = zf
     # 
     nc_e1 = rootgrp.createVariable('e1',dtype,('y','x'))
     nc_e1[:] = e1
     nc_e2 = rootgrp.createVariable('e2',dtype,('y','x'))
     nc_e2[:] = e2
-    nc_e3 = rootgrp.createVariable('e3',dtype,('z'))
-    #nc_e3[:] = e3.append(e3[-1])
-    nc_e3[:] = np.hstack((e3,e3[[-1]]))
+    #nc_e3 = rootgrp.createVariable('e3',dtype,('zc'))
+    ##nc_e3[:] = e3.append(e3[-1])
+    #nc_e3[:] = np.hstack((e3,e3[[-1]]))
     
     rootgrp.close()
     
@@ -146,7 +149,8 @@ if __name__ == "__main__":
     f0 = np.mean(f)
     
     # create a reference profile
-    N2 = 1e-3*zf/zf[0]
+    N2 = 1e-3*(zf-10.)/zf[0]
+    #print N2[:]
  
     # create a potential vorticity anomaly
     lon0 = np.mean(lon)
@@ -159,17 +163,17 @@ if __name__ == "__main__":
         * np.cos(2.*np.pi/(200*1e3)*dist(lon,lat0))
     
     # store variables
-    rootgrp = create_nc('curv_pv.nc', LON, LAT, zc)
+    rootgrp = create_nc('curv_pv.nc', LON, LAT, zc, zf)
     #
     nc_f = rootgrp.createVariable('f',dtype,('y','x'))
     nc_f[:] = f    
     nc_f0 = rootgrp.createVariable('f0',dtype)
     nc_f0[:] = f0
     #
-    nc_N2 = rootgrp.createVariable('N2',dtype,('z'))
+    nc_N2 = rootgrp.createVariable('N2',dtype,('zf'))
     nc_N2[:] = N2
     #
-    nc_q = rootgrp.createVariable('q',dtype,('z','y','x'))
+    nc_q = rootgrp.createVariable('q',dtype,('zc','y','x'))
     nc_q[:] = q[:]
     #
     rootgrp.close()

@@ -27,13 +27,17 @@ class pvinversion():
         self.L = qg.da.createMat()
         #
         if self._verbose>0:
-            print 'Operator L declared \n'
+            print 'Operator L declared'
 
         # Fill in operator values
-        set_L(self.L, qg)
+        if qg.grid._flag_hgrid_uniform:
+            set_L(self.L, qg)
+        else:
+            set_L_curv(self.L, qg)
+            
         #
         if self._verbose>0:
-            print 'Operator L filled \n'
+            print 'Operator L filled'
 
         # global vector for PV inversion
         self._Qinv = qg.da.createGlobalVec()

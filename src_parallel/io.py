@@ -85,17 +85,23 @@ def read_nc_petsc(V, vname, filename, qg):
         qg object
     """
     v = qg.da.getVecArray(V)
-    mx, my, mz = qg.da.getSizes()
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
     rootgrp = Dataset(filename, 'r')
-    for k in range(zs, ze):
-        for j in range(ys, ye):
-            for i in range(xs, xe):
-                #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
-                # line above does not work for early versions of netcdf4 python library
-                # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
-                # https://github.com/Unidata/netcdf4-python/issues/306
-                v[i, j, k] = rootgrp.variables['q'][rootgrp.variables['q'].shape[0]-1,k,j,i]
+    ndim=len(rootgrp.variables['q'].shape)
+    if ndim>3:
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
+                    # line above does not work for early versions of netcdf4 python library
+                    # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
+                    # https://github.com/Unidata/netcdf4-python/issues/306
+                    v[i, j, k] = rootgrp.variables['q'][rootgrp.variables['q'].shape[0]-1,k,j,i]
+    else:
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    v[i, j, k] = rootgrp.variables['q'][k,j,i]
     rootgrp.close()
     qg.comm.barrier()
     #if qg.rank ==0: print 'Variable '+vname+' read from '+filename
@@ -143,12 +149,29 @@ def read_nc(vnames, filename):
     rootgrp = Dataset(filename, 'r')
     
     # loop around variables to load
-    V=[]
-    for name in vnames:
-        V.append(rootgrp.variables[name])
-    
+    if isinstance(vnames, list):
+        V=[]
+        for name in vnames:
+            V.append(rootgrp.variables[name][:])
+    else:
+        V = rootgrp.variables[vnames][:]
+        
     # close the netcdf file
     rootgrp.close()
     
     return V
+
+
+def read_hgrid_dimensions(hgrid_file):
+    """ Reads grid dimension from netcdf file
+    Could put dimension names as optional inputs ...
+    """
+    # open netcdf file
+    rootgrp = Dataset(hgrid_file, 'r')
+    Nx = len(rootgrp.dimensions['x'])
+    Ny = len(rootgrp.dimensions['y'])    
+    return Nx, Ny
+    
+
+
         

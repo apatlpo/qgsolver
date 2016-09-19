@@ -14,13 +14,14 @@ from .io import read_nc_petsc
 #from netCDF4 import Dataset
 
 
-class qg():
+class qg_model():
     """ QG object
     """
     
     def __init__(self,
                  hgrid = None, vgrid=None,
                  N2 = 1e-3, f0 = 7e-5, K = 1.e2,
+                 f0N2_file = None,
                  dt = 86400.e-1,
                  verbose = 1,
                  ):
@@ -28,12 +29,15 @@ class qg():
         Parameters:
         """
 
-        ### Build grid object        
+        #
+        # Build grid object
+        #        
         self.grid = grid(hgrid, vgrid) 
 
-
-        ### init petsc
-
+        #
+        # init petsc
+        #
+        
         #OptDB = PETSc.Options()
 
         # setup tiling
@@ -43,8 +47,8 @@ class qg():
         self.rank = self.comm.getRank()
         
         # for lon/lat grids should load metric terms over tiles
-        if not self._flag_hgrid_uniform:
-            self.grid.load_metric_terms(self.da)
+        if not self.grid._flag_hgrid_uniform:
+            self.grid.load_metric_terms(self.da, self.comm)
 
         # print out grid information
         if self.rank is 0 and verbose>0:
@@ -54,29 +58,52 @@ class qg():
         #
         if self._verbose>0:
             # general information
-            print '\nA QG model object is being created \n'
+            print 'A QG model object is being created'
             # print out grid parameters
             print self.grid
 
-
-        ### vertical stratification and Coriolis
+        #
+        # vertical stratification and Coriolis
+        #
         # N2 is at w points (cell faces), N2[i] is between q[i-1] and q[i]
-        if not isinstance(N2,list):
-            self.N2 = N2*np.ones(self.grid.Nz)
-        self.f0 = f0
+        if f0N2_file is not None:
+            if self._verbose:
+                print 'Reads N2 from '+f0N2_file
+            #
+            self.N2 = read_nc('N2', f0N2_file)
+        else:
+            if self._verbose:
+                print 'Set N2 from user prescribed value = '+str(N2)+' 1/s^2'
+            #
+            self.N2 = N2*np.ones(self.grid.Nz+1)
+        #
+        if f0N2_file is not None:
+            if self._verbose:
+                print 'Reads f0 from '+f0N2_file
+            #
+            self.f0 = read_nc('f0', f0N2_file)            
+        else:
+            self.f0 = f0
+        #
         self._sparam = self.f0**2/self.N2
         self.K = K
 
-        ### declare petsc vectors
+        #
+        # declare petsc vectors
+        #
         # PV
         self.Q = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
 
-        ### initiate pv inversion solver
+        #
+        # initiate pv inversion solver
+        #
         self.pvinv = pvinversion(self)
 
-        ### initiate time stepper
+        #
+        # initiate time stepper
+        #
         self.tstepper = time_stepper(self, dt)
         
     

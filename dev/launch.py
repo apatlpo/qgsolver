@@ -12,6 +12,7 @@ print 'On linux workstation:'
 print 'bash'
 print 'source activate natl60'
 print 'export PYTHONPATH=\"$PYTHONPATH:/home/slyne/aponte/natl60/qgsolver/\";'
+print('python setup.py build_ext --inplace')
 print('mpirun -np 8  python  '+script+'.py -mf -ksp_view -ksp_monitor -ksp_converged_reason -log_view') 
 
 # on mac os
