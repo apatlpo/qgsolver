@@ -57,9 +57,9 @@ if __name__ == "__main__":
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent([-55,-30, 25, 45],ccrs.PlateCarree())
-    ax.plot(LON,LAT,'k-',transform=ccrs.PlateCarree())
-    ax.plot(LON.transpose(),LAT.transpose(),'k-',transform=ccrs.PlateCarree())
-    plt.title('Horizontal grid', size=10) # to modify the title
+    ax.plot(LON[::10,::10],LAT[::10,::10],'k-',transform=ccrs.PlateCarree())
+    ax.plot(LON.transpose()[::10,::10],LAT.transpose()[::10,::10],'k-',transform=ccrs.PlateCarree())
+    plt.title('Horizontal grid (every 10 points)', size=10) # to modify the title
     lon_tcks = range(-55,-30, 5)
     lat_tcks = range(25,45,5)
     ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
     #figname='figs/snapshot_'+vkey.replace (" ", "_")+'_magnitude.jpg'
-    #plt.savefig(figname, dpi=300)
+    plt.savefig('figs/curvilinear_input_hgrid.jpg', dpi=300)
     #print figname+' printed'
     
     # build vertical coordinates
@@ -110,7 +110,8 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()    
-    
+    plt.savefig('figs/curvilinear_input_e1.jpg', dpi=300)
+
     # plot horizontal metrics
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())
@@ -124,7 +125,8 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()    
-    
+    plt.savefig('figs/curvilinear_input_e2.jpg', dpi=300)
+
         
     # store metric terms
     #zc = np.hstack((zc,zc[[-1]]))
@@ -150,6 +152,9 @@ if __name__ == "__main__":
     
     # create a reference profile
     N2 = 1e-3*(zf-10.)/zf[0]
+    # tmp !!
+    N2[:] = 1e-5
+    print 'Set N2 to a constant ='+str(N2[0])
     #print N2[:]
  
     # create a potential vorticity anomaly
@@ -158,10 +163,11 @@ if __name__ == "__main__":
     def dist(lon,lat):
         return R*np.arccos(np.sin(d2r*lat)*np.sin(d2r*lat0) \
                            + np.cos(d2r*lat)*np.cos(d2r*lat0)*np.cos(d2r*(lon-lon0)))
-    q = 0.1*f0*np.sin(np.pi*zc[:,np.newaxis,np.newaxis]/zf[0]) \
+    q = 0.1*f0*np.sin(2.*np.pi*zc[:,np.newaxis,np.newaxis]/zf[0]) \
         * np.exp(-(dist(LON,LAT)[np.newaxis,...]/(100.*1e3))**2) \
-        * np.cos(2.*np.pi/(200*1e3)*dist(lon,lat0))
-    
+        * np.cos(2.*np.pi/(2000.*1e3)*dist(lon,lat0))
+#        * np.cos(2.*np.pi/(200*1e3)*dist(lon,lat0)) # sinusoidal pattern in the zonal direction
+
     # store variables
     rootgrp = create_nc('curv_pv.nc', LON, LAT, zc, zf)
     #
@@ -178,7 +184,22 @@ if __name__ == "__main__":
     #
     rootgrp.close()
   
-    
+  
+    # plot horizontal metrics
+    plt.figure(figsize=(8,3))
+    ax=plt.axes(projection=ccrs.PlateCarree())
+    ax.set_extent([-55,-30, 25, 45],ccrs.PlateCarree())
+    im = ax.pcolormesh(lon,lat,q[5,:,:]/f0,transform=ccrs.PlateCarree())
+    cbar = plt.colorbar(im, format="%.2f")
+    plt.title('q/f0 [1]', size=10) # to modify the title
+    lon_tcks = range(-55,-30, 5)
+    lat_tcks = range(25,45,5)
+    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    ax.gridlines()
+    plt.savefig('figs/curvilinear_input_q.jpg', dpi=300)
+        
     
     plt.ion()
     plt.show(); 
