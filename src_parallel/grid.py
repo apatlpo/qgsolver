@@ -9,7 +9,9 @@ from netCDF4 import Dataset
 class grid(object):
     """ Grid object
     """
-    
+
+
+
 #
 #==================== Builders ============================================
 # 
@@ -23,7 +25,7 @@ class grid(object):
         # horizontal global grids
         #
         hgrid_uniform_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3, 
-                                      'Nx':150, 'Ny':100, 'Nz':10}
+                                 'Nx':150, 'Ny':100, 'Nz':10}
         self._flag_hgrid_uniform = False
         if hgrid is None or isinstance(hgrid,dict):
             # uniform grid
@@ -110,8 +112,10 @@ class grid(object):
         V = read_nc(['zc','zf'], vgrid_filename)
         self.zc = V[0]
         self.zf = V[1]
+        #
         self.dzc = np.diff(self.zc)
         self.dzf = np.diff(self.zf)
+        #
         self.Nz = len(self.zc)
 
 

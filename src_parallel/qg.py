@@ -41,10 +41,20 @@ class qg_model():
         #OptDB = PETSc.Options()
 
         # setup tiling
-        self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
-                                      stencil_width=2)
+        #self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
+        #                              stencil_width=2)
+        self.da = PETSc.DMDA().create(sizes = [self.grid.Nx, self.grid.Ny, self.grid.Nz],
+                                      proc_sizes = [2,4,1],
+                                      stencil_width = 2)
+        # http://lists.mcs.anl.gov/pipermail/petsc-dev/2016-April/018889.html
         self.comm = self.da.getComm()
         self.rank = self.comm.getRank()
+        # print tiling information
+        if self.rank is 0 and verbose>0:
+            print 'PETSc DMDA created'
+            print 'The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
+                    +str(self.da.proc_sizes) 
+            #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
         
         # for lon/lat grids should load metric terms over tiles
         if not self.grid._flag_hgrid_uniform:
