@@ -91,7 +91,11 @@ class qg_model():
             if self._verbose:
                 print 'Reads f0 from '+f0N2_file
             #
-            self.f0 = read_nc('f0', f0N2_file)            
+            self.f0 = read_nc('f0', f0N2_file)
+            #
+            if self._verbose:
+                print 'Reads Coriolis parameter f from '+f0N2_file
+            self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
             self.f0 = f0
         #

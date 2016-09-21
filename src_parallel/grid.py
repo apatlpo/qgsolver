@@ -105,6 +105,21 @@ class grid(object):
         comm.barrier()
         pass
     
+    def load_coriolis_parameter(self, coriolis_file, da, comm):
+        v = da.getVecArray(self.D)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        # indexes along the third dimension 
+        self._k_f=zs+4       
+        # open and read netcdf file
+        rootgrp = Dataset(coriolis_file, 'r')
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                v[i, j, self._k_f] = rootgrp.variables['f'][j,i]                
+        rootgrp.close()
+        #
+        comm.barrier()
+        pass
+    
     #
     # Vertically stretched grid
     #

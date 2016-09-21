@@ -273,6 +273,7 @@ class time_stepper():
         D = qg.da.getVecArray(local_D)
         kdx = qg.grid._k_dx
         kdy = qg.grid._k_dy
+        kf = qg.grid._k_f
         #
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
         #
@@ -312,6 +313,24 @@ class time_stepper():
                         #
                         dq[i, j, k] = ( J_pp + J_pc + J_cp )/3. /D[i,j,kdx]/D[i,j,kdy]
                         #
+                        ### Add advection of planetary vorticity, shouldn't f-f0 be part of q though !!!
+                        Jp_pp =   ( D[i+1,j,kf] - D[i-1,j,kf] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) \
+                               - ( D[i,j+1,kf] - D[i,j-1,kf] ) * ( psi[i+1,j,k] - psi[i-1,j,k] )
+                        Jp_pp *= 0.25
+                        #
+                        Jp_pc =  D[i+1,j,kf] * (psi[i+1,j+1,k]-psi[i+1,j-1,k]) \
+                               - D[i-1,j,kf] * (psi[i-1,j+1,k]-psi[i-1,j-1,k]) \
+                               - D[i,j+1,kf] * (psi[i+1,j+1,k]-psi[i-1,j+1,k]) \
+                               + D[i,j-1,kf] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])
+                        Jp_pc *= 0.25
+                        #
+                        Jp_cp =  D[i+1,j+1,kf] * (psi[i,j+1,k]-psi[i+1,j,k]) \
+                               - D[i-1,j-1,kf] * (psi[i-1,j,k]-psi[i,j-1,k]) \
+                               - D[i-1,j+1,kf] * (psi[i,j+1,k]-psi[i-1,j,k]) \
+                               + D[i+1,j-1,kf] * (psi[i+1,j,k]-psi[i,j-1,k])
+                        Jp_cp *= 0.25
+                        #
+                        dq[i, j, k] += ( Jp_pp + Jp_pc + Jp_cp )/3. /D[i,j,kdx]/D[i,j,kdy]
                         ### Dissipation
                         dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdx]/D[i,j,kdx] \
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdy]/D[i,j,kdy]
