@@ -154,7 +154,7 @@ if __name__ == "__main__":
     N2 = 1e-3*(zf-10.)/zf[0]
     # tmp !!
     N2[:] = 1e-5
-    print 'Set N2 to a constant ='+str(N2[0])
+    print 'Set N2 to a constant = '+str(N2[0])
     #print N2[:]
  
     # create a potential vorticity anomaly
@@ -165,8 +165,8 @@ if __name__ == "__main__":
                            + np.cos(d2r*lat)*np.cos(d2r*lat0)*np.cos(d2r*(lon-lon0)))
     q = 0.1*f0*np.sin(2.*np.pi*zc[:,np.newaxis,np.newaxis]/zf[0]) \
         * np.exp(-(dist(LON,LAT)[np.newaxis,...]/(100.*1e3))**2) \
-        * np.cos(2.*np.pi/(2000.*1e3)*dist(lon,lat0))
-#        * np.cos(2.*np.pi/(200*1e3)*dist(lon,lat0)) # sinusoidal pattern in the zonal direction
+        * np.cos(2.*np.pi/(200*1e3)*dist(lon,lat0)) # sinusoidal pattern in the zonal direction
+#        * np.cos(2.*np.pi/(2000.*1e3)*dist(lon,lat0)) # single eddy
 
     # store variables
     rootgrp = create_nc('curv_pv.nc', LON, LAT, zc, zf)

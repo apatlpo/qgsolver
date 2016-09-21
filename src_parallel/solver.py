@@ -150,7 +150,10 @@ class time_stepper():
             qg.Q.copy(self._Q0) # copies Q into Q0
             qg.Q.copy(self._Q1) # copies Q into Q1
             for rk in range(4):
-                self._computeRHS(qg)
+                if qg.grid._flag_hgrid_uniform:
+                    self._computeRHS(qg)
+                else:
+                    self._computeRHS_curv(qg)
                 if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dQ, self._Q0)
                 self._Q1.axpy(self._a[rk]*self.dt, self._dQ)
             self._Q1.copy(qg.Q) # copies Q1 into Q
@@ -192,9 +195,11 @@ class time_stepper():
         dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
-        ### advect PV:
-        # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy) 
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        #
+        ### advect PV:
+        # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
+        #
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -231,5 +236,85 @@ class time_stepper():
                         ### Dissipation
                         dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
-        
+
+
+
+   
+    def _computeRHS_curv(self,qg):
+        """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
+        Jacobian 9 points (from Q-GCM):
+        Arakawa and Lamb 1981:
+        DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
+        """
     
+        ### compute PV inversion to streamfunction
+        qg.invert_pv()
+        
+        ### declare local vectors
+        local_Q  = qg.da.createLocalVec()
+        #local_dQ  = qg.da.createLocalVec()
+        local_PSI  = qg.da.createLocalVec()
+        
+        ###
+        qg.da.globalToLocal(qg.Q, local_Q)
+        qg.da.globalToLocal(qg.PSI, local_PSI)
+        #qg.da.globalToLocal(self._dQ, local_dQ)
+        #
+        q = qg.da.getVecArray(local_Q)
+        psi = qg.da.getVecArray(local_PSI)
+        dq = qg.da.getVecArray(self._dQ)
+        #dq = qg.da.getVecArray(local_dQ)
+        #
+        mx, my, mz = qg.da.getSizes()
+        #
+        #D = qg.da.getVecArray(qg.grid.D)
+        local_D  = qg.da.createLocalVec()
+        qg.da.globalToLocal(qg.grid.D, local_D)
+        D = qg.da.getVecArray(local_D)
+        kdx = qg.grid._k_dx
+        kdy = qg.grid._k_dy
+        #
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        #
+        # advect PV:
+        # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
+        # 
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
+                        # lateral boundaries
+                        dq[i, j, k] = 0.
+                    else:
+                        ### Jacobian
+                        #
+                        # naive approach leads to noodling (see Arakawa 1966, J_pp)
+                        # dq[i, j, k] = - ( -dpsidy * dqdx + dpsidx * dqdy)
+                        # 
+                        # Arakawa Jacobian
+                        #
+                        J_pp =   ( q[i+1,j,k] - q[i-1,j,k] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) \
+                               - ( q[i,j+1,k] - q[i,j-1,k] ) * ( psi[i+1,j,k] - psi[i-1,j,k] )
+                        J_pp *= 0.25
+                        #
+                        J_pc =   q[i+1,j,k] * (psi[i+1,j+1,k]-psi[i+1,j-1,k]) \
+                               - q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k]) \
+                               - q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k]) \
+                               + q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k])
+                        J_pc *= 0.25
+                        #
+                        J_cp =   q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k]) \
+                               - q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k]) \
+                               - q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k]) \
+                               + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])
+                        J_cp *= 0.25
+                        #
+                        dq[i, j, k] = ( J_pp + J_pc + J_cp )/3. /D[i,j,kdx]/D[i,j,kdy]
+                        #
+                        ### Dissipation
+                        dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdx]/D[i,j,kdx] \
+                                       + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdy]/D[i,j,kdy]
+
+
+

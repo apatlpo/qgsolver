@@ -53,25 +53,15 @@ def curvilinear_runs():
     qg.invert_pv()
     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg)
     
-    #
-    #===========================================================================
-    # test=2
-    # if test==0:
-    #     # one time step and store
-    #     qg.tstep(1)
-    #     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
-    # elif test==1:
-    #     # write/read/write
-    #     qg.tstep(1)
-    #     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output1.nc', qg, create=True)
-    #     qg.set_q(file_q='output.nc')
-    #     qg.tstep(1)
-    #     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output1.nc', qg, create=False)
-    # else:
-    #     while qg.tstepper.t/86400. < 200 :
-    #         qg.tstep(1)
-    #         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
-    #===========================================================================
+    test=1
+    if test==0:
+        # one time step and store
+        qg.tstep(1)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
+    elif test==1:
+        while qg.tstepper.t/86400. < 200 :
+            qg.tstep(1)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg, create=False)
 
     return qg
     

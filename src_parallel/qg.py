@@ -122,7 +122,7 @@ class qg_model():
         """ Set psi to a given value
         """
         if self._verbose:
-            print 'Set psi to ... \n'
+            print 'Set psi to ... ?'
         #if analytical_psi:
             
 
@@ -132,11 +132,11 @@ class qg_model():
         #
         if file_q is not None:
             if self._verbose:
-                print 'Set q from file '+file_q+' ...\n'
+                print 'Set q from file '+file_q+' ...'
             read_nc_petsc(self.Q, 'q', file_q, self)
         elif analytical_q:
             if self._verbose:
-                print 'Set q analytically \n'
+                print 'Set q analytically '
             self.set_q_analytically()
 
 
