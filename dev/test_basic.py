@@ -47,7 +47,7 @@ def curvilinear_runs():
     
     qg = qg_model(hgrid = 'curv_metrics.nc', vgrid = 'curv_metrics.nc',
                   f0N2_file = 'curv_pv.nc',
-                  K = 0.e0, dt = 0.5*86400.e0)
+                  K = 1.e3, dt = 0.5*86400.e0)
     #
     qg.set_q(file_q='curv_pv.nc')
     qg.invert_pv()

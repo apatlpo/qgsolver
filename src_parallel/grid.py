@@ -153,7 +153,7 @@ class grid(object):
                 #+ '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
                 #+ '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
                 
-        if self._flag_hgrid_uniform:
+        if self._flag_vgrid_uniform:
             out += 'The vertical grid is uniform with:\n' \
                 + '  Nz = %i' % (self.Nz) \
                 + ' , H = %e m' % (self.H) \
