@@ -186,10 +186,10 @@ nc_psi = rootgrp.createVariable('psi',dtype,('zc','y','x',))
 
 # fills in coordinate variables, keep truely periodic data
 nc_zc[:]=zr0[:]
-nc_zf[:]=zw1[:]
+nc_zf[:]=zw0[:]
 nc_x[:]=d.hgrid.x_rho[:,:-2]
 nc_y[:]=d.hgrid.y_rho[:,:-2]
-nc_f[:]=d.hgrid.f[:]
+nc_f[:]=d.hgrid.f[:,:-2]
 #nc_f[:]=d.hgrid.f0
 nc_f0[:]=d.hgrid.f0
 #nc_rho0[:]=d.rho0
