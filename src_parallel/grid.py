@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
+import sys
 import numpy as np
 from .io import read_nc, read_hgrid_dimensions
 # for curvilinear grids
@@ -24,7 +25,7 @@ class grid(object):
         #
         # horizontal global grids
         #
-        hgrid_uniform_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3, 
+        hgrid_uniform_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3,
                                  'Nx':150, 'Ny':100, 'Nz':10}
         self._flag_hgrid_uniform = False
         if hgrid is None or isinstance(hgrid,dict):
@@ -39,7 +40,7 @@ class grid(object):
         else:
             # curvilinear grid
             self._build_hgrid_curvilinear(hgrid)
-         
+
         #   
         # vertical grid
         #
@@ -62,6 +63,7 @@ class grid(object):
     def _build_hgrid_uniform(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+        self.hgrid_file = None
         # compute metric terms
         self.dx=self.Lx/(self.Nx-1.)
         self.dy=self.Ly/(self.Ny-1.)
@@ -91,24 +93,20 @@ class grid(object):
         self._k_dx =zs
         self._k_dy =zs+1
         self._k_lon=zs+2
-        self._k_lat=zs+3       
-        # open and read netcdf file
-        rootgrp = Dataset(self.hgrid_file, 'r')
-        var_list = rootgrp.variables.keys()
+        self._k_lat=zs+3
 
-        # Check if e1 variable exists
-        if 'e1' not in var_list:
+        if self.hgrid_file is None:
             # roms input
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, self._k_lon] = rootgrp.variables['x'][j,i]
-                    v[i, j, self._k_lat] = rootgrp.variables['y'][j,i]
-            v[xs:xe-1, ys:ye  , self._k_dx] = np.diff(v[xs:xe, ys:ye, self._k_lon],axis=0)
-            v[xe-1, ys:ye  , self._k_dx] = v[xe-2, ys:ye  , self._k_dx]
-            v[xs:xe  , ys:ye-1, self._k_dy] = np.diff(v[xs:xe, ys:ye, self._k_lat],axis=1)
-            v[xs:xe, ye-1  , self._k_dy] = v[xs:xe, ye-2  , self._k_dy]
-
+                    v[i, j, self._k_lon] = i*self.dx
+                    v[i, j, self._k_lat] = j*self.dy
+            v[xs:xe, ys:ye, self._k_dx] = self.dx
+            v[xs:xe, ys:ye, self._k_dy] = self.dy
         else:
+            # open and read netcdf file
+            rootgrp = Dataset(self.hgrid_file, 'r')
+
             # curvilinear metric
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -116,7 +114,7 @@ class grid(object):
                     v[i, j, self._k_dy] = rootgrp.variables['e2'][j,i]
                     v[i, j, self._k_lon] = rootgrp.variables['lon'][j,i]
                     v[i, j, self._k_lat] = rootgrp.variables['lat'][j,i]
-        rootgrp.close()
+            rootgrp.close()
         #
         comm.barrier()
         pass

@@ -59,8 +59,8 @@ class qg_model():
             #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
 
         # for lon/lat grids should load metric terms over tiles
-        if not self.grid._flag_hgrid_uniform:
-            self.grid.load_metric_terms(self.da, self.comm)
+        # if not self.grid._flag_hgrid_uniform:
+        self.grid.load_metric_terms(self.da, self.comm)
 
         # print out grid information
         if self.rank is 0 and verbose>0:
@@ -73,8 +73,6 @@ class qg_model():
             print 'A QG model object is being created'
             # print out grid parameters
             print self.grid
-        sys.exit()
-
         #
         # vertical stratification and Coriolis
         #
@@ -104,7 +102,6 @@ class qg_model():
         #
         self._sparam = self.f0**2/self.N2
         self.K = K
-
         #
         # declare petsc vectors
         #
@@ -112,7 +109,6 @@ class qg_model():
         self.Q = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
-
         #
         # initiate pv inversion solver
         #

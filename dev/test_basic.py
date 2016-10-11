@@ -70,12 +70,12 @@ def roms_input_runs():
     ''' Tests with curvilinear grid
     '''
 
-    qg = qg_model(hgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc', \
-                  vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc',
-                  f0N2_file = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc',
-                  K = 1.e0, dt = 0.5*86400.e0)
+    hgrid = {'Lx':(512-1)*2.e3, 'Ly':(1440-1)*2.e3, 'H':4.e3, \
+             'Nx':512, 'Ny':1440, 'Nz':100}
+    vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
+    qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0)
     #
-    qg.set_q(file_q='data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc')
+    qg.set_q(file_q = vgrid)
     qg.invert_pv()
     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg)
 
