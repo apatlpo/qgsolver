@@ -94,12 +94,28 @@ class grid(object):
         self._k_lat=zs+3       
         # open and read netcdf file
         rootgrp = Dataset(self.hgrid_file, 'r')
-        for j in range(ys, ye):
-            for i in range(xs, xe):
-                v[i, j, self._k_dx] = rootgrp.variables['e1'][j,i]
-                v[i, j, self._k_dy] = rootgrp.variables['e2'][j,i]
-                v[i, j, self._k_lon] = rootgrp.variables['lon'][j,i]
-                v[i, j, self._k_lat] = rootgrp.variables['lat'][j,i]
+        var_list = rootgrp.variables.keys()
+
+        # Check if e1 variable exists
+        if 'e1' not in var_list:
+            # roms input
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    v[i, j, self._k_lon] = rootgrp.variables['x'][j,i]
+                    v[i, j, self._k_lat] = rootgrp.variables['y'][j,i]
+            v[xs:xe-1, ys:ye  , self._k_dx] = np.diff(v[xs:xe, ys:ye, self._k_lon],axis=0)
+            v[xe-1, ys:ye  , self._k_dx] = v[xe-2, ys:ye  , self._k_dx]
+            v[xs:xe  , ys:ye-1, self._k_dy] = np.diff(v[xs:xe, ys:ye, self._k_lat],axis=1)
+            v[xs:xe, ye-1  , self._k_dy] = v[xs:xe, ye-2  , self._k_dy]
+
+        else:
+            # curvilinear metric
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    v[i, j, self._k_dx] = rootgrp.variables['e1'][j,i]
+                    v[i, j, self._k_dy] = rootgrp.variables['e2'][j,i]
+                    v[i, j, self._k_lon] = rootgrp.variables['lon'][j,i]
+                    v[i, j, self._k_lat] = rootgrp.variables['lat'][j,i]
         rootgrp.close()
         #
         comm.barrier()

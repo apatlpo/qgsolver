@@ -1,6 +1,8 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
+import sys
+
 from .grid import *
 from .solver import *
 
@@ -31,8 +33,8 @@ class qg_model():
 
         #
         # Build grid object
-        #        
-        self.grid = grid(hgrid, vgrid) 
+        #
+        self.grid = grid(hgrid, vgrid)
 
         #
         # init petsc
@@ -55,7 +57,7 @@ class qg_model():
             print 'The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
                     +str(self.da.proc_sizes) 
             #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
-        
+
         # for lon/lat grids should load metric terms over tiles
         if not self.grid._flag_hgrid_uniform:
             self.grid.load_metric_terms(self.da, self.comm)
@@ -71,6 +73,7 @@ class qg_model():
             print 'A QG model object is being created'
             # print out grid parameters
             print self.grid
+        sys.exit()
 
         #
         # vertical stratification and Coriolis
