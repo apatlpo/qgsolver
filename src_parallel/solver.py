@@ -40,10 +40,10 @@ class pvinversion():
             print 'Operator L filled'
 
         # global vector for PV inversion
-        self._Qinv = qg.da.createGlobalVec()
+        self._RHSinv = qg.da.createGlobalVec()
 
         # local vectors
-        #self._localQ  = qg.da.createLocalVec()
+        #self._localRHS  = qg.da.createLocalVec()
         #self._localPSI  = qg.da.createLocalVec()
 
         # create solver
@@ -65,42 +65,60 @@ class pvinversion():
         self.ksp.setFromOptions()
          
 
-    def solve(self, Q, PSI, da):
+    def solve(self, RHS, PSI, da, qg):
         """ Compute the PV inversion
         """
-        # copy Q into Qinv
-        Q.copy(self._Qinv) 
+        # copy RHS into RHSinv
+        RHS.copy(self._RHSinv)
         # fix boundaries
-        self.set_qinv_bdy(da)
+        self.set_qinv_bdy(da, qg)
         # actually solves the pb
-        self.ksp.solve(self._Qinv, PSI)
+        self.ksp.solve(self._RHSinv, PSI)
         # tmp, test:
-        #self.L.mult(PSI, Q)
+        #self.L.mult(PSI, RHS)
         if self._verbose>1:
             print 'Inversion done'
 
 
-    def set_qinv_bdy(self, da):
+    def set_qinv_bdy(self, da, qg):
         """ Set bdy in order to implement boundary conditions
         Set q to 0 along boundaries for inversion, may be an issue
         for time stepping
         """ 
-        # 
-        q = da.getVecArray(self._Qinv)
-        mx, my, mz = da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()        
-        # bottom bdy
-        if (zs==0):
-            k=0
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.
-        # upper bdy
-        if (ze==mz):
-            k=mz-1
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 0.
+        #
+        if qg.case == "roms":
+            q = da.getVecArray(self._RHSinv)
+            rho = da.getVecArray(qg.RHO)
+            mx, my, mz = da.getSizes()
+            (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+            # bottom bdy
+            if (zs==0):
+                k=0
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        q[i, j, k] = - self.g*rho[i, j, k]/(self.rho0*self.f0)
+            # upper bdy
+            if (ze==mz):
+                k=mz-1
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        q[i, j, k] = - self.g*rho[i, j, k]/(self.rho0*self.f0)
+        else:
+            q = da.getVecArray(self._RHSinv)
+            mx, my, mz = da.getSizes()
+            (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+            # bottom bdy
+            if (zs==0):
+                k=0
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        q[i, j, k] = 0.
+            # upper bdy
+            if (ze==mz):
+                k=mz-1
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        q[i, j, k] = 0.
 
 
 #
@@ -132,9 +150,9 @@ class time_stepper():
         self._b = [0.5, 0.5, 1.]
 
         ### additional global vectors
-        self._Q0 = qg.da.createGlobalVec()
-        self._Q1 = qg.da.createGlobalVec()
-        self._dQ = qg.da.createGlobalVec()
+        self._RHS0 = qg.da.createGlobalVec()
+        self._RHS1 = qg.da.createGlobalVec()
+        self._dRHS = qg.da.createGlobalVec()
 
 
     def go(self, qg, nt):
@@ -147,18 +165,18 @@ class time_stepper():
             self.t += self.dt
             _tstep += 1
             #
-            qg.Q.copy(self._Q0) # copies Q into Q0
-            qg.Q.copy(self._Q1) # copies Q into Q1
+            qg.RHS.copy(self._RHS0) # copies RHS into RHS0
+            qg.RHS.copy(self._RHS1) # copies RHS into RHS1
             for rk in range(4):
                 if qg.grid._flag_hgrid_uniform:
                     self._computeRHS(qg)
                 else:
                     self._computeRHS_curv(qg)
-                if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dQ, self._Q0)
-                self._Q1.axpy(self._a[rk]*self.dt, self._dQ)
-            self._Q1.copy(qg.Q) # copies Q1 into Q
+                if rk < 3: qg.RHS.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
+                self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
+            self._RHS1.copy(qg.RHS) # copies RHS1 into RHS
             # reset q at boundaries
-            qg.set_q_bdy()
+            qg.set_rhs_bdy()
             if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
 #         if self._verbose>0:
@@ -177,19 +195,19 @@ class time_stepper():
         qg.invert_pv()
         
         ### declare local vectors
-        local_Q  = qg.da.createLocalVec()
-        #local_dQ  = qg.da.createLocalVec()
+        local_RHS  = qg.da.createLocalVec()
+        #local_dRHS  = qg.da.createLocalVec()
         local_PSI  = qg.da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.Q, local_Q)
+        qg.da.globalToLocal(qg.RHS, local_RHS)
         qg.da.globalToLocal(qg.PSI, local_PSI)
-        #qg.da.globalToLocal(self._dQ, local_dQ)
+        #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
-        q = qg.da.getVecArray(local_Q)
+        q = qg.da.getVecArray(local_RHS)
         psi = qg.da.getVecArray(local_PSI)
-        dq = qg.da.getVecArray(self._dQ)
-        #dq = qg.da.getVecArray(local_dQ)
+        dq = qg.da.getVecArray(self._dRHS)
+        #dq = qg.da.getVecArray(local_dRHS)
         #
         mx, my, mz = qg.da.getSizes()
         dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
@@ -251,19 +269,19 @@ class time_stepper():
         qg.invert_pv()
         
         ### declare local vectors
-        local_Q  = qg.da.createLocalVec()
-        #local_dQ  = qg.da.createLocalVec()
+        local_RHS  = qg.da.createLocalVec()
+        #local_dRHS  = qg.da.createLocalVec()
         local_PSI  = qg.da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.Q, local_Q)
+        qg.da.globalToLocal(qg.RHS, local_RHS)
         qg.da.globalToLocal(qg.PSI, local_PSI)
-        #qg.da.globalToLocal(self._dQ, local_dQ)
+        #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
-        q = qg.da.getVecArray(local_Q)
+        q = qg.da.getVecArray(local_RHS)
         psi = qg.da.getVecArray(local_PSI)
-        dq = qg.da.getVecArray(self._dQ)
-        #dq = qg.da.getVecArray(local_dQ)
+        dq = qg.da.getVecArray(self._dRHS)
+        #dq = qg.da.getVecArray(local_dRHS)
         #
         mx, my, mz = qg.da.getSizes()
         #

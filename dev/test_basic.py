@@ -16,6 +16,7 @@ def uniform_grid_runs():
     '''
     qg = qg_model(hgrid = {'Nx':150, 'Ny':100}, vgrid = {'Nz':3 },
             K = 0.e0, dt = 0.5*86400.e0)
+    qg.case='uniform'
     #
     qg.set_q()
     qg.invert_pv()
@@ -48,6 +49,7 @@ def curvilinear_runs():
     qg = qg_model(hgrid = 'curv_metrics.nc', vgrid = 'curv_metrics.nc',
                   f0N2_file = 'curv_pv.nc',
                   K = 1.e3, dt = 0.5*86400.e0)
+    qg.case='curv'
     #
     qg.set_q(file_q='curv_pv.nc')
     qg.invert_pv()
@@ -74,8 +76,11 @@ def roms_input_runs():
              'Nx':512, 'Ny':1440, 'Nz':100}
     vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
     qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0)
-    #
+    qg.case='roms'
+
     qg.set_q(file_q = vgrid)
+    qg.set_psi(file_psi = vgrid)
+    qg.set_rho(file_rho = vgrid)
     qg.invert_pv()
     write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output.nc', qg)
 

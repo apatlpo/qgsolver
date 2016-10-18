@@ -175,7 +175,7 @@ nc_f0 = rootgrp.createVariable('f0',dtype)
 #nc_rho0 = rootgrp.createVariable('rho0',dtype)
 #nc_it = rootgrp.createVariable('it',dtype)
 # pv inv variables
-nc_pv = rootgrp.createVariable('pv',dtype,('zc','y','x',))
+nc_pv = rootgrp.createVariable('q',dtype,('zc','y','x',))
 nc_rho = rootgrp.createVariable('rho',dtype,('zc','y','x',))
 nc_N2 = rootgrp.createVariable('N2',dtype,('zf',))
 nc_f = rootgrp.createVariable('f',dtype,('y','x',))
@@ -199,7 +199,7 @@ nc_f0[:]=d.hgrid.f0
 # useful parameters
 g=9.81
 
-# start computation of pv and N2
+# start computation of q and N2
 for k in np.arange(d.N):
 
     # compute relative vorticity
@@ -229,9 +229,9 @@ for k in np.arange(d.N):
              ) /(zw0[k+1]-zw0[k]) ;
     #S = S * d.hgrid.f
     S = S * d.hgrid.f0
-    # assemble pv
+    # assemble q
     pv=xi+S
-    # store pv 
+    # store q
     nc_pv[k,:,:]=pv[:,:-2]
     # store N2
     if k>0:
