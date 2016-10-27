@@ -1,4 +1,4 @@
-#
+                                                                                                                                                    #
 # Compute quasigeostrophic PV and store it for latter inversion
 # and time stepping
 # ROMS variable are interpolated on a flat grid.
@@ -35,7 +35,10 @@ prtfig=True
 
 # main path to data
 rpath="/home2/pharos/othr/aponte/roms_ird/"
-dirname=rpath+"curie1/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j"
+# rpath="/home/mulroy/slgentil/models/roms/Roms_Agrif/"
+# dirname=rpath+"curie1/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j"
+dirname=rpath+"caparmor/jet_cfg1_wp5_4km_k3.2e8_0a1500j"
+# dirname=rpath+"test_8km"
 
 # prefix use for figure outputs
 pref=dirname.replace(rpath,"")
@@ -102,7 +105,7 @@ v=d.his.variables['v'+suff][it,...]
 #u=tvs_to_s(u,ssh,d,ztarget=zr0)
 #v=tvs_to_s(v,ssh,d,ztarget=zr0)
 #
-rho=tvs_to_s_fast(rho,ssh,d)
+# rho=tvs_to_s_fast(rho,ssh,d)
 u=tvs_to_s_fast(u,ssh,d)
 v=tvs_to_s_fast(v,ssh,d)
 
@@ -199,60 +202,146 @@ nc_f0[:]=d.hgrid.f0
 # useful parameters
 g=9.81
 
+# add a good estimate of the streamfunction from pressure
+p=get_p(rho, zr, zw, d)
+p=tvs_to_s(p,ssh,d,ztarget=zr0)
+rho=tvs_to_s_fast(rho,ssh,d)
+
+# print d.hgrid.f0,g,d.rho0
+nc_psi[:]=p[:,:,:-2]/d.hgrid.f0/d.rho0
+
+### fill's in density
+# plt.figure()
+# plt.pcolormesh(rho[-1,:,:])
+# # plt.pcolormesh(ssh*g)
+#
+# plt.colorbar()
+# plt.show()
+
+nc_rho[:] = rho[:,:,:-2]
+# rho bottom and top from psi
+# nc_rho[0,:,:] =  -d.hgrid.f0*d.rho0* (nc_psi[1,:,:]-nc_psi[0,:,:])/(nc_zc[1]-nc_zc[0])/g
+# nc_rho[-1,:,:] =  -d.hgrid.f0*d.rho0* (nc_psi[-1,:,:]-nc_psi[-2,:,:])/(nc_zc[-1]-nc_zc[-2])/g
+
+# plt.figure()
+# plt.pcolormesh(nc_rho[-1,:,:]-rho[-1,:,:-2])
+# plt.colorbar()
+# plt.show()
+
+
+
+
+
+
+for k in np.arange(d.N):
+    # store N2
+    if k > 0:
+        nc_N2[k] = -g * (rho_a[k] - rho_a[k - 1]) / (zr0[k] - zr0[k - 1]) / d.rho0
+
+# extrapolate N2 top and bottom values
+nc_N2[0] = nc_N2[1]
+nc_N2[-1] = nc_N2[-2]
+
 # start computation of q and N2
+flag_stretching = False
 for k in np.arange(d.N):
 
-    # compute relative vorticity
-    lu=u[k,:,:]
-    lv=v[k,:,:]
-    xi=psi2rho(vorticity(lu,lv,d.hgrid))
-    # compute vortex stretching
-    if ( k==0 ):
-        # use bottom density
-        S = ( (rho[k+1,...]+rho[k,...])*0.5
-                *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-             - rho[k,...]
-                *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-             ) /(zw0[k+1]-zw0[k]) ;
-    elif ( k==d.N-1 ):
-        # use top density
-        S = ( rho[k,...]
-                *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-             -(rho[k,...]+rho[k-1,...])*0.5
-                *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-             ) /(zw0[k+1]-zw0[k]) ;
+    if flag_stretching :
+        # compute relative vorticity
+        lu = u[k, :, :]
+        lv = v[k, :, :]
+        xi = psi2rho(vorticity(lu, lv, d.hgrid))
+        # compute vortex stretching
+        if ( k==0 ):
+            # use bottom density
+            S = ( (rho[k+1,...]+rho[k,...])*0.5
+                    *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
+                 - rho[k,...]
+                    *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
+                 ) /(zw0[k+1]-zw0[k])
+        elif ( k==d.N-1 ):
+            # use top density
+            S = ( rho[k,...]
+                    *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
+                 -(rho[k,...]+rho[k-1,...])*0.5
+                    *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
+                 ) /(zw0[k+1]-zw0[k])
+        else:
+            S = ( (rho[k+1,...]+rho[k,...])*0.5
+                    *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
+                 -(rho[k,...]+rho[k-1,...])*0.5
+                    *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
+                 ) /(zw0[k+1]-zw0[k])
+        #S = S * d.hgrid.f
+        S = S * d.hgrid.f0
+
+        # assemble q
+        pv=xi+S
+        # store q
+        nc_pv[k,:,:]=pv[:,:-2]
     else:
-        S = ( (rho[k+1,...]+rho[k,...])*0.5
-                *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-             -(rho[k,...]+rho[k-1,...])*0.5
-                *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-             ) /(zw0[k+1]-zw0[k]) ;
-    #S = S * d.hgrid.f
-    S = S * d.hgrid.f0
-    # assemble q
-    pv=xi+S
-    # store q
-    nc_pv[k,:,:]=pv[:,:-2]
-    # store N2
-    if k>0:
-        nc_N2[k] = -g*(rho_a[k]-rho_a[k-1])/(zr0[k]-zr0[k-1])
+        """
+        Compute the relative vorticity. Works for 2D and 3D arrays
+        """
+        # dx = 0.5 * (d.hgrid.dx[1:,:] + d.hgrid.dx[:-1,:])  # dx at V point
+        # dx = 0.5 * (dx[:,1:] + dx[:,:-1])          # dx at PSI point
+        #
+        # dy = 0.5 * (d.hgrid.dy[:,1:] + d.hgrid.dy[:,:-1])  # dy at U point
+        # dy = 0.5 * (dy[1:,:] + dy[:-1,:])          # dy at PSI point
+
+        dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
+        dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
+
+        psi = p[k,:,:]/d.hgrid.f0/d.rho0
+
+        psixx = np.zeros(dx2.shape)
+        psixx[:,1:-1] = np.diff(psi[:,:], n=2, axis=1)
+        psixx[:,0] = psixx[:,-2]
+        psixx[:,-1]= psixx[:,1]
+        psixx = np.divide(psixx,dx2)
+
+        psiyy = np.zeros(dy2.shape)
+        psiyy[1:-1,:] = np.diff(psi[:,:], n=2, axis=0)
+        psiyy[0,:] = psiyy[1,:]
+        psiyy[-1,:] = psiyy[-2,:]
+        psiyy = np.divide(psiyy,dy2)
+
+        xi = psixx + psiyy
+
+        # lappsi = np.zeros(dx.shape)
+        # for i in range(1,d.L):
+        #     lappsi[:,i] = (psi[:-1,i+1]-2.*psi[:-1,i]+psi[:-1,i-1])/(dx[:,i]**2)
+        # for j in range(1,d.M):
+        #     lappsi[j,:] = lappsi[j,:] + (psi[j+1,-1]-2.*psi[j,-1]+psi[j-1,:-1])/(dy[j,:]**2)
+        # xi =  psi2rho(lappsi)
+
+
+        if (k == 0):
+            # bottom bdy condition not used in the solver
+            S = nc_psi[0]
+        elif (k == d.N - 1):
+            # top bdy condition not used in the solver
+            S = nc_psi[d.N - 1]
+        else:
+            # interior pv
+            S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) -
+                   (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zr0[k ]-zr0[k-1])
+                 )/(zw0[k+1]-zw0[k])
+
+         # assemble q
+
+        pv=xi[:,:-2]+S
+        # store q
+        nc_pv[k,:,:]=pv[:,:]
+
+
     # sync data to netcdf file
     rootgrp.sync()
     print k, "depth level done"
 
 
-# extrapolate N2 top and bottom values
-nc_N2[0]=nc_N2[1]
-nc_N2[-1]=nc_N2[-2]
 
-### fill's in density
-nc_rho[:] = rho[:,:,:-2]
 
-# add a good estimate of the streamfunction from pressure
-p=get_p(rho, zr, zw, d)
-p=tvs_to_s(p,ssh,d,ztarget=zr0)
-nc_psi[:]=p[:,:,:-2]/d.hgrid.f0/d.rho0
-#nc_psi[:]=p[:,:,:-2]/d.hgrid.f/d.rho0
 
 # close the netcdf file
 rootgrp.close()
