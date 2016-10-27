@@ -77,7 +77,8 @@ def write_nc(V, vname, filename, qg, create=True):
 
 
 def read_nc_petsc(V, vname, filename, qg):    
-    """ Read a variable from a netcdf file and stores it in a petsc Vector
+    """
+    Read a variable from a netcdf file and stores it in a petsc Vector
     Parameters:
         V one(!) petsc vector
         vname corresponding name in netcdf file
@@ -89,19 +90,18 @@ def read_nc_petsc(V, vname, filename, qg):
     rootgrp = Dataset(filename, 'r')
     ndim=len(rootgrp.variables[vname].shape)
     if ndim>3:
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
-                    # line above does not work for early versions of netcdf4 python library
-                    # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
-                    # https://github.com/Unidata/netcdf4-python/issues/306
-                    v[i, j, k] = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,k,j,i]
+        #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
+        # line above does not work for early versions of netcdf4 python library
+        # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
+        # https://github.com/Unidata/netcdf4-python/issues/306
+        vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,zs:ze,ys:ye,xs:xe]
     else:
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    v[i, j, k] = rootgrp.variables[vname][k,j,i]
+        vread = rootgrp.variables[vname][zs:ze,ys:ye,xs:xe]
+    for k in range(zs, ze):
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                v[i, j, k] = vread[k-zs,j-ys,i-xs]
+
     rootgrp.close()
     qg.comm.barrier()
     #if qg.rank ==0: print 'Variable '+vname+' read from '+filename

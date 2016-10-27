@@ -8,6 +8,7 @@ import sys
 
 #from .grid import *
 from .set_L import *
+from .io import write_nc
 
 #
 #==================== Serial solver ============================================
@@ -30,10 +31,10 @@ class pvinversion():
             print 'Operator L declared'
 
         # Fill in operator values
-        if qg.grid._flag_hgrid_uniform:
-            set_L(self.L, qg)
-        else:
-            set_L_curv(self.L, qg)
+        # if qg.grid._flag_hgrid_uniform:
+        #     set_L(self.L, qg)
+        # else:
+        set_L_curv(self.L, qg)
             
         #
         if self._verbose>0:
@@ -58,67 +59,101 @@ class pvinversion():
         #self.ksp.getPC().setType('icc')
         # set tolerances
         #self.ksp.setTolerances(rtol=1e-10) # nope
+        # self.ksp.setTolerances(max_it=1000)
         #
+        #
+        for opt in sys.argv[1:]:
+	        PETSc.Options().setValue(opt, None)
+        self.ksp.setFromOptions()
         #PETSc.Options().setValue('-ksp_view', None)
         #PETSc.Options().setValue('-ksp_monitor', None)
         #PETSc.Options().setValue('-ksp_converged_reason', None)        
-        self.ksp.setFromOptions()
+        # self.ksp.setFromOptions()
          
 
-    def solve(self, RHS, PSI, da, qg):
+    def solve(self, qg):
         """ Compute the PV inversion
         """
         # copy RHS into RHSinv
-        RHS.copy(self._RHSinv)
+        qg.RHS.copy(self._RHSinv)
         # fix boundaries
-        self.set_qinv_bdy(da, qg)
+        self.set_rhsinv_bdy(qg)
         # actually solves the pb
-        self.ksp.solve(self._RHSinv, PSI)
+        self.ksp.solve(self._RHSinv, qg.PSI)
         # tmp, test:
         #self.L.mult(PSI, RHS)
         if self._verbose>1:
             print 'Inversion done'
 
-
-    def set_qinv_bdy(self, da, qg):
-        """ Set bdy in order to implement boundary conditions
-        Set q to 0 along boundaries for inversion, may be an issue
+    def set_rhsinv_bdy(self, qg):
+        """
+        Set South/North, East/West, Bottom/Top boundary conditions
+        Set RHS along boundaries for inversion, may be an issue
         for time stepping
-        """ 
-        #
+        :param da: abstract distributed memory object of the domain
+        :param qg: qg_model instance
+        :return:
+        """
+
+        rhsinv = qg.da.getVecArray(self._RHSinv)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
         if qg.case == "roms":
-            q = da.getVecArray(self._RHSinv)
-            rho = da.getVecArray(qg.RHO)
-            mx, my, mz = da.getSizes()
-            (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+
+            psi = qg.da.getVecArray(qg.PSI)
+            rho = qg.da.getVecArray(qg.RHO)
+
+            # south bdy
+            if ys == 0:
+                j = 0
+                for k in range(zs, ze):
+                    for i in range(xs, xe):
+                        rhsinv[i, j, k] = psi[i, j, k]
+            # north bdy
+            if ye == my:
+                j = my - 1
+                for k in range(zs, ze):
+                    for i in range(xs, xe):
+                        rhsinv[i, j, k] = psi[i, j, k]
+            # west bdy
+            if xs == 0:
+                i = 0
+                for k in range(zs, ze):
+                    for j in range(ys, ye):
+                        rhsinv[i, j, k] = psi[i, j, k]
+            # east bdy
+            if xe == mx:
+                i = mx - 1
+                for k in range(zs, ze):
+                    for j in range(ys, ye):
+                        rhsinv[i, j, k] = psi[i, j, k]
             # bottom bdy
-            if (zs==0):
-                k=0
+            if zs == 0:
+                k = 0
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = - self.g*rho[i, j, k]/(self.rho0*self.f0)
+                        rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
             # upper bdy
-            if (ze==mz):
-                k=mz-1
+            if ze == mz:
+                k = mz-1
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = - self.g*rho[i, j, k]/(self.rho0*self.f0)
+                        rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
         else:
-            q = da.getVecArray(self._RHSinv)
-            mx, my, mz = da.getSizes()
-            (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+
             # bottom bdy
-            if (zs==0):
-                k=0
+            if zs == 0:
+                k = 0
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = 0.
+                        rhsinv[i, j, k] = 0.
             # upper bdy
-            if (ze==mz):
-                k=mz-1
+            if ze == mz :
+                k = mz-1
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        q[i, j, k] = 0.
+                        rhsinv[i, j, k] = 0.
 
 
 #
@@ -176,7 +211,7 @@ class time_stepper():
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
             self._RHS1.copy(qg.RHS) # copies RHS1 into RHS
             # reset q at boundaries
-            qg.set_rhs_bdy()
+            self.set_rhs_bdy(qg)
             if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
 #         if self._verbose>0:
@@ -198,7 +233,7 @@ class time_stepper():
         local_RHS  = qg.da.createLocalVec()
         #local_dRHS  = qg.da.createLocalVec()
         local_PSI  = qg.da.createLocalVec()
-        
+
         ###
         qg.da.globalToLocal(qg.RHS, local_RHS)
         qg.da.globalToLocal(qg.PSI, local_PSI)
@@ -354,4 +389,37 @@ class time_stepper():
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdy]/D[i,j,kdy]
 
 
+    def set_rhs_bdy(self, qg):
+        """ Reset rhs at boundaries such that drhs/dn=0 """
+        #
+        rhs = qg.da.getVecArray(qg.RHS)
 
+        #
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        # south bdy
+        if (ys == 0):
+            j = 0
+            for k in range(zs, ze):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = rhs[i, j + 1, k]
+        # north bdy
+        if (ye == my):
+            j = my - 1
+            for k in range(zs, ze):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = rhs[i, j - 1, k]
+        # west bdy
+        if (xs == 0):
+            i = 0
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    rhs[i, j, k] = rhs[i + 1, j, k]
+        # east bdy
+        if (xe == mx):
+            i = mx - 1
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    rhs[i, j, k] = rhs[i - 1, j, k]
+        return

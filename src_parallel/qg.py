@@ -36,7 +36,7 @@ class qg_model():
         #
         # Build grid object
         #
-        self.grid = grid(hgrid, vgrid)
+        self.grid = grid(hgrid, vgrid, verbose=verbose)
 
         #
         # init petsc
@@ -126,11 +126,9 @@ class qg_model():
     
         
     def set_psi(self, analytical_psi=True, file_psi=None):
-        """ Set psi to a given value
         """
-        if self._verbose:
-            print 'Set psi to ... ?'
-
+        Set psi to a given value
+        """
         if file_psi is not None:
             if self._verbose:
                 print 'Set psi from file '+file_psi+' ...'
@@ -187,40 +185,7 @@ class qg_model():
                                               + (j/float(my-1)-0.5)**2)/0.1**2)
                     q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
                     q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
-            
 
-    # def set_q_bdy(self):
-    #     """ Reset q at boundaries such that dq/dn=0 """
-    #     #
-    #     q = self.da.getVecArray(self.RHS)
-    #     #
-    #     mx, my, mz = self.da.getSizes()
-    #     (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-    #     #
-    #     # south bdy
-    #     if (ys==0):
-    #         j=0
-    #         for k in range(zs, ze):
-    #             for i in range(xs, xe):
-    #                 q[i, j, k] = q[i,j+1,k]
-    #     # north bdy
-    #     if (ye==my):
-    #         j=my-1
-    #         for k in range(zs, ze):
-    #             for i in range(xs, xe):
-    #                 q[i, j, k] = q[i,j-1,k]
-    #     # west bdy
-    #     if (xs==0):
-    #         i=0
-    #         for k in range(zs, ze):
-    #             for j in range(ys, ye):
-    #                 q[i, j, k] = q[i+1,j,k]
-    #     # east bdy
-    #     if (xe==mx):
-    #         i=mx-1
-    #         for k in range(zs, ze):
-    #             for j in range(ys, ye):
-    #                 q[i, j, k] = q[i-1,j,k]                
 
     def set_rho(self, analytical_rho=True, file_rho=None):
         """ Set rho to a given value
@@ -253,7 +218,7 @@ class qg_model():
     def invert_pv(self):
         """ wrapper around solver solve method
         """
-        self.pvinv.solve(self.RHS,self.PSI,self.da)
+        self.pvinv.solve(self)
 
 
     def tstep(self, nt=1):

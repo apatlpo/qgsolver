@@ -20,8 +20,9 @@ class grid(object):
     #
     # object init
     #
-    def __init__(self, hgrid = None, vgrid = None):
-        
+    def __init__(self, hgrid = None, vgrid = None, verbose=1):
+
+        self.verbose = verbose
         #
         # horizontal global grids
         #
@@ -146,6 +147,8 @@ class grid(object):
         self.dzf = np.diff(self.zf)
         #
         self.Nz = len(self.zc)
+        # if self.verbose>0 : print self.dzc
+
 
 
 #
