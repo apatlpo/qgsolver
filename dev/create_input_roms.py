@@ -24,6 +24,7 @@ from netCDF4 import Dataset
 # solves the sparse linear pb
 import scipy.sparse as sp
 from scipy.sparse.linalg import spsolve
+from util import outnc
 
 
 #change default fontsize
@@ -109,12 +110,17 @@ v=d.his.variables['v'+suff][it,...]
 u=tvs_to_s_fast(u,ssh,d)
 v=tvs_to_s_fast(v,ssh,d)
 
+# add a good estimate of the streamfunction from pressure
+p=get_p(rho, zr, zw, d)
+p=tvs_to_s(p,ssh,d,ztarget=zr0)
+rho=tvs_to_s_fast(rho,ssh,d)
 
 # compute density reference profile and take it away from the 3D density
 # average horizontally
 rho_a = rho.mean(axis=2).mean(axis=1)
 rho += -rho_a.reshape((d.N,1,1))
-
+p_a = p.mean(axis=2).mean(axis=1)
+p += -p_a.reshape((d.N,1,1))
 
 # plot the background stratification profile
 plt.figure(2)
@@ -202,10 +208,10 @@ nc_f0[:]=d.hgrid.f0
 # useful parameters
 g=9.81
 
-# add a good estimate of the streamfunction from pressure
-p=get_p(rho, zr, zw, d)
-p=tvs_to_s(p,ssh,d,ztarget=zr0)
-rho=tvs_to_s_fast(rho,ssh,d)
+# # add a good estimate of the streamfunction from pressure
+# p=get_p(rho, zr, zw, d)
+# p=tvs_to_s(p,ssh,d,ztarget=zr0)
+# rho=tvs_to_s_fast(rho,ssh,d)
 
 # print d.hgrid.f0,g,d.rho0
 nc_psi[:]=p[:,:,:-2]/d.hgrid.f0/d.rho0
@@ -280,15 +286,7 @@ for k in np.arange(d.N):
         # store q
         nc_pv[k,:,:]=pv[:,:-2]
     else:
-        """
-        Compute the relative vorticity. Works for 2D and 3D arrays
-        """
-        # dx = 0.5 * (d.hgrid.dx[1:,:] + d.hgrid.dx[:-1,:])  # dx at V point
-        # dx = 0.5 * (dx[:,1:] + dx[:,:-1])          # dx at PSI point
-        #
-        # dy = 0.5 * (d.hgrid.dy[:,1:] + d.hgrid.dy[:,:-1])  # dy at U point
-        # dy = 0.5 * (dy[1:,:] + dy[:-1,:])          # dy at PSI point
-
+        # compute relative vorticity
         dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
         dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
 
@@ -318,10 +316,10 @@ for k in np.arange(d.N):
 
         if (k == 0):
             # bottom bdy condition not used in the solver
-            S = nc_psi[0]
+            S = 0.
         elif (k == d.N - 1):
             # top bdy condition not used in the solver
-            S = nc_psi[d.N - 1]
+            S = 0.
         else:
             # interior pv
             S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) -
@@ -339,7 +337,15 @@ for k in np.arange(d.N):
     rootgrp.sync()
     print k, "depth level done"
 
+# vortex stretching from rho
+# upper bdy
 
+bdyrho = - g * nc_rho[ d.N-1,:, :] / (d.rho0 * d.hgrid.f0)
+outnc("bdyrho",bdyrho)
+bdypsi = (nc_psi[d.N-1,:,:]-nc_psi[d.N-2,:,:])/(nc_zc[-1]-nc_zc[-2])
+outnc("bdypsi",bdypsi)
+rhopsi=-bdypsi*(d.rho0 * d.hgrid.f0)/g
+# nc_rho[-1,:,:]=rhopsi
 
 
 

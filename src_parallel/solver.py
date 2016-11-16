@@ -3,12 +3,11 @@
 
 
 import sys
-#import petsc4py
-#from petsc4py import PETSc
 
-#from .grid import *
+from dev.util import outnc
 from .set_L import *
 from .io import write_nc
+
 
 #
 #==================== Serial solver ============================================
@@ -74,10 +73,13 @@ class pvinversion():
     def solve(self, qg):
         """ Compute the PV inversion
         """
+        qg.pvinv.L.mult(qg.PSI,self._RHSinv)
+        write_nc([self._RHSinv], ['Lpsi'], 'data/lpsi.nc', qg)
         # copy RHS into RHSinv
         qg.RHS.copy(self._RHSinv)
         # fix boundaries
         self.set_rhsinv_bdy(qg)
+        write_nc([self._RHSinv], ['rhsinv'], 'data/rhsinv.nc', qg)
         # actually solves the pb
         self.ksp.solve(self._RHSinv, qg.PSI)
         # tmp, test:
@@ -128,18 +130,35 @@ class pvinversion():
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         rhsinv[i, j, k] = psi[i, j, k]
+            # vortex stretching from rho
             # bottom bdy
-            if zs == 0:
-                k = 0
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            # if zs == 0:
+            #     k = 0
+            #     for j in range(ys, ye):
+            #         for i in range(xs, xe):
+            #             rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+
             # upper bdy
             if ze == mz:
                 k = mz-1
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+
+             # vortrex stretching from psi
+             # bottom bdy
+            if zs == 0:
+                k = 0
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhsinv[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzc[k]
+            # # upper bdy
+            # if ze == mz:
+            #     k = mz-1
+            #     for j in range(ys, ye):
+            #         for i in range(xs, xe):
+            #             rhsinv[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzc[k-1]
+
         else:
 
             # bottom bdy
