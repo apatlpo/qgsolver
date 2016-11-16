@@ -8,12 +8,14 @@
 
 #
 import sys;
+sys.path.append('/home/slyne/aponte/roms_ird/Jet_fermi/python/')
 from lpolib.lporun import LPORun
 #from lpolib.vmodes import VModes
 from lpolib.utils import *
 #from IPython import embed
 import numpy as np
 import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 # for interpolation
 #from scipy import interpolate
@@ -26,6 +28,8 @@ import scipy.sparse as sp
 from scipy.sparse.linalg import spsolve
 from util import outnc
 
+# useful parameters
+g=9.81
 
 #change default fontsize
 mpl.rcParams['font.size']=10
@@ -107,20 +111,44 @@ v=d.his.variables['v'+suff][it,...]
 #v=tvs_to_s(v,ssh,d,ztarget=zr0)
 #
 # rho=tvs_to_s_fast(rho,ssh,d)
-u=tvs_to_s_fast(u,ssh,d)
-v=tvs_to_s_fast(v,ssh,d)
+#u=tvs_to_s_fast(u,ssh,d)
+#v=tvs_to_s_fast(v,ssh,d)
+u=tvs_to_s(u,ssh,d)
+v=tvs_to_s(v,ssh,d)
 
 # add a good estimate of the streamfunction from pressure
-p=get_p(rho, zr, zw, d)
-p=tvs_to_s(p,ssh,d,ztarget=zr0)
-rho=tvs_to_s_fast(rho,ssh,d)
+#p=get_p(rho, zr, zw, d)
+#p=tvs_to_s(p,ssh,d)
+
+#
+#rho=tvs_to_s_fast(rho,ssh,d)
+rho=tvs_to_s(rho,ssh,d)
+
+# debug: reconstruct p from rho
+#rho = np.zeros_like(p)
+#dpdz = (p[1:,...]-p[:-1,...])/(zr0[1:,None,None]-zr0[:-1,None,None])
+#rho[-1,...] = dpdz[-1,...]/g
+#rho[0,...] = dpdz[0,...]/g
+#rho[1:-1] = -0.5* ( dpdz[1:,...] - dpdz[:-1,...] )/g
 
 # compute density reference profile and take it away from the 3D density
 # average horizontally
 rho_a = rho.mean(axis=2).mean(axis=1)
 rho += -rho_a.reshape((d.N,1,1))
-p_a = p.mean(axis=2).mean(axis=1)
-p += -p_a.reshape((d.N,1,1))
+
+#
+#p=get_p(rho, zr, zw, d)
+#p=tvs_to_s(p,ssh,d,ztarget=zr0)
+
+#
+#p_a = p.mean(axis=2).mean(axis=1)
+#p += -p_a.reshape((d.N,1,1))
+
+# compute p from rho manually (does not agree with ROMS)
+p = np.zeros_like(rho)
+p[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho[-1,...])*ssh[None,:,:]
+for k in range(d.N-2,-1,-1):
+    p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zr0[k+1,None,None]-zr0[k,None,None])
 
 # plot the background stratification profile
 plt.figure(2)
@@ -192,7 +220,6 @@ nc_f = rootgrp.createVariable('f',dtype,('y','x',))
 # streamfunction, i.e. the solution presumably
 nc_psi = rootgrp.createVariable('psi',dtype,('zc','y','x',))
 
-
 # fills in coordinate variables, keep truely periodic data
 nc_zc[:]=zr0[:]
 nc_zf[:]=zw0[:]
@@ -203,15 +230,6 @@ nc_f[:]=d.hgrid.f[:,:-2]
 nc_f0[:]=d.hgrid.f0
 #nc_rho0[:]=d.rho0
 #nc_it[:]=it
-
-
-# useful parameters
-g=9.81
-
-# # add a good estimate of the streamfunction from pressure
-# p=get_p(rho, zr, zw, d)
-# p=tvs_to_s(p,ssh,d,ztarget=zr0)
-# rho=tvs_to_s_fast(rho,ssh,d)
 
 # print d.hgrid.f0,g,d.rho0
 nc_psi[:]=p[:,:,:-2]/d.hgrid.f0/d.rho0
