@@ -324,13 +324,6 @@ for k in np.arange(d.N):
 
         xi = psixx + psiyy
 
-        # lappsi = np.zeros(dx.shape)
-        # for i in range(1,d.L):
-        #     lappsi[:,i] = (psi[:-1,i+1]-2.*psi[:-1,i]+psi[:-1,i-1])/(dx[:,i]**2)
-        # for j in range(1,d.M):
-        #     lappsi[j,:] = lappsi[j,:] + (psi[j+1,-1]-2.*psi[j,-1]+psi[j-1,:-1])/(dy[j,:]**2)
-        # xi =  psi2rho(lappsi)
-
 
         if (k == 0):
             # bottom bdy condition not used in the solver
@@ -362,8 +355,10 @@ bdyrho = - g * nc_rho[ d.N-1,:, :] / (d.rho0 * d.hgrid.f0)
 outnc("bdyrho",bdyrho)
 bdypsi = (nc_psi[d.N-1,:,:]-nc_psi[d.N-2,:,:])/(nc_zc[-1]-nc_zc[-2])
 outnc("bdypsi",bdypsi)
-rhopsi=-bdypsi*(d.rho0 * d.hgrid.f0)/g
-# nc_rho[-1,:,:]=rhopsi
+#rhopsi=-bdypsi*(d.rho0 * d.hgrid.f0)/g
+# average rho on z direction for boundary conditions dpsi/dz
+nc_rho[1:,:,:] = 0.5*(nc_rho[1:,:,:]+nc_rho[:-1,:,:])
+nc_rho[0,:,:] = nc_rho[1,:,:]
 
 
 

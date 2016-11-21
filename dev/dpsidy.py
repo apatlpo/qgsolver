@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from util import outnc
 
 # choose variable
-variable = "psi"
-# variable = "u"
+# variable = "psi"
+variable = "u"
 # variable = "q"
 # variable = "bdy"
 
@@ -48,19 +48,24 @@ elif variable=="u":
     # rootgrp1 = Dataset("data/output_run2.nc", 'r')
     # rootgrp1 = Dataset("data/output_run3.nc", 'r')
     # rootgrp2 = Dataset("data/output_run4.nc", 'r')
+    rootgrp1 = Dataset("data/output_run5.nc", 'r')
+    rootgrp2 = Dataset("data/output_run6.nc", 'r')
     # rootgrp1 = Dataset("data/output_run1bis.nc", 'r')
     # rootgrp2 = Dataset("data/output_run3bis.nc", 'r')
-    rootgrp1 = Dataset("data/output_run2bis.nc", 'r')
-    rootgrp2 = Dataset("data/output_run4bis.nc", 'r')
+    # rootgrp1 = Dataset("data/output_run2bis.nc", 'r')
+    # rootgrp2 = Dataset("data/output_run4bis.nc", 'r')
     # titles
     # title1 = "run1"
     # title1 = "run2"
     # title1 = "run3"
     # title2 = "run4"
-    # title1 = "run1bis"
+
+    title1 = "run5"
+    title2 = "run6"
+    #  title1 = "run1bis"
     # title2 = "run3bis"
-    title1 = "run2bis"
-    title2 = "run4bis"
+    # title1 = "run2bis"
+    # title2 = "run4bis"
     # read variable
     psi1 = rootgrp1.variables["psi"][-1,level,:,:]
     psi2 = rootgrp2.variables["psi"][-1,level,:,:]
@@ -103,11 +108,13 @@ vmin = -vmax
 ax = fig.add_subplot(3,1,1)
 # mesh = ax.pcolormesh(var1,vmin=vmin, vmax=vmax)
 mesh = ax.pcolormesh(var1)
+ax.set_aspect('equal', 'box','C')
 plt.colorbar(mesh, ax=ax)
 plt.title(title1)
 
 ax = fig.add_subplot(3,1,2)
 mesh = ax.pcolormesh(var2)
+ax.set_aspect('equal', 'box','C')
 plt.colorbar(mesh, ax=ax)
 
 # mesh = ax.pcolormesh(var2,vmin=vmin, vmax=vmax)
@@ -116,6 +123,7 @@ plt.title(title2)
 
 ax = fig.add_subplot(3,1,3)
 mesh = ax.pcolormesh(diffvar)
+ax.set_aspect('equal', 'box','C')
 # mesh = ax.pcolormesh(var2,vmin=vmin, vmax=vmax)
 plt.title(title2+' - '+ title1)
 

@@ -4,7 +4,6 @@
 
 import sys
 
-from dev.util import outnc
 from .set_L import *
 from .io import write_nc
 
@@ -40,7 +39,7 @@ class pvinversion():
             print 'Operator L filled'
 
         # global vector for PV inversion
-        self._RHSinv = qg.da.createGlobalVec()
+        self._RHS = qg.da.createGlobalVec()
 
         # local vectors
         #self._localRHS  = qg.da.createLocalVec()
@@ -73,21 +72,21 @@ class pvinversion():
     def solve(self, qg):
         """ Compute the PV inversion
         """
-        qg.pvinv.L.mult(qg.PSI,self._RHSinv)
-        write_nc([self._RHSinv], ['Lpsi'], 'data/lpsi.nc', qg)
-        # copy RHS into RHSinv
-        qg.RHS.copy(self._RHSinv)
+        # qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
+        # copy Q into RHS
+        qg.Q.copy(self._RHS)
         # fix boundaries
-        self.set_rhsinv_bdy(qg)
-        write_nc([self._RHSinv], ['rhsinv'], 'data/rhsinv.nc', qg)
+        self.set_rhs_bdy(qg)
+        # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # actually solves the pb
-        self.ksp.solve(self._RHSinv, qg.PSI)
+        self.ksp.solve(self._RHS, qg.PSI)
         # tmp, test:
-        #self.L.mult(PSI, RHS)
+        #self.L.mult(PSI, self._RHS)
         if self._verbose>1:
             print 'Inversion done'
 
-    def set_rhsinv_bdy(self, qg):
+    def set_rhs_bdy(self, qg):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
@@ -97,7 +96,7 @@ class pvinversion():
         :return:
         """
 
-        rhsinv = qg.da.getVecArray(self._RHSinv)
+        rhs = qg.da.getVecArray(self._RHS)
         mx, my, mz = qg.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
@@ -111,53 +110,53 @@ class pvinversion():
                 j = 0
                 for k in range(zs, ze):
                     for i in range(xs, xe):
-                        rhsinv[i, j, k] = psi[i, j, k]
+                        rhs[i, j, k] = psi[i, j, k]
             # north bdy
             if ye == my:
                 j = my - 1
                 for k in range(zs, ze):
                     for i in range(xs, xe):
-                        rhsinv[i, j, k] = psi[i, j, k]
+                        rhs[i, j, k] = psi[i, j, k]
             # west bdy
             if xs == 0:
                 i = 0
                 for k in range(zs, ze):
                     for j in range(ys, ye):
-                        rhsinv[i, j, k] = psi[i, j, k]
+                        rhs[i, j, k] = psi[i, j, k]
             # east bdy
             if xe == mx:
                 i = mx - 1
                 for k in range(zs, ze):
                     for j in range(ys, ye):
-                        rhsinv[i, j, k] = psi[i, j, k]
+                        rhs[i, j, k] = psi[i, j, k]
             # vortex stretching from rho
             # bottom bdy
-            # if zs == 0:
-            #     k = 0
-            #     for j in range(ys, ye):
-            #         for i in range(xs, xe):
-            #             rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            if zs == 0:
+                k = 0
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
 
             # upper bdy
             if ze == mz:
                 k = mz-1
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhsinv[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+                        rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
 
              # vortrex stretching from psi
              # bottom bdy
-            if zs == 0:
-                k = 0
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhsinv[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzc[k]
+            # if zs == 0:
+            #     k = 0
+            #     for j in range(ys, ye):
+            #         for i in range(xs, xe):
+            #             rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzc[k]
             # # upper bdy
             # if ze == mz:
             #     k = mz-1
             #     for j in range(ys, ye):
             #         for i in range(xs, xe):
-            #             rhsinv[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzc[k-1]
+            #             rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzc[k-1]
 
         else:
 
@@ -166,13 +165,13 @@ class pvinversion():
                 k = 0
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhsinv[i, j, k] = 0.
+                        rhs[i, j, k] = 0.
             # upper bdy
             if ze == mz :
                 k = mz-1
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhsinv[i, j, k] = 0.
+                        rhs[i, j, k] = 0.
 
 
 #
@@ -219,16 +218,16 @@ class time_stepper():
             self.t += self.dt
             _tstep += 1
             #
-            qg.RHS.copy(self._RHS0) # copies RHS into RHS0
-            qg.RHS.copy(self._RHS1) # copies RHS into RHS1
+            qg.Q.copy(self._RHS0) # copies Q into RHS0
+            qg.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
                 if qg.grid._flag_hgrid_uniform:
                     self._computeRHS(qg)
                 else:
                     self._computeRHS_curv(qg)
-                if rk < 3: qg.RHS.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
+                if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
-            self._RHS1.copy(qg.RHS) # copies RHS1 into RHS
+            self._RHS1.copy(qg.Q) # copies RHS1 into Q
             # reset q at boundaries
             self.set_rhs_bdy(qg)
             if self._verbose>0:
@@ -254,7 +253,7 @@ class time_stepper():
         local_PSI  = qg.da.createLocalVec()
 
         ###
-        qg.da.globalToLocal(qg.RHS, local_RHS)
+        qg.da.globalToLocal(qg.Q, local_RHS)
         qg.da.globalToLocal(qg.PSI, local_PSI)
         #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
@@ -328,7 +327,7 @@ class time_stepper():
         local_PSI  = qg.da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.RHS, local_RHS)
+        qg.da.globalToLocal(qg.Q, local_RHS)
         qg.da.globalToLocal(qg.PSI, local_PSI)
         #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
@@ -411,7 +410,7 @@ class time_stepper():
     def set_rhs_bdy(self, qg):
         """ Reset rhs at boundaries such that drhs/dn=0 """
         #
-        rhs = qg.da.getVecArray(qg.RHS)
+        rhs = qg.da.getVecArray(qg.Q)
 
         #
         mx, my, mz = qg.da.getSizes()

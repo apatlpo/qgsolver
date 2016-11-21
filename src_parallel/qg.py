@@ -108,7 +108,7 @@ class qg_model():
         # declare petsc vectors
         #
         # PV
-        self.RHS = self.da.createGlobalVec()
+        self.Q = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
         # density
@@ -161,7 +161,7 @@ class qg_model():
         if file_q is not None:
             if self._verbose:
                 print 'Set q from file '+file_q+' ...'
-            read_nc_petsc(self.RHS, 'q', file_q, self)
+            read_nc_petsc(self.Q, 'q', file_q, self)
         elif analytical_q:
             if self._verbose:
                 print 'Set q analytically '
@@ -171,7 +171,7 @@ class qg_model():
     def set_q_analytically(self):
         """ Set q analytically
         """
-        q = self.da.getVecArray(self.RHS)
+        q = self.da.getVecArray(self.Q)
         mx, my, mz = self.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #

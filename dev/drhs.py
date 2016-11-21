@@ -20,7 +20,7 @@ rootgrp.close()
 #outnc('drhs',Lpsi-rhs)
 vardata=Lpsi-rhs
 
-rootgrp = Dataset("drhs.nc", 'w', format='NETCDF4_CLASSIC', clobber=True)
+rootgrp = Dataset("data/drhs.nc", 'w', format='NETCDF4_CLASSIC', clobber=True)
 # create dimensions
 rootgrp.createDimension('z', vardata.shape[0])
 rootgrp.createDimension('y', vardata.shape[1])

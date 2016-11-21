@@ -23,24 +23,24 @@ def uniform_grid_runs():
     #
     qg.set_q()
     qg.invert_pv()
-    write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
     #
     test=2
     if test==0:
         # one time step and store
         qg.tstep(1)
-        write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
     elif test==1:
         # write/read/write
         qg.tstep(1)
-        write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output1.nc', qg, create=True)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=True)
         qg.set_q(file_q='data/output.nc')
         qg.tstep(1)
-        write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output1.nc', qg, create=False)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=False)
     else:
         while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
-            write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
     
     return qg
 
@@ -56,17 +56,17 @@ def curvilinear_runs():
     #
     qg.set_q(file_q='curv_pv.nc')
     qg.invert_pv()
-    write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
     
     test=1
     if test==0:
         # one time step and store
         qg.tstep(1)
-        write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
     elif test==1:
         while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
-            write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
 
     return qg
 
@@ -110,7 +110,7 @@ def roms_input_runs():
     if qg.rank == 0: print 'Elapsed time for invert_pv ',str(time.time() - cur_time)
     cur_time = time.time()
 
-    write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/output.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
     if qg.rank == 0: print '----------------------------------------------------'
     if qg.rank == 0: print 'Elapsed time for write_nc ',str(time.time() - cur_time)
     cur_time = time.time()
@@ -142,12 +142,12 @@ def test_L():
     if qg.rank == 0: print 'Elapsed time for set_psi ',str(time.time() - cur_time)
     cur_time = time.time()
 
-    qg.pvinv.L.mult(qg.PSI,qg.RHS)
+    qg.pvinv.L.mult(qg.PSI,qg.Q)
     qg.invert_pv()
     if qg.rank == 0: print '----------------------------------------------------'
     if qg.rank == 0: print 'Elapsed time for invert_pv ',str(time.time() - cur_time)
 
-    write_nc([qg.PSI, qg.RHS], ['psi', 'q'], 'data/Lpsi_invPV.nc', qg)
+    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/Lpsi_invPV.nc', qg)
 
 if __name__ == "__main__":
     
