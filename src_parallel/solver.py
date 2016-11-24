@@ -7,7 +7,6 @@ import sys
 from .set_L import *
 from .io import write_nc
 
-
 #
 #==================== Serial solver ============================================
 #
@@ -78,7 +77,8 @@ class pvinversion():
         qg.Q.copy(self._RHS)
         # fix boundaries
         self.set_rhs_bdy(qg)
-        # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
         # tmp, test:
@@ -129,20 +129,37 @@ class pvinversion():
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         rhs[i, j, k] = psi[i, j, k]
+
             # vortex stretching from rho
             # bottom bdy
-            if zs == 0:
-                k = 0
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            if zs <= qg.kdown:
+                rhs[:,:,:min(qg.kdown,ze)]=0.
+                if ze > qg.kdown-1:
+                    k = qg.kdown-1
+                    for j in range(ys, ye):
+                        for i in range(xs, xe):
+                            rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            # elif zs == 0:
+            # # if zs == 0:
+            #     k = 0
+            #     for j in range(ys, ye):
+            #         for i in range(xs, xe):
+            #             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
 
             # upper bdy
-            if ze == mz:
-                k = mz-1
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            if ze >= qg.kup:
+                rhs[:,:,max(qg.kup,zs):]=0.
+                if zs < qg.kup:
+                    k = qg.kup-1
+                    for j in range(ys, ye):
+                        for i in range(xs, xe):
+                            rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            # elif ze == mz:
+            # # if ze == mz:
+            #     k = mz-1
+            #     for j in range(ys, ye):
+            #         for i in range(xs, xe):
+            #             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
 
              # vortrex stretching from psi
              # bottom bdy
@@ -172,7 +189,6 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = 0.
-
 
 #
 #==================== Time stepper ============================================

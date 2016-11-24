@@ -25,6 +25,8 @@ class qg_model():
                  N2 = 1e-3, f0 = 7e-5, K = 1.e2,
                  f0N2_file = None,
                  dt = 86400.e-1,
+                 kdown=0,
+                 kup=5000,
                  verbose = 1,
                  ):
         """ QG object creation
@@ -37,6 +39,8 @@ class qg_model():
         # Build grid object
         #
         self.grid = grid(hgrid, vgrid, verbose=verbose)
+        self.kdown=max(kdown,1)
+        self.kup=min(kup,self.grid.Nz)
 
         #
         # init petsc

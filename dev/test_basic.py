@@ -78,14 +78,21 @@ def roms_input_runs():
     start_time = time.time()
     cur_time = start_time
 
+    kdown=1
+    kup=50
+    if kdown>kup:
+        kdown,kup = kup,kdown
+
     # hgrid = {'Lx':(512-1)*2.e3, 'Ly':(1440-1)*2.e3, 'H':4.e3, \
     #          'Nx':512, 'Ny':1440, 'Nz':100}
     hgrid = {'Lx':(256-1)*4.e3, 'Ly':(720-1)*4.e3, 'H':4.e3,
              'Nx':256, 'Ny':720, 'Nz':50}
     # vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
     vgrid = 'data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
-    qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0)
+    qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0, kdown=kdown, kup=kup)
     qg.case='roms'
+
+
     if qg.rank == 0: print '----------------------------------------------------'
     if qg.rank == 0: print 'Elapsed time for qg_model ',str(time.time() - cur_time)
     cur_time = time.time()
