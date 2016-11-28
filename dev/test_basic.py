@@ -78,8 +78,8 @@ def roms_input_runs():
     start_time = time.time()
     cur_time = start_time
 
-    kdown=1
-    kup=50
+    kdown=10
+    kup=30
     if kdown>kup:
         kdown,kup = kup,kdown
 

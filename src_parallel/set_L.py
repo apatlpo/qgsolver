@@ -103,10 +103,10 @@ def set_L_curv(L, qg):
             for i in range(xs, xe):
                 row.index = (i,j,k)
                 row.field = 0
-                if (k<qg.kdown-1) or (k>qg.kup-1):
+                if (k<qg.kdown) or (k>qg.kup):
                     L.setValueStencil(row, row, 0.0)
                 else:
-                    if (k==qg.kdown-1):
+                    if (k==qg.kdown):
                         # bottom bdy condition: Neuman dpsi/dz=0
                         for index, value in [
                             ((i,j,k), -idzc[k]),
@@ -115,7 +115,7 @@ def set_L_curv(L, qg):
                             col.index = index
                             col.field = 0
                             L.setValueStencil(row, col, value)
-                    elif (k==qg.kup-1):
+                    elif (k==qg.kup):
                         # top bdy condition: Neuman dpsi/dz=0
                         for index, value in [
                             ((i,j,k-1), -idzc[k-1]),

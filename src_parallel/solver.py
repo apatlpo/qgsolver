@@ -49,11 +49,13 @@ class pvinversion():
         self.ksp.create(PETSc.COMM_WORLD)
         self.ksp.setOperators(self.L)
         # use conjugate gradients
-        #self.ksp.setType('cg')
+        # self.ksp.setType('cg')
         self.ksp.setType('gmres')
+        # self.ksp.setType('bicg')
         self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
         #self.ksp.getPC().setType('icc')
+        self.ksp.getPC().setType('none')
         # set tolerances
         #self.ksp.setTolerances(rtol=1e-10) # nope
         # self.ksp.setTolerances(max_it=1000)
@@ -133,9 +135,11 @@ class pvinversion():
             # vortex stretching from rho
             # bottom bdy
             if zs <= qg.kdown:
-                rhs[:,:,:min(qg.kdown,ze)]=0.
-                if ze > qg.kdown-1:
-                    k = qg.kdown-1
+                # rhs[:,:,:min(qg.kdown,ze)]=0.
+                # rhs[:,:,:min(qg.kdown,ze)]=psi[:,:,:min(qg.kdown,ze)]
+               rhs[:,:,:min(qg.kdown,ze)]=sys.float_info.epsilon
+            if ze > qg.kdown:
+                    k = qg.kdown
                     for j in range(ys, ye):
                         for i in range(xs, xe):
                             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
@@ -148,9 +152,11 @@ class pvinversion():
 
             # upper bdy
             if ze >= qg.kup:
-                rhs[:,:,max(qg.kup,zs):]=0.
+                # rhs[:,:,max(qg.kup+1,zs):]=0.
+                # rhs[:,:,max(qg.kup+1,zs):]=psi[:,:,max(qg.kup+1,zs):]
+                rhs[:,:,max(qg.kup+1,zs):]=sys.float_info.epsilon
                 if zs < qg.kup:
-                    k = qg.kup-1
+                    k = qg.kup
                     for j in range(ys, ye):
                         for i in range(xs, xe):
                             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)

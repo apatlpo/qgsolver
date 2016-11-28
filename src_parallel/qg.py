@@ -39,8 +39,8 @@ class qg_model():
         # Build grid object
         #
         self.grid = grid(hgrid, vgrid, verbose=verbose)
-        self.kdown=max(kdown,1)
-        self.kup=min(kup,self.grid.Nz)
+        self.kdown=max(kdown,0)
+        self.kup=min(kup,self.grid.Nz-1)
 
         #
         # init petsc
