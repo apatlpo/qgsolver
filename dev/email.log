@@ -1,0 +1,80 @@
+
+
+-------- Message transféré --------
+Sujet : Re: fichiers NATL
+Date : Wed, 19 Oct 2016 14:02:10 +0200
+De : Simon FRESNAY <Simon.Fresnay@partenaire-exterieur.ifremer.fr>
+Organisation : IFREMER
+Pour : Sylvie LE GENTIL <Sylvie.Le.Gentil@ifremer.fr>
+
+Bonjour Sylvie,
+
+Voici les chemins pour le 1 Jan 2007
+
+/home7/pharos/othr/NATL60/DIAG_DIMUP/density/LMX/LMX_y2007m01d01_density.nc
+
+/home7/pharos/othr/NATL60/DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v1.nc
+
+/home7/pharos/othr/NATL60/DIAG_DIMUP/psi0/LMX/
+LMX_y2007m01d01_psi0.nc
+
+Les données le grille sont dans /home7/pharos/othr/NATL60/NATL60-I/BOXES
+- les coordonnées NATL60LMX_coordinates_v4.nc
+- les coefficients métriques NATL60LMX_v4.1_cdf_mesh_hgr.nc et
+NATL60LMX_v4.1_cdf_mesh_zgr.nc
+- les masques NATL60LMX_v4.1_cdf_byte_mask.nc
+- la bathymétrie NATL60LMX_bathymeter_zps_gebco_v4.1.nc
+
+A bientôt,
+Simon
+
+
+Bonjour Sylvie,
+
+Excuse-moi, j'ai identifié une erreur sur le fichier précédent pour le PV
+
+Le nouveau chemin est /home7/pharos/othr/NATL60/DIAG_DIMUP/qgpv/LMX/test_good/LMX_y2007m01d01_qgpv_v1_recomput.nc
+
+A bientôt,
+Simon
+
+
+Le 19/10/2016 11:41, Simon FRESNAY a écrit :
+> Bonjour Sylvie,
+>
+> Actuellement je n'ai pas encore de fichier psi, donc je t'informe cet
+> après-midi quand j'en ai créé un, si une date suffit.
+>
+> A bientôt,
+> Simon
+>
+> Le 19/10/2016 10:23, Sylvie LE GENTIL a écrit :
+>> Bonjour Simon,
+>>
+>> Est ce que tu pourrais me donner les paths de fichiers NATL/LMX à un
+>> instant donné pour les variables rho, psi et pv et aussi pour les
+>> grilles associées.
+>>
+>> Merci,
+>>
+>> Sylvie 
+
+
+Bonjour Aurélien,
+
+Si tu as un besoin rapide, voici les paths de N2 et background density du domaine LMX
+
+background density
+/home7/pharos/othr/NATL60/DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_density_bg_mindepth10.nc
+
+N2
+/home7/pharos/othr/NATL60/DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_bruntvaisala_bg_mindepth10.nc
+
+Attention, N2 est sur grille w.
+
+A bientot,
+Simon
+
+
+
+
