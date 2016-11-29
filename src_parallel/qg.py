@@ -44,6 +44,7 @@ class qg_model():
                  kdown=0,
                  kup=5000,
                  hdom={},
+                 ncores_x=None, ncores_y=None,
                  verbose = 1,
                  ):
         """ QG object creation
@@ -75,7 +76,7 @@ class qg_model():
         #self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
         #                              stencil_width=2)
         self.da = PETSc.DMDA().create(sizes = [self.grid.Nx, self.grid.Ny, self.grid.Nz],
-                                      proc_sizes = [2,4,1],
+                                      proc_sizes = [ncores_x,ncores_y,1],
                                       stencil_width = 2)
         # http://lists.mcs.anl.gov/pipermail/petsc-dev/2016-April/018889.html
         self.comm = self.da.getComm()

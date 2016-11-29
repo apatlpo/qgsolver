@@ -78,9 +78,14 @@ def roms_input_runs():
     start_time = time.time()
     cur_time = start_time
 
+    # MPI decomposition of the domain
+    ncores_x= 2
+    ncores_y=4
+    
     # vertical subdomain
     kdown=10
-    kup=30
+    kup=40
+
     if kdown>kup:
         kdown,kup = kup,kdown
 
@@ -94,7 +99,7 @@ def roms_input_runs():
     # vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
     vgrid = 'data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
     qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0, 
-                  kdown=kdown, kup=kup, hdom=hdom)
+                  kdown=kdown, kup=kup, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y)
     qg.case='roms'
 
 
