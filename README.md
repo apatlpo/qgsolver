@@ -42,3 +42,14 @@ source activate petsc
 conda install -c sed-pro-inria petsc4py=3.4
 conda install -y netcdf4
 ```
+
+Use on Caparmor
+```
+bash
+source activate petsc
+cd .../qgsolver/dev
+python run_caparmor.py workdir
+
+The script creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
+
+```
