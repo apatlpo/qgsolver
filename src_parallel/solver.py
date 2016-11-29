@@ -102,42 +102,18 @@ class pvinversion():
         mx, my, mz = qg.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
-        if qg.case == "roms":
+        if qg.case == "roms" or 'nemo':
 
             psi = qg.da.getVecArray(qg.PSI)
             rho = qg.da.getVecArray(qg.RHO)
 
-            # south bdy
-            if ys == 0:
-                j = 0
-                for k in range(zs, ze):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i, j, k]
-            # north bdy
-            if ye == my:
-                j = my - 1
-                for k in range(zs, ze):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i, j, k]
-            # west bdy
-            if xs == 0:
-                i = 0
-                for k in range(zs, ze):
-                    for j in range(ys, ye):
-                        rhs[i, j, k] = psi[i, j, k]
-            # east bdy
-            if xe == mx:
-                i = mx - 1
-                for k in range(zs, ze):
-                    for j in range(ys, ye):
-                        rhs[i, j, k] = psi[i, j, k]
 
             # vortex stretching from rho
             # bottom bdy
             if zs <= qg.kdown:
                 # rhs[:,:,:min(qg.kdown,ze)]=0.
                 # rhs[:,:,:min(qg.kdown,ze)]=psi[:,:,:min(qg.kdown,ze)]
-               rhs[:,:,:min(qg.kdown,ze)]=sys.float_info.epsilon
+                rhs[:,:,:min(qg.kdown,ze)]=sys.float_info.epsilon
             if ze > qg.kdown:
                     k = qg.kdown
                     for j in range(ys, ye):
@@ -166,9 +142,9 @@ class pvinversion():
             #     for j in range(ys, ye):
             #         for i in range(xs, xe):
             #             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
-
-             # vortrex stretching from psi
-             # bottom bdy
+            
+            # vortrex stretching from psi
+            # bottom bdy
             # if zs == 0:
             #     k = 0
             #     for j in range(ys, ye):
@@ -180,6 +156,35 @@ class pvinversion():
             #     for j in range(ys, ye):
             #         for i in range(xs, xe):
             #             rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzc[k-1]
+
+            # south bdy
+            if ys <= qg.jstart:
+                #j = 0
+                for k in range(zs, ze):
+                    for j in range(ys,min(ye,qg.jstart+1)):
+                        for i in range(xs, xe):
+                            rhs[i, j, k] = psi[i, j, k]
+            # north bdy
+            if ye >= qg.jend:
+                #j = my - 1
+                for k in range(zs, ze):
+                    for j in range(max(ys,qg.jend),ye):
+                        for i in range(xs, xe):
+                            rhs[i, j, k] = psi[i, j, k]
+            # west bdy
+            if xs <= qg.istart:
+                #i = 0
+                for k in range(zs, ze):
+                    for j in range(ys, ye):
+                        for i in range(xs,min(xe,qg.istart+1)):
+                            rhs[i, j, k] = psi[i, j, k]
+            # east bdy
+            if xe >= qg.iend:
+                #i = mx - 1
+                for k in range(zs, ze):
+                    for j in range(ys, ye):
+                        for i in range(max(xs,qg.iend),xe):
+                            rhs[i, j, k] = psi[i, j, k]
 
         else:
 

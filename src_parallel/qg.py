@@ -16,6 +16,22 @@ from .io import read_nc_petsc
 #from netCDF4 import Dataset
 
 
+# class subdom():
+#     
+#     def __init__(self, dom_in, grid, da):
+#         dom_default = {'kdown':0, 'kup': grid.Nz-1, \
+#                        'istart':0, 'iend': grid.Nx-1, \
+#                        'jstart':0, 'jend': grid.Ny-1}
+#         for key in dom_in:
+#             if key in ['kdown', 'istart', 'jstart']:
+#                 setattr(self, key, max(dom_default[key], dom_in[key]) )
+#             else:
+#                 setattr(self, key, min(dom_default[key], dom_in[key]) )
+#         
+#         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        
+
+
 class qg_model():
     """ QG object
     """
@@ -27,6 +43,7 @@ class qg_model():
                  dt = 86400.e-1,
                  kdown=0,
                  kup=5000,
+                 hdom={},
                  verbose = 1,
                  ):
         """ QG object creation
@@ -41,6 +58,12 @@ class qg_model():
         self.grid = grid(hgrid, vgrid, verbose=verbose)
         self.kdown=max(kdown,0)
         self.kup=min(kup,self.grid.Nz-1)
+        #
+        self.istart=0; self.iend=self.grid.Nx-1;
+        self.jstart=0; self.jend=self.grid.Ny-1;
+        for key, value in hdom.items():
+            exec('self.'+key+'='+str(value))
+        
 
         #
         # init petsc
@@ -79,6 +102,13 @@ class qg_model():
             print 'A QG model object is being created'
             # print out grid parameters
             print self.grid
+            # print if a subdomain is considered
+            if self.kdown==0 or self.kup<self.grid.Nz-1:
+                print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
+                print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+                         %(self.istart, self.iend, self.jstart, self.jend)            
+        
         #
         # vertical stratification and Coriolis
         #

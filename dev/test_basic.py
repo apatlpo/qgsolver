@@ -78,10 +78,14 @@ def roms_input_runs():
     start_time = time.time()
     cur_time = start_time
 
+    # vertical subdomain
     kdown=10
     kup=30
     if kdown>kup:
         kdown,kup = kup,kdown
+
+    # horizontal subdomain
+    hdom = {'istart': 10, 'iend': 200, 'jstart':20, 'jend':500}
 
     # hgrid = {'Lx':(512-1)*2.e3, 'Ly':(1440-1)*2.e3, 'H':4.e3, \
     #          'Nx':512, 'Ny':1440, 'Nz':100}
@@ -89,7 +93,8 @@ def roms_input_runs():
              'Nx':256, 'Ny':720, 'Nz':50}
     # vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
     vgrid = 'data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
-    qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0, kdown=kdown, kup=kup)
+    qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0, 
+                  kdown=kdown, kup=kup, hdom=hdom)
     qg.case='roms'
 
 
