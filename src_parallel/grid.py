@@ -20,14 +20,13 @@ class grid(object):
     #
     # object init
     #
-    def __init__(self, hgrid = None, vgrid = None, verbose=1):
+    def __init__(self, hgrid = None, vgrid = None, vdom={} , hdom={}, verbose=1):
 
         self.verbose = verbose
         #
         # horizontal global grids
         #
-        hgrid_uniform_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'H':4.e3,
-                                 'Nx':150, 'Ny':100, 'Nz':10}
+        hgrid_uniform_default = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'Nx0':150, 'Ny0':100}
         self._flag_hgrid_uniform = False
         if hgrid is None or isinstance(hgrid,dict):
             # uniform grid
@@ -45,7 +44,7 @@ class grid(object):
         #   
         # vertical grid
         #
-        vgrid_uniform_default = {'H':4.e3, 'Nz':10}
+        vgrid_uniform_default = {'H':4.e3, 'Nz0':10}
         self._flag_vgrid_uniform = False
         if vgrid is None or isinstance(vgrid,dict):
             self._flag_vgrid_uniform = True
@@ -58,6 +57,30 @@ class grid(object):
         else:
             self._build_vgrid_stretched(vgrid)
 
+        self.kdown = 0
+        self.kup = self.Nz0 - 1
+        self.k0 = 0
+        for key, value in vdom.items():
+            exec ('self.' + key + '=' + str(value))
+        self.kmargin = self.kdown - self.k0
+
+        #
+        self.istart = 0
+        self.iend = self.Nx0 - 1
+        self.i0 = 0
+        self.jstart = 0
+        self.jend = self.Ny0 - 1
+        self.j0 = 0
+        for key, value in hdom.items():
+            exec ('self.' + key + '=' + str(value))
+        self.imargin = self.istart - self.i0
+        self.jmargin = self.jstart - self.j0
+
+        self.Nx = min(self.Nx0, self.iend - self.istart + 1 + 2 * self.imargin)
+        self.Ny = min(self.Ny0, self.jend - self.jstart + 1 + 2 * self.jmargin)
+        self.Nz = min(self.Nz0, self.kup - self.kdown + 1 + 2 * self.kmargin)
+        print
+
     #
     # Uniform grids
     #
@@ -66,14 +89,14 @@ class grid(object):
             setattr(self, key, value)
         self.hgrid_file = None
         # compute metric terms
-        self.dx=self.Lx/(self.Nx-1.)
-        self.dy=self.Ly/(self.Ny-1.)
+        self.dx=self.Lx/(self.Nx0-1.)
+        self.dy=self.Ly/(self.Ny0-1.)
         
     def _build_vgrid_uniform(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
         # compute metric terms
-        self.dz=self.H/(self.Nz-1.)
+        self.dz=self.H/(self.Nz0-1.)
     
     #
     # Curvilinear horizontal grid
@@ -82,7 +105,7 @@ class grid(object):
         # store metric file but metric terms are loaded later
         self.hgrid_file = hgrid_file
         # loads dimensions for dmda creation
-        self.Nx, self.Ny = read_hgrid_dimensions(self.hgrid_file)
+        self.Nx0, self.Ny0 = read_hgrid_dimensions(self.hgrid_file)
         
     def load_metric_terms(self, da, comm):
         # create a 3D vector containing metric terms
@@ -111,12 +134,29 @@ class grid(object):
             # curvilinear metric
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, self._k_dx] = rootgrp.variables['e1'][j,i]
-                    v[i, j, self._k_dy] = rootgrp.variables['e2'][j,i]
-                    v[i, j, self._k_lon] = rootgrp.variables['lon'][j,i]
-                    v[i, j, self._k_lat] = rootgrp.variables['lat'][j,i]
+                    v[i, j, self._k_dx] = rootgrp.variables['e1'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_dy] = rootgrp.variables['e2'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_lon] = rootgrp.variables['lon'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_lat] = rootgrp.variables['lat'][j+self.j0,i+self.i0]
             rootgrp.close()
         #
+
+        if self._flag_vgrid_uniform:
+            for k in range(zs,ze):
+                self.zc[k]=(k-0.5)*self.dz
+                self.zf[k]=k*self.dz
+                self.dzc = np.diff(self.zc)
+                self.dzf = np.diff(self.zf)
+        else:
+            # open netdc file
+            rootgrp = Dataset(self.vgrid_file, 'r')
+            self.zc = rootgrp.variables['zc'][zs+self.k0:ze+self.k0]
+            self.zf = rootgrp.variables['zf'][zs+self.k0:ze+self.k0]
+            rootgrp.close()
+
+            self.dzc = np.diff(self.zc)
+            self.dzf = np.diff(self.zf)
+
         comm.barrier()
         pass
     
@@ -129,7 +169,7 @@ class grid(object):
         rootgrp = Dataset(coriolis_file, 'r')
         for j in range(ys, ye):
             for i in range(xs, xe):
-                v[i, j, self._k_f] = rootgrp.variables['f'][j,i]                
+                v[i, j, self._k_f] = rootgrp.variables['f'][j+self.j0,i+self.i0]
         rootgrp.close()
         #
         comm.barrier()
@@ -138,15 +178,22 @@ class grid(object):
     #
     # Vertically stretched grid
     #
-    def _build_vgrid_stretched(self,vgrid_filename):
-        V = read_nc(['zc','zf'], vgrid_filename)
-        self.zc = V[0]
-        self.zf = V[1]
-        #
-        self.dzc = np.diff(self.zc)
-        self.dzf = np.diff(self.zf)
-        #
-        self.Nz = len(self.zc)
+    def _build_vgrid_stretched(self,vgrid_file):
+
+        # store metric file but metric terms are loaded later
+        self.vgrid_file = vgrid_file
+        # open netcdf file
+        rootgrp = Dataset(vgrid_file, 'r')
+        self.Nz0 = len(rootgrp.dimensions['zc'])
+
+        # V = read_nc(['zc','zf'], vgrid_filename)
+        # self.zc = V[0]
+        # self.zf = V[1]
+        # #
+        # self.dzc = np.diff(self.zc)
+        # self.dzf = np.diff(self.zf)
+        # #
+        # self.Nz0 = len(self.zc)
         # if self.verbose>0 : print self.dzc
 
 
@@ -181,7 +228,14 @@ class grid(object):
                 + '  min(dzf) = %e , mean(dzf) = %e, max(dzf) = %e \n' \
                     % (np.min(self.dzf), np.mean(self.dzf), np.max(self.dzf)) \
                 + '  min(dzc) = %e , mean(dzc) = %e, max(dzc) = %e \n' \
-                    % (np.min(self.dzc), np.mean(self.dzc), np.max(self.dzc))    
+                    % (np.min(self.dzc), np.mean(self.dzc), np.max(self.dzc))
+
+            # print if a subdomain is considered
+            if self.kdown>0 or self.kup<self.Nz0-1:
+                print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            if self.istart>0 or self.iend<self.Nx0-1 or self.jstart>0 or self.jend<self.Ny0-1:
+                print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+                         %(self.istart, self.iend, self.jstart, self.jend)
         return out
       
                   

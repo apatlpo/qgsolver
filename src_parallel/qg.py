@@ -43,6 +43,7 @@ class qg_model():
                  dt = 86400.e-1,
                  kdown=0,
                  kup=5000,
+                 vdom={},
                  hdom={},
                  ncores_x=None, ncores_y=None,
                  verbose = 1,
@@ -56,15 +57,30 @@ class qg_model():
         #
         # Build grid object
         #
-        self.grid = grid(hgrid, vgrid, verbose=verbose)
-        self.kdown=max(kdown,0)
-        self.kup=min(kup,self.grid.Nz-1)
+        self.grid = grid(hgrid, vgrid, vdom, hdom, verbose=verbose)
+
+        # self.kdown = 0
+        # self.kup = self.grid.Nz0-1
+        # self.k0 = 0
+        # for key, value in vdom.items():
+        #     exec ('self.' + key + '=' + str(value))
+        # self.kmargin = self.kdown - self.k0
         #
-        self.istart=0; self.iend=self.grid.Nx-1;
-        self.jstart=0; self.jend=self.grid.Ny-1;
-        for key, value in hdom.items():
-            exec('self.'+key+'='+str(value))
-        
+        # #
+        # self.istart = 0;
+        # self.iend = self.grid.Nx0 - 1;
+        # self.i0 = 0
+        # self.jstart = 0;
+        # self.jend = self.grid.Ny0 - 1;
+        # self.j0 = 0
+        # self.jmargin = self.jstart - self.j0
+        # for key, value in hdom.items():
+        #     exec ('self.' + key + '=' + str(value))
+        # self.imargin = self.istart - self.i0
+        #
+        # self.grid.Nx = min(self.grid.Nx0,self.iend-self.istart+1+2*self.imargin)
+        # self.grid.Ny = min(self.grid.Ny0,self.jend-self.jstart+1+2*self.jmargin)
+        # self.grid.Nz = min(self.grid.Nz0,self.kup-self.kdown+1+2*self.kmargin)
 
         #
         # init petsc
@@ -91,7 +107,6 @@ class qg_model():
         # for lon/lat grids should load metric terms over tiles
         # if not self.grid._flag_hgrid_uniform:
         self.grid.load_metric_terms(self.da, self.comm)
-
         # print out grid information
         if self.rank is 0 and verbose>0:
             self._verbose=verbose
@@ -103,13 +118,13 @@ class qg_model():
             print 'A QG model object is being created'
             # print out grid parameters
             print self.grid
-            # print if a subdomain is considered
-            if self.kdown==0 or self.kup<self.grid.Nz-1:
-                print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
-            if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
-                print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
-                         %(self.istart, self.iend, self.jstart, self.jend)            
-        
+            # # print if a subdomain is considered
+            # if self.kdown==0 or self.kup<self.grid.Nz-1:
+            #     print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            # if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
+            #     print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+            #              %(self.istart, self.iend, self.jstart, self.jend)
+
         #
         # vertical stratification and Coriolis
         #
@@ -118,7 +133,7 @@ class qg_model():
             if self._verbose:
                 print 'Reads N2 from '+f0N2_file
             #
-            self.N2 = read_nc('N2', f0N2_file)
+            self.N2 = read_nc('N2', f0N2_file, self)
         else:
             if self._verbose:
                 print 'Set N2 from user prescribed value = '+str(N2)+' 1/s^2'
@@ -129,13 +144,14 @@ class qg_model():
             if self._verbose:
                 print 'Reads f0 from '+f0N2_file
             #
-            self.f0 = read_nc('f0', f0N2_file)
+            self.f0 = read_nc('f0', f0N2_file, self)
             #
             if self._verbose:
                 print 'Reads Coriolis parameter f from '+f0N2_file
             self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
             self.f0 = f0
+
         #
         self._sparam = self.f0**2/self.N2
         self.K = K
@@ -152,7 +168,6 @@ class qg_model():
         # initiate pv inversion solver
         #
         self.pvinv = pvinversion(self)
-
         #
         # initiate time stepper
         #

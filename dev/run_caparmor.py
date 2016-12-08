@@ -9,18 +9,27 @@ import shutil
 import sys
 
 # check number of arguments
-if  len(sys.argv) < 1:
-    print '[syntaxe] : run_caparmor workdir'
+if  len(sys.argv) < 2:
+    print '[syntaxe] : run_caparmor workdir case'
+    print 'workdir = directory created in /work/username'
+    print 'case = roms or nemo'
     quit()
 
-workdir=sys.argv[1]
+workdir = sys.argv[1]
+casename = sys.argv[2]
+if casename != 'roms' and casename != 'nemo':
+    print 'unknown case (roms or nemo)'
+    sys.exit()
+goodcase=False
 
 # Search the number of cores in test_basic.py
 pyfile = open( 'test_basic.py', 'r' )
 for line in pyfile:
-    if 'ncores_x' in line :
+    if 'casename' in line and  casename in line:
+        goodcase=True
+    if 'ncores_x' in line and goodcase==True :
         ncores_x = int(line[line.index('=')+1:])
-    if 'ncores_y' in line :
+    if 'ncores_y' in line and goodcase==True :
         ncores_y = int(line[line.index('=')+1:])
         break
 
@@ -60,6 +69,7 @@ try:
     os.mkdir(RPATH+'/dev/data')
     shutil.copy(HOMEDIR+'/dev/test_basic.py','./dev')
 
+
     # make job.caparmor
     os.chdir(RPATH+'/dev')
     fo = open('job_caparmor','w')
@@ -80,7 +90,13 @@ try:
     fo.close()
 
     # copy data file in workdir
-    shutil.copy(HOMEDIR+'/dev/data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc',RPATH+'/dev/data')
+    if casename=='roms':
+        shutil.copy(HOMEDIR+'/dev/data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc',RPATH+'/dev/data')
+    elif casename=='nemo':
+        shutil.copy(HOMEDIR+'/dev/data/nemo_metrics.nc',RPATH+'/dev/data')
+        shutil.copy(HOMEDIR+'/dev/data/nemo_psi.nc',RPATH+'/dev/data')
+        shutil.copy(HOMEDIR+'/dev/data/nemo_pv.nc',RPATH+'/dev/data')
+        shutil.copy(HOMEDIR+'/dev/data/nemo_rho.nc',RPATH+'/dev/data')
 
     os.system('cd '+RPATH+'/dev')
     os.system('qsub job_caparmor')

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
+import sys
 from petsc4py import PETSc
 
 import numpy as np
@@ -87,6 +88,13 @@ def read_nc_petsc(V, vname, filename, qg):
     """
     v = qg.da.getVecArray(V)
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+    istart = xs + qg.grid.i0
+    iend = xe + qg.grid.i0
+    jstart = ys + qg.grid.j0
+    jend = ye + qg.grid.j0
+    kdown = zs + qg.grid.k0
+    kup = ze + qg.grid.k0
+
     rootgrp = Dataset(filename, 'r')
     ndim=len(rootgrp.variables[vname].shape)
     if ndim>3:
@@ -94,9 +102,9 @@ def read_nc_petsc(V, vname, filename, qg):
         # line above does not work for early versions of netcdf4 python library
         # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
         # https://github.com/Unidata/netcdf4-python/issues/306
-        vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,zs:ze,ys:ye,xs:xe]
+        vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
     else:
-        vread = rootgrp.variables[vname][zs:ze,ys:ye,xs:xe]
+        vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]
     for k in range(zs, ze):
         for j in range(ys, ye):
             for i in range(xs, xe):
@@ -138,7 +146,7 @@ def read_nc_petsc(V, vname, filename, qg):
         
         
         
-def read_nc(vnames, filename):
+def read_nc(vnames, filename,qg):
     """ Read variables from a netcdf file
     Parameters:
         vnames list of variable names
@@ -149,13 +157,32 @@ def read_nc(vnames, filename):
     rootgrp = Dataset(filename, 'r')
     
     # loop around variables to load
+    kstart = qg.grid.k0
+    kend = qg.grid.k0 + qg.grid.Nz
+
     if isinstance(vnames, list):
         V=[]
         for name in vnames:
-            V.append(rootgrp.variables[name][:])
+            if name == 'N2':
+                V.append(rootgrp.variables[name][kstart:kend])
+            elif name == 'f0':
+                V.append(rootgrp.variables[name][:])
+            # elif name == 'zc' or name == 'zf':
+            #     V.append(rootgrp.variables[name][kstart:kend])
+            else:
+                print 'error in read_nc: unknown variable '+name
+                sys.exit()
     else:
-        V = rootgrp.variables[vnames][:]
-        
+        if vnames == 'N2':
+            V = rootgrp.variables[vnames][kstart:kend]
+        elif vnames == 'f0':
+            V = rootgrp.variables[vnames][:]
+        # elif vnames == 'zc' or vnames == 'zf':
+        #     V = rootgrp.variables[vnames][kstart:kend]
+        else:
+            print 'error in read_nc: unknown variable '+vnames
+            sys.exit()
+
     # close the netcdf file
     rootgrp.close()
     

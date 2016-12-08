@@ -93,6 +93,12 @@ def set_L_curv(L, qg):
     #idz, idz2 = 1./dz, 1./dz**2
     #
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+    istart = qg.grid.istart - qg.grid.i0
+    iend = qg.grid.iend - qg.grid.i0
+    jstart = qg.grid.jstart - qg.grid.j0
+    jend = qg.grid.jend - qg.grid.j0
+    kdown = qg.grid.kdown - qg.grid.k0
+    kup = qg.grid.kup - qg.grid.k0
     #
     L.zeroEntries()
     row = PETSc.Mat.Stencil()
@@ -104,11 +110,11 @@ def set_L_curv(L, qg):
                 row.index = (i,j,k)
                 row.field = 0
                 # lateral points outside the domain: dirichlet, psi=...
-                if (i<=qg.istart or j<=qg.jstart or
-                    i>=qg.iend or j>=qg.jend):
+                if (i<=istart or j<=jstart or
+                    i>=iend or j>=jend):
                     L.setValueStencil(row, row, 1.0)
                 # bottom bdy condition: Neuman dpsi/dz=...
-                elif (k==qg.kdown):
+                elif (k==kdown):
                     for index, value in [
                         ((i,j,k), -idzc[k]),
                         ((i,j,k+1),  idzc[k])
@@ -117,7 +123,7 @@ def set_L_curv(L, qg):
                         col.field = 0
                         L.setValueStencil(row, col, value)
                 # top bdy condition: Neuman dpsi/dz=...
-                elif (k==qg.kup):
+                elif (k==kup):
                     for index, value in [
                         ((i,j,k-1), -idzc[k-1]),
                         ((i,j,k),  idzc[k-1]),
@@ -126,8 +132,9 @@ def set_L_curv(L, qg):
                         col.field = 0
                         L.setValueStencil(row, col, value)
                 # points below and above the domain
-                elif (k<qg.kdown) or (k>qg.kup):
-                    L.setValueStencil(row, row, 0.0)                
+                elif (k<kdown) or (k>kup):
+                    L.setValueStencil(row, row, 0.0)
+                    # L.setValueStencil(row, row, 1.0)
                 # interior points: pv is prescribed
                 else:
                     for index, value in [
