@@ -53,3 +53,23 @@ python run_caparmor.py workdir
 The script creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
 
 ```
+
+The .bashrc file in the caparmor home directory could look like:
+```
+#alias
+# User specific aliases and functions
+alias qs="qstat|grep aponte"
+
+# added by Miniconda2 4.0.5 installer
+export PATH="/home1/caparmor/aponte/.miniconda2/bin:$PATH"
+
+# add path to launch batch
+export PATH="/usr/pbs/bin/:$PATH"
+
+# for qgsolver
+export WORKDIR="/work/aponte/"
+
+source activate petsc
+```
+
+

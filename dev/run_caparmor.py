@@ -48,7 +48,7 @@ elif nb_cores<=256:
 # Création du répertoire workdir dans /work
 startdir=os.getcwd()
 HOMEDIR = startdir+"/.."
-WORKDIR = os.getenv("workdir")
+WORKDIR = os.getenv("WORKDIR")
 RPATH = WORKDIR+'/'+workdir
 
 if os.path.exists(RPATH) :
@@ -82,7 +82,7 @@ try:
     fo.write('cd $PBS_O_WORKDIR\n')
     fo.write('\n')
     fo.write('# get the path for python\n')
-    fo.write('setenv PATH ${HOME}/miniconda2/envs/petsc/bin:${PATH}\n')
+    fo.write('setenv PATH ${HOME}/.miniconda2/envs/petsc/bin:${PATH}\n')
     fo.write('setenv PYTHONPATH $PBS_O_WORKDIR/..\n')
     fo.write('\n')
     # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py  >& output.mpi\n')
