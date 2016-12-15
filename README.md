@@ -22,6 +22,7 @@ export PYTHONPATH=$PYTHONPATH:/home/slyne/aponte/natl60/python/oocgcm/
 Proper conda install on Linux:
 ```
 bash /home/mulroy/slgentil/tarfiles/Miniconda2-latest-Linux-x86_64.sh
+(specify .miniconda2 and not miniconda2 as target dir for conda)
 bash
 conda update conda
 conda create --name natl60 python
