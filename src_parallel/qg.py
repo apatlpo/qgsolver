@@ -13,23 +13,7 @@ from petsc4py import PETSc
 
 import numpy as np
 from .io import read_nc_petsc
-#from netCDF4 import Dataset
 
-
-# class subdom():
-#     
-#     def __init__(self, dom_in, grid, da):
-#         dom_default = {'kdown':0, 'kup': grid.Nz-1, \
-#                        'istart':0, 'iend': grid.Nx-1, \
-#                        'jstart':0, 'jend': grid.Ny-1}
-#         for key in dom_in:
-#             if key in ['kdown', 'istart', 'jstart']:
-#                 setattr(self, key, max(dom_default[key], dom_in[key]) )
-#             else:
-#                 setattr(self, key, min(dom_default[key], dom_in[key]) )
-#         
-#         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        
 
 
 class qg_model():
@@ -41,10 +25,7 @@ class qg_model():
                  N2 = 1e-3, f0 = 7e-5, K = 1.e2,
                  f0N2_file = None,
                  dt = 86400.e-1,
-                 kdown=0,
-                 kup=5000,
-                 vdom={},
-                 hdom={},
+                 vdom={}, hdom={},
                  ncores_x=None, ncores_y=None,
                  verbose = 1,
                  ):
@@ -59,38 +40,18 @@ class qg_model():
         #
         self.grid = grid(hgrid, vgrid, vdom, hdom, verbose=verbose)
 
-        # self.kdown = 0
-        # self.kup = self.grid.Nz0-1
-        # self.k0 = 0
-        # for key, value in vdom.items():
-        #     exec ('self.' + key + '=' + str(value))
-        # self.kmargin = self.kdown - self.k0
-        #
-        # #
-        # self.istart = 0;
-        # self.iend = self.grid.Nx0 - 1;
-        # self.i0 = 0
-        # self.jstart = 0;
-        # self.jend = self.grid.Ny0 - 1;
-        # self.j0 = 0
-        # self.jmargin = self.jstart - self.j0
-        # for key, value in hdom.items():
-        #     exec ('self.' + key + '=' + str(value))
-        # self.imargin = self.istart - self.i0
-        #
-        # self.grid.Nx = min(self.grid.Nx0,self.iend-self.istart+1+2*self.imargin)
-        # self.grid.Ny = min(self.grid.Ny0,self.jend-self.jstart+1+2*self.jmargin)
-        # self.grid.Nz = min(self.grid.Nz0,self.kup-self.kdown+1+2*self.kmargin)
 
         #
         # init petsc
         #
         
-        #OptDB = PETSc.Options()
-
+        # test whether tiling is consistent with dimensions
+        if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
+            print 'Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y) 
+            sys.exit()
+            
         # setup tiling
-        #self.da = PETSc.DMDA().create([self.grid.Nx, self.grid.Ny, self.grid.Nz],
-        #                              stencil_width=2)
         self.da = PETSc.DMDA().create(sizes = [self.grid.Nx, self.grid.Ny, self.grid.Nz],
                                       proc_sizes = [ncores_x,ncores_y,1],
                                       stencil_width = 2)
@@ -104,9 +65,14 @@ class qg_model():
                     +str(self.da.proc_sizes) 
             #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
 
+        #
+        # finalize grid/metric loading
+        #
+
         # for lon/lat grids should load metric terms over tiles
-        # if not self.grid._flag_hgrid_uniform:
-        self.grid.load_metric_terms(self.da, self.comm)
+        if not self.grid._flag_hgrid_uniform or not self.grid._flag_vgrid_uniform:
+            self.grid.load_metric_terms(self.da, self.comm)
+        
         # print out grid information
         if self.rank is 0 and verbose>0:
             self._verbose=verbose
@@ -138,7 +104,8 @@ class qg_model():
             if self._verbose:
                 print 'Set N2 from user prescribed value = '+str(N2)+' 1/s^2'
             #
-            self.N2 = N2*np.ones(self.grid.Nz+1)
+            self.N2 = N2*np.ones(self.grid.Nz)
+            #self.N2 = N2*np.ones(self.grid.Nz+1)
         #
         if f0N2_file is not None:
             if self._verbose:
@@ -151,6 +118,8 @@ class qg_model():
             self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
             self.f0 = f0
+            if self._verbose:
+                print 'Sets f0 to %.3e' %f0
 
         #
         self._sparam = self.f0**2/self.N2
@@ -164,6 +133,7 @@ class qg_model():
         self.PSI = self.da.createGlobalVec()
         # density
         self.RHO = self.da.createGlobalVec()
+                
         #
         # initiate pv inversion solver
         #
@@ -172,6 +142,7 @@ class qg_model():
         # initiate time stepper
         #
         self.tstepper = time_stepper(self, dt)
+        #print 'debug: time stepper object created'
         
     
         
@@ -184,8 +155,6 @@ class qg_model():
                 print 'Set psi from file '+file_psi+' ...'
             read_nc_petsc(self.PSI, 'psi', file_psi, self)
         elif analytical_psi:
-            if self._verbose:
-                print 'Set psi analytically '
             self.set_psi_analytically()
 
 
@@ -197,8 +166,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            pass
-            #print 'Set psi analytically \n'
+            print 'Set psi analytically'
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -213,8 +181,6 @@ class qg_model():
                 print 'Set q from file '+file_q+' ...'
             read_nc_petsc(self.Q, 'q', file_q, self)
         elif analytical_q:
-            if self._verbose:
-                print 'Set q analytically '
             self.set_q_analytically()
 
 
@@ -226,8 +192,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            pass
-            #print 'Set q analytically \n'
+            print 'Set q analytically'
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -246,8 +211,6 @@ class qg_model():
                 print 'Set rho from file '+file_rho+' ...'
             read_nc_petsc(self.RHO, 'rho', file_rho, self)
         elif analytical_rho:
-            if self._verbose:
-                print 'Set rho analytically '
             self.set_rho_analytically()
 
     def set_rho_analytically(self):
@@ -258,8 +221,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            pass
-            #print 'Set rho analytically \n'
+            print 'Set rho analytically'
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):

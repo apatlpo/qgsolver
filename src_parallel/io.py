@@ -7,8 +7,10 @@ from petsc4py import PETSc
 import numpy as np
 from netCDF4 import Dataset
 
+def write_nc(V, vname, filename, qg, create=True):
+    pass    
 
-def write_nc(V, vname, filename, qg, create=True):    
+def write_nc0(V, vname, filename, qg, create=True):    
     """ Write a variable to a netcdf file
     Parameters:
         V list of petsc vectors

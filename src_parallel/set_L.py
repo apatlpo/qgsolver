@@ -4,19 +4,29 @@
 from petsc4py import PETSc
 import sys
 
+
 def set_L(L, qg):
     """ Builds the laplacian operator along with boundary conditions
         Horizontally uniform grid
     """
+    
+    if qg._verbose>0:
+        print '  ... assumes a uniform horizontal and vertical grid'
+    
     #
     mx, my, mz = qg.da.getSizes()
     dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
     idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
     idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
-    #print idx, idy, idz
-    #print idx2, idy2, idz2   
     #
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+    #
+    istart = qg.grid.istart
+    iend = qg.grid.iend
+    jstart = qg.grid.jstart
+    jend = qg.grid.jend
+    kdown = qg.grid.kdown
+    kup = qg.grid.kup
     #
     L.zeroEntries()
     row = PETSc.Mat.Stencil()
@@ -29,11 +39,11 @@ def set_L(L, qg):
                 row.index = (i,j,k)
                 row.field = 0
                 # lateral points outside the domain: dirichlet, psi=...
-                if (i<=qg.istart or j<=qg.jstart or
-                    i>=qg.iend or j>=qg.jend):
+                if (i<=istart or j<=jstart or
+                    i>=iend or j>=jend):
                     L.setValueStencil(row, row, 1.0)
                 # bottom bdy condition: Neuman dpsi/dz=...
-                elif (k==qg.kdown):
+                elif (k==kdown):
                     for index, value in [
                         ((i,j,k), -idz),
                         ((i,j,k+1),  idz)
@@ -42,7 +52,7 @@ def set_L(L, qg):
                         col.field = 0
                         L.setValueStencil(row, col, value)
                 # top bdy condition: Neuman dpsi/dz=...
-                elif (k==qg.kup):
+                elif (k==kup):
                     for index, value in [
                         ((i,j,k-1), -idz),
                         ((i,j,k),  idz),
@@ -51,7 +61,7 @@ def set_L(L, qg):
                         col.field = 0
                         L.setValueStencil(row, col, value)
                 # points below and above the domain
-                elif (k<qg.kdown or k>qg.kup):
+                elif (k<kdown or k>kup):
                     L.setValueStencil(row, row, 0.0)
                 # interior points: pv is prescribed
                 else:
@@ -78,6 +88,9 @@ def set_L_curv(L, qg):
     """ Builds the laplacian operator along with boundary conditions
         Horizontally uniform grid
     """
+    
+    if qg._verbose>0:
+        print '  ... assumes a curvilinear and/or vertically stretched grid'
     #
     mx, my, mz = qg.da.getSizes()
     #

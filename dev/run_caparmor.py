@@ -17,8 +17,9 @@ if  len(sys.argv) < 2:
 
 workdir = sys.argv[1]
 casename = sys.argv[2]
-if casename != 'roms' and casename != 'nemo':
-    print 'unknown case (roms or nemo)'
+valid_cases = ['uniform','roms','nemo']
+if not any(casename in case for case in valid_cases):
+    print 'unknown case (uniform or roms or nemo)'
     sys.exit()
 goodcase=False
 
@@ -86,7 +87,7 @@ try:
     fo.write('setenv PYTHONPATH $PBS_O_WORKDIR/..\n')
     fo.write('\n')
     # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py  >& output.mpi\n')
-    fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py  -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
     fo.close()
 
     # copy data file in workdir

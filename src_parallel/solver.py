@@ -28,11 +28,11 @@ class pvinversion():
             print 'Operator L declared'
 
         # Fill in operator values
-        # if qg.grid._flag_hgrid_uniform:
-        #     set_L(self.L, qg)
-        # else:
-        set_L_curv(self.L, qg)
-            
+        if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
+            set_L(self.L, qg)
+        else:
+            set_L_curv(self.L, qg)
+
         #
         if self._verbose>0:
             print 'Operator L filled'
@@ -50,14 +50,14 @@ class pvinversion():
         self.ksp.setOperators(self.L)
         # use conjugate gradients
         # self.ksp.setType('cg')
-        self.ksp.setType('gmres')
-        # self.ksp.setType('bicg')
+        # self.ksp.setType('gmres')
+        self.ksp.setType('bicg')
         self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
         # self.ksp.getPC().setType('icc')
         # self.ksp.getPC().setType('bjacobi')
         # self.ksp.getPC().setType('asm')
-        self.ksp.getPC().setType('none')
+        #self.ksp.getPC().setType('none')
         # set tolerances
         # self.ksp.setTolerances(rtol=1e-10) # nope
         self.ksp.setTolerances(max_it=1000)
@@ -70,7 +70,11 @@ class pvinversion():
         #PETSc.Options().setValue('-ksp_monitor', None)
         #PETSc.Options().setValue('-ksp_converged_reason', None)        
         # self.ksp.setFromOptions()
-         
+        
+        if self._verbose>0:
+            print 'PV inversion is set up'
+            
+            
 
     def solve(self, qg):
         """ Compute the PV inversion
@@ -81,14 +85,17 @@ class pvinversion():
         qg.Q.copy(self._RHS)
         # fix boundaries
         self.set_rhs_bdy(qg)
-        write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        #write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
-        # tmp, test:
-        #self.L.mult(PSI, self._RHS)
+        #
+        # debug test:
+        #self.L.mult(qg.PSI, self._RHS)
+        #
         if self._verbose>1:
             print 'Inversion done'
+
 
     def set_rhs_bdy(self, qg):
         """
@@ -104,18 +111,17 @@ class pvinversion():
         mx, my, mz = qg.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
-        istart = qg.grid.istart - qg.grid.i0
-        iend = qg.grid.iend - qg.grid.i0
-        jstart = qg.grid.jstart - qg.grid.j0
-        jend = qg.grid.jend - qg.grid.j0
-        kdown = qg.grid.kdown - qg.grid.k0
-        kup = qg.grid.kup - qg.grid.k0
+        istart = qg.grid.istart
+        iend = qg.grid.iend
+        jstart = qg.grid.jstart
+        jend = qg.grid.jend
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
 
-        if qg.case == "roms" or 'nemo':
+        if qg.case == "roms" or 'nemo' or 'uniform':
 
             psi = qg.da.getVecArray(qg.PSI)
             rho = qg.da.getVecArray(qg.RHO)
-
 
             # vortex stretching from rho
             # bottom bdy
@@ -127,12 +133,6 @@ class pvinversion():
                     for j in range(ys, ye):
                         for i in range(xs, xe):
                             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
-            # elif zs == 0:
-            # # if zs == 0:
-            #     k = 0
-            #     for j in range(ys, ye):
-            #         for i in range(xs, xe):
-            #             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
 
             # upper bdy
             if ze >= kup:
@@ -143,14 +143,8 @@ class pvinversion():
                     for j in range(ys, ye):
                         for i in range(xs, xe):
                             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
-            # elif ze == mz:
-            # # if ze == mz:
-            #     k = mz-1
-            #     for j in range(ys, ye):
-            #         for i in range(xs, xe):
-            #             rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
             
-            # vortrex stretching from psi
+            # debug: computes vertical bdy from psi
             # bottom bdy
             # if zs == 0:
             #     k = 0
@@ -208,6 +202,10 @@ class pvinversion():
                     for i in range(xs, xe):
                         rhs[i, j, k] = 0.
 
+
+
+
+
 #
 #==================== Time stepper ============================================
 #
@@ -240,6 +238,9 @@ class time_stepper():
         self._RHS0 = qg.da.createGlobalVec()
         self._RHS1 = qg.da.createGlobalVec()
         self._dRHS = qg.da.createGlobalVec()
+        
+        if self._verbose>0:
+            print 'PV time stepper is set up'
 
 
     def go(self, qg, nt):
@@ -255,7 +256,7 @@ class time_stepper():
             qg.Q.copy(self._RHS0) # copies Q into RHS0
             qg.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
-                if qg.grid._flag_hgrid_uniform:
+                if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
                     self._computeRHS(qg)
                 else:
                     self._computeRHS_curv(qg)

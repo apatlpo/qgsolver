@@ -17,15 +17,57 @@ def uniform_grid_runs():
     """
     Tests with uniform grid, closed domains
     """
-    qg = qg_model(hgrid = {'Nx0':150, 'Ny0':100}, vgrid = {'Nz0':3 },
-            K = 0.e0, dt = 0.5*86400.e0)
+    
+    start_time = time.time()
+    cur_time = start_time
+    
+    # MPI decomposition of the domain
+    # case must be defined before ncores for run_caparmor.py
+    casename='uniform'
+    ncores_x=8
+    ncores_y=8
+    
+    # grid
+    # small case fits on 2x4 tiling
+    #hgrid = {'Nx0':150, 'Ny0':100}
+    #vgrid = {'Nz0':10 }
+    # nhoes: 512³,  512 procs, 1000³, 4096 procs 
+    # LMX case: Nx=1032=2³x3x43, Ny=756=2²x3³x7, Nz=300
+    # fails with 2x4 tiling:
+    #   [2] Out of memory. Allocated: 2130143328, Used by process: 2156957696
+    #   [2] Memory requested 18446744068237631488
+    # fails with 4x4 tiling
+    # fails with 8x4 tiling
+    #   [19] Out of memory. Allocated: 539100336, Used by process: 572317696
+    #   [19] Memory requested 7171453124
+    # fails with 8x12 tiling: no clear error message
+    # 
+    #hgrid = {'Nx0':1032, 'Ny0':756}
+    #hgrid = {'Nx':516, 'Ny':756}
+    hgrid = {'Nx':512, 'Ny':256}
+    vgrid = {'Nz':100}
+    
+    # fails with 8x4 tiling on 512x256x100 grid (gmres and bicg):
+    #   [28] Out of memory. Allocated: 676721200, Used by process: 716288000
+    #   [28] Memory requested 389653540
+    
+    qg = qg_model(hgrid = hgrid, vgrid = vgrid,
+            K = 0.e0, dt = 0.5*86400.e0,
+            ncores_x=ncores_x, ncores_y=ncores_y)
     qg.case='uniform'
     #
     qg.set_q()
+    qg.set_rho()
+    qg.set_psi()    
     qg.invert_pv()
-    write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+    #write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+    
+    if qg._verbose>0:
+        print '----------------------------------------------------'
+        print 'Elapsed time for all ',str(time.time() - cur_time)
+    
     #
-    test=2
+    test=-1
     if test==0:
         # one time step and store
         qg.tstep(1)
@@ -37,7 +79,7 @@ def uniform_grid_runs():
         qg.set_q(file_q='data/output.nc')
         qg.tstep(1)
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=False)
-    else:
+    elif test==2:
         while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
             write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
@@ -151,6 +193,8 @@ def nemo_input_runs():
     ncores_x = 2
     ncores_y = 4
 
+    # LMX domain: Nx=1032, Ny=756, Nz=300
+
     # vertical subdomain
     vdom = {'kdown': 150, 'kup': 250, 'k0': 150 }
 
@@ -232,10 +276,9 @@ def test_L():
 
 if __name__ == "__main__":
     
-    #qg = uniform_grid_runs()
-    
-    # qg = roms_input_runs()
-    qg = nemo_input_runs()
+    qg = uniform_grid_runs()
+    #qg = roms_input_runs()
+    #qg = nemo_input_runs()
     # qg = test_L()
     
 
