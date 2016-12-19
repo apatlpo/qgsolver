@@ -21,10 +21,9 @@ python setup.py
 
 ## libraries required
 
+qgsolver requires petsc4py (and thus petsc) and netcdf4
 
-### conda
-
-### on standard linux platform
+### with conda on standard linux platform
 
 We use conda for the install of python libraries required by qgsolver:
 ```
@@ -42,9 +41,10 @@ conda update conda
 conda create --name petsc_env python
 source activate petsc_env
 conda install -c juanlu001 petsc4py=3.6.0
+conda install -y netcdf4
 ```
 
-# on caparmor: (pb size < 512x252x100)
+### with conda on caparmor (pb size < 512x252x100)
 
 Proper conda install on Caparmor:
 ```
@@ -81,7 +81,7 @@ export WORKDIR="/work/aponte/"
 source activate petsc
 ```
 
-# on caparmor: (pb size >= 512x252x100)
+### with pip on caparmor (pb size >= 512x252x100)
 
 When the problem is larger than 256x256x100 (approximately),
 petsc needs to have been compiled with the option --with-64-bit-indices.
