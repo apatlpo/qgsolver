@@ -105,6 +105,10 @@ pip install --user --upgrade --ignore-installed --no-cache-dir numpy
 
 setenv PETSC_CONFIGURE_OPTIONS '--with-64-bit-indices --with-fc=0 --download-f2cblaslapack'
 pip install --user --upgrade --ignore-installed --no-cache-dir  petsc petsc4py
+
+# netcdf
+setenv USE_NCCONFIG 1
+pip install --user netcdf4
 ```
 
 I should also be possible to compile petsc4py within a petsc compilation with
