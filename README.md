@@ -13,7 +13,7 @@ It relies on petsc4py for parallelized PV inversions but can also work in serial
 ## qgsolver
 
 Download and install with:
-```
+```csh
 git clone https://apatlpo@bitbucket.org/apatlpo/qgsolver.git
 cd qgsolver
 python setup.py
@@ -26,14 +26,14 @@ qgsolver requires petsc4py (and thus petsc) and netcdf4
 ### with conda on standard linux platform
 
 We use conda for the install of python libraries required by qgsolver:
-```
+```csh
 bash
 source activate petsc_env
 export PYTHONPATH=$PYTHONPATH:/home/slyne/aponte/natl60/python/oocgcm/
 ```
 
 Proper conda install on Linux:
-```
+```csh
 wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
 (specify .miniconda2 and not miniconda2 as target dir for conda)
 bash
@@ -47,7 +47,7 @@ conda install -y netcdf4
 ### with conda on caparmor (pb size < 512x252x100)
 
 Proper conda install on Caparmor:
-```
+```csh
 conda create --name petsc_env python
 source activate petsc_env
 conda install -c sed-pro-inria petsc4py=3.4
@@ -55,7 +55,7 @@ conda install -y netcdf4
 ```
 
 Use of qgsolver on Caparmor
-```
+```csh
 bash
 source activate petsc_env
 cd .../qgsolver/dev
@@ -64,7 +64,7 @@ python run_caparmor.py workdir
 run\_caparmor.py creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
 
 The .bashrc file in the caparmor home directory could look like:
-```
+```csh
 #alias
 # User specific aliases and functions
 alias qs="qstat|grep aponte"
@@ -113,7 +113,7 @@ pip install --user netcdf4
 
 I should also be possible to compile petsc4py within a petsc compilation with
 something like (not tested):
-```
+```csh
 module load python/2.7.10_gnu-4.9.2
 setenv MPICC mpiicc
 setenv PETSC_DIR /home1/caparmor/aponte/petsc/petsc-3.7.4

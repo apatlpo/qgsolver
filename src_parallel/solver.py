@@ -48,7 +48,6 @@ class pvinversion():
         self.ksp = PETSc.KSP()
         self.ksp.create(PETSc.COMM_WORLD)
         self.ksp.setOperators(self.L)
-        # use conjugate gradients
         # self.ksp.setType('cg')
         # self.ksp.setType('gmres')
         self.ksp.setType('bicg')
@@ -66,10 +65,6 @@ class pvinversion():
         for opt in sys.argv[1:]:
 	        PETSc.Options().setValue(opt, None)
         self.ksp.setFromOptions()
-        #PETSc.Options().setValue('-ksp_view', None)
-        #PETSc.Options().setValue('-ksp_monitor', None)
-        #PETSc.Options().setValue('-ksp_converged_reason', None)        
-        # self.ksp.setFromOptions()
         
         if self._verbose>0:
             print 'PV inversion is set up'
@@ -123,26 +118,28 @@ class pvinversion():
             psi = qg.da.getVecArray(qg.PSI)
             rho = qg.da.getVecArray(qg.RHO)
 
-            # vortex stretching from rho
+            # lower ghost area
+            if zs < kdown:
+                for k in range(zs,kdown):
+                    for j in range(ys, ye):
+                        for i in range(xs, xe):                    
+                            rhs[i,j,k]=sys.float_info.epsilon
             # bottom bdy
-            if zs <= kdown:
-                rhs[:,:,:min(kdown,ze)]=sys.float_info.epsilon
-                # rhs[:,:,:min(kdown,ze)]=psi[:,:,:min(kdown,ze)]
-            if ze > kdown:
-                    k = kdown
+            k = kdown
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            # upper ghost area (!!! ze=Nz and not Nz-1)
+            if ze > kup+1:
+                for k in range(kup+1,ze):
                     for j in range(ys, ye):
                         for i in range(xs, xe):
-                            rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
-
+                            rhs[i,j,k]=sys.float_info.epsilon                
             # upper bdy
-            if ze >= kup:
-                # rhs[:,:,max(kup+1,zs):]=psi[:,:,max(kup+1,zs):]
-                rhs[:,:,max(kup+1,zs):]=sys.float_info.epsilon
-                if zs < kup:
-                    k = kup
-                    for j in range(ys, ye):
-                        for i in range(xs, xe):
-                            rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            k = kup
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
             
             # debug: computes vertical bdy from psi
             # bottom bdy

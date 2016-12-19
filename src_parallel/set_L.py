@@ -106,12 +106,12 @@ def set_L_curv(L, qg):
     #idz, idz2 = 1./dz, 1./dz**2
     #
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
-    istart = qg.grid.istart - qg.grid.i0
-    iend = qg.grid.iend - qg.grid.i0
-    jstart = qg.grid.jstart - qg.grid.j0
-    jend = qg.grid.jend - qg.grid.j0
-    kdown = qg.grid.kdown - qg.grid.k0
-    kup = qg.grid.kup - qg.grid.k0
+    istart = qg.grid.istart
+    iend = qg.grid.iend
+    jstart = qg.grid.jstart
+    jend = qg.grid.jend
+    kdown = qg.grid.kdown
+    kup = qg.grid.kup
     #
     L.zeroEntries()
     row = PETSc.Mat.Stencil()

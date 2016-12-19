@@ -14,10 +14,15 @@ try:
     from qgsolver.qg import qg_model
     from qgsolver.io import write_nc
 except:
-    print 'qgsolver not yet in path'
+    #print 'qgsolver not yet in path'
+    pass
 
 
-def uniform_grid_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
+#
+#==================== Uniform case ============================================
+#
+
+def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     """
     Tests with uniform grid, closed domains
     """
@@ -30,28 +35,36 @@ def uniform_grid_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
     casename='uniform'
     
     # grid
-    # small case fits on 2x4 tiling
-    #hgrid = {'Nx0':150, 'Ny0':100}
-    #vgrid = {'Nz0':10 }
     # nhoes: 512³,  512 procs, 1000³, 4096 procs 
     # LMX case: Nx=1032=2³x3x43, Ny=756=2²x3³x7, Nz=300
-    # fails with 2x4 tiling:
-    #   [2] Out of memory. Allocated: 2130143328, Used by process: 2156957696
-    #   [2] Memory requested 18446744068237631488
-    # fails with 4x4 tiling
-    # fails with 8x4 tiling
-    #   [19] Out of memory. Allocated: 539100336, Used by process: 572317696
-    #   [19] Memory requested 7171453124
-    # fails with 8x12 tiling: no clear error message
-    # 
-    #hgrid = {'Nx0':1032, 'Ny0':756}
-    #hgrid = {'Nx':516, 'Ny':756}
-    hgrid = {'Nx':512, 'Ny':256}
-    vgrid = {'Nz':100}
+    #hgrid = {'Nx':1032, 'Ny':756}
+    #vgrid = {'Nz':300}
+    #
     
-    # fails with 8x4 tiling on 512x256x100 grid (gmres and bicg):
-    #   [28] Out of memory. Allocated: 676721200, Used by process: 716288000
-    #   [28] Memory requested 389653540
+    # :
+    #ncores_x=8; ncores_y=8
+    #hgrid = {'Nx':512, 'Ny':512}
+    #vgrid = {'Nz':100}       
+    
+    # requires 16x8:
+    #ncores_x=16; ncores_y=8
+    #hgrid = {'Nx':512, 'Ny':512}
+    #vgrid = {'Nz':300}    
+    
+    # requires 16x16
+    ncores_x=16; ncores_y=16
+    hgrid = {'Nx':1024, 'Ny':512}
+    vgrid = {'Nz':300}
+    # crashes with io
+    
+    # no io
+    # 512 x 512 x 100 on 8x8: 160 s, 136 iter
+    # 512 x 512 x 300 on 8x8: crash, out of memory
+    #     -------     on 16x8: 237 s, 144 iter
+    # 1024 x 512 x 300 on 16 x 8: crash, out of memory
+    #     -------     on 16x16: 379s s, 236 iter
+
+    
     
     if ping_mpi_cfg:
         # escape before computing
@@ -68,7 +81,7 @@ def uniform_grid_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
         qg.set_rho()
         qg.set_psi()    
         qg.invert_pv()
-        #write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
         
         if qg._verbose>0:
             print '----------------------------------------------------'
@@ -93,6 +106,18 @@ def uniform_grid_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
                 write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
         
         return qg
+
+
+
+
+
+
+
+
+#
+#==================== Synthetic curvilinear case ============================================
+#
+
 
 
 def curvilinear_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
@@ -126,6 +151,16 @@ def curvilinear_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
                 write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
     
         return qg
+
+
+
+
+
+
+#
+#==================== ROMS case ============================================
+#
+
 
 
 def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
@@ -201,7 +236,13 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
 
 
-def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
+
+
+#
+#==================== NEMO case ============================================
+#
+
+def nemo_input_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
     ''' Tests with curvilinear grid
     '''
     
@@ -221,11 +262,12 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # LMX domain: Nx=1032, Ny=756, Nz=300
     
         # vertical subdomain
-        vdom = {'kdown': 150, 'kup': 250, 'k0': 150 }
+        vdom = {'kdown': 0, 'kup': 100-1, 'k0': 150 }
     
         # horizontal subdomain
-        hdom = {'istart': 230, 'iend': 450, 'i0': 230,'jstart': 250, 'jend': 500,  'j0': 250 }
-    
+        hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+        # 448=8x56
+        # 512=8x64
     
         hgrid = 'data/nemo_metrics.nc'
         vgrid = 'data/nemo_metrics.nc'
@@ -270,6 +312,10 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     
         return qg
 
+
+
+
+
 def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     
     if ping_mpi_cfg:
@@ -311,9 +357,9 @@ def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
 def main(ping_mpi_cfg=False):    
     
-    qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
+    #qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
     #qg = roms_input_runs(ping_mpi_cfg=ping_mpi_cfg)
-    #qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
+    qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
     # qg = test_L(ping_mpi_cfg=ping_mpi_cfg)
     
     if ping_mpi_cfg:

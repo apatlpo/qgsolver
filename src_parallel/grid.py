@@ -34,13 +34,10 @@ class grid(object):
             #
             hgrid = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'Nx':150, 'Ny':100}
             hgrid.update(hgrid_in)
-            #for key, value in hgrid.items():
-            #    hgrid_input[key]=value
-            #
             self._build_hgrid_uniform(**hgrid)
         else:
             # curvilinear grid
-            print '!!! need to determine Nx and Ny from files'
+            #print '!!! need to determine Nx and Ny from files'
             self._build_hgrid_curvilinear(hgrid_in)
 
         #   
@@ -53,53 +50,83 @@ class grid(object):
             #
             vgrid = {'H':4.e3, 'Nz':10}
             vgrid.update(vgrid_in)
-            #for key, value in vgrid.items():
-            #    vgrid_input[key]=value
-            #
             self._build_vgrid_uniform(**vgrid)
         else:
             # curvilinear grid
-            print '!!! need to determine Nz from files'
+            #print '!!! need to determine Nz from files'
             self._build_vgrid_stretched(vgrid_in)
+
+
+        # check that Nx, Ny, Nz can be derived or that they are provided
+        if not hasattr(self,'Nx'):
+            try:
+                self.Nx = hdom_in['iend']-hdom_in['istart']+1
+            except:
+                print '!!! you need to prescribe one of the two variables: Nx, iend'
+                sys.exit()
+        if not hasattr(self,'Ny'):
+            try:
+                self.Ny = hdom_in['jend']-hdom_in['jstart']+1
+            except:
+                print '!!! you need to prescribe one of the two variables: Ny, jend'
+                sys.exit()
+        if not hasattr(self,'Nz'):
+            try:
+                self.Nz = vdom_in['kup']-vdom_in['kdown']+1
+            except:
+                print '!!! you need to prescribe one of the two variables: Nz, kup'
+                sys.exit()
 
 
         #
         # deals with subdomains
         #
-        
         self._flag_vdom=False
         if vdom_in:
             self._flag_vdom=True
         vdom = {'kdown': 0, 'kup': self.Nz-1, 'k0': 0}
         vdom.update(vdom_in)
-        #self.kdown = 0
-        #self.kup = self.Nz0 - 1
-        #self.k0 = 0
         for key, value in vdom.items():
             exec ('self.' + key + '=' + str(value))
-        #self.kmargin = self.kdown - self.k0
 
         self._flag_hdom=False
         if hdom_in:
             self._flag_hdom=True
         hdom = {'istart': 0, 'iend': self.Nx-1, 'i0': 0,
                 'jstart': 0, 'jend': self.Ny-1, 'j0': 0}
-        hdom.update(hdom_in)  
-        #self.istart = 0
-        #self.iend = self.Nx0 - 1
-        #self.i0 = 0
-        #self.jstart = 0
-        #self.jend = self.Ny0 - 1
-        #self.j0 = 0
+        hdom.update(hdom_in)
         for key, value in hdom.items():
             exec ('self.' + key + '=' + str(value))
-        #self.imargin = self.istart - self.i0
-        #self.jmargin = self.jstart - self.j0
 
-        #self.Nx = min(self.Nx0, self.iend - self.istart + 1 + 2 * self.imargin)
-        #self.Ny = min(self.Ny0, self.jend - self.jstart + 1 + 2 * self.jmargin)
-        #self.Nz = min(self.Nz0, self.kup - self.kdown + 1 + 2 * self.kmargin)
-        #print
+        # fills in jend, iend, or kup if necessary
+        if 'iend' not in hdom_in:
+            try:
+                self.iend=self.istart+self.Nx-1
+            except:
+                print '!!! iend cannot be determined'
+        if 'jend' not in hdom_in:
+            try:
+                self.jend=self.jstart+self.Ny-1
+            except:
+                print '!!! jend cannot be determined'
+        if 'kup' not in vdom_in:
+            try:
+                self.kup=self.kdown+self.Nz-1
+            except:
+                print '!!! kup cannot be determined'                
+                 
+
+        # check consistency between subdomain indices and Nx, Ny and Nz
+        if self.iend-self.istart+1!=self.Nx:
+            print '!!! iend-istart+1 not equal to Nx'
+            sys.exit()
+        elif self.jend-self.jstart+1!=self.Ny:
+            print '!!! jend-jstart+1 not equal to Ny'
+            sys.exit()
+        elif self.kup-self.kdown+1!=self.Nz:
+            print '!!! kup-kdown+1 not equal to Nz'
+            sys.exit()
+
 
 
     #
@@ -126,7 +153,7 @@ class grid(object):
         # store metric file but metric terms are loaded later
         self.hgrid_file = hgrid_file
         # loads dimensions for dmda creation
-        self.Nx0, self.Ny0 = read_hgrid_dimensions(self.hgrid_file)
+        #self.Nx0, self.Ny0 = read_hgrid_dimensions(self.hgrid_file)
     
     
     def load_metric_terms(self, da, comm):
@@ -150,8 +177,7 @@ class grid(object):
                     v[i, j, self._k_dy] = self.dy                   
                     v[i, j, self._k_lon] = i*self.dx
                     v[i, j, self._k_lat] = j*self.dy
-            #v[xs:xe, ys:ye, self._k_dx] = self.dx
-            #v[xs:xe, ys:ye, self._k_dy] = self.dy
+                    
         else:
             # open and read netcdf file
             rootgrp = Dataset(self.hgrid_file, 'r')
@@ -169,9 +195,7 @@ class grid(object):
         if self._flag_vgrid_uniform:
             self.zc = np.ones(self.Nz)
             self.zf = np.ones(self.Nz)
-            # a cleaner choice should be made here for whether the code is parallelized in z
-            #for k in range(zs,ze):
-            for k in xrange(self.Nz):
+            for k in range(zs,ze):
                 self.zc[k]=(k-0.5)*self.dz
                 self.zf[k]=k*self.dz
             self.dzc = np.diff(self.zc)
@@ -213,7 +237,7 @@ class grid(object):
         self.vgrid_file = vgrid_file
         # open netcdf file
         rootgrp = Dataset(vgrid_file, 'r')
-        self.Nz0 = len(rootgrp.dimensions['zc'])
+        #self.Nz0 = len(rootgrp.dimensions['zc'])
 
         # V = read_nc(['zc','zf'], vgrid_filename)
         # self.zc = V[0]
