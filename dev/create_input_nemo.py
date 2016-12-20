@@ -166,6 +166,7 @@ if __name__ == "__main__":
     nc.close()
     #N2[1:] = N2[:-1]
     np.hstack((N2[0],N2))
+    #np.hstack((N2,N2[-1]))
     print '!!! Shape of N2 is %d' %N2.shape
 
     # load PV
@@ -183,7 +184,7 @@ if __name__ == "__main__":
     nc_f0[:] = f0
     #
     nc_N2 = rootgrp.createVariable('N2',dtype,('zf'))
-    nc_N2[:] = N2[:]
+    nc_N2[:] = N2[::-1]
     #
     nc_q = rootgrp.createVariable('q',dtype,('zc','y','x'))
     for k in xrange(zc.size):
@@ -191,7 +192,7 @@ if __name__ == "__main__":
     #
     rootgrp.close()
 
-  
+
     # plot pv
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())

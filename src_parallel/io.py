@@ -7,8 +7,9 @@ from petsc4py import PETSc
 import numpy as np
 from netCDF4 import Dataset
 
-#def write_nc(V, vname, filename, qg, create=True):
-#    pass
+#
+#==================== Pure IO ============================================
+#
 
 def write_nc(V, vname, filename, qg, create=True):    
     """ Write a variable to a netcdf file
@@ -200,7 +201,39 @@ def read_hgrid_dimensions(hgrid_file):
     Nx = len(rootgrp.dimensions['x'])
     Ny = len(rootgrp.dimensions['y'])    
     return Nx, Ny
+
+
+
+
+
+#
+#==================== Data input ============================================
+#
+
+class input(object):
+    '''
+    Hold data that will be used 
+    Interpolate data in time
+    '''
+
+    def __init__(self,variable,files, da):
+        ''' init data input
+        should test if variables are 2D
+        '''
+        # browses files in order to figure out available times
+        self.data = da.createGlobalVec()
+        pass
     
+    
+    def update(self,time):
+        ''' interpolate input data at a given time
+        '''
+        pass
 
 
-        
+
+
+
+
+
+
