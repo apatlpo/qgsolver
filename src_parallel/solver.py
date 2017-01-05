@@ -78,6 +78,8 @@ class pvinversion():
         # write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
+        # substract f-f0 from PV
+        self.substract_fprime_from_rhs(qg)
         # fix boundaries
         self.set_rhs_bdy(qg)
         #write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
@@ -90,7 +92,26 @@ class pvinversion():
         #
         if self._verbose>1:
             print 'Inversion done'
+            
+    def substract_fprime_from_rhs(self, qg):
+        """
+        Substract f'=f-f0 from the rhs used in PV inversion
+        """
+        rhs = qg.da.getVecArray(self._RHS)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
+        D = qg.da.getVecArray(qg.D)
+
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):                    
+                    rhs[i,j,k] -= D[i,j,qg.grid._k_f] - qg.f0
+        
+        if self._verbose>0:
+            print 'Substract f-f0 from pv prior to inversion'
+
+        
 
     def set_rhs_bdy(self, qg):
         """
