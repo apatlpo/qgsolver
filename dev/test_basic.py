@@ -296,6 +296,12 @@ def nemo_input_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for set_rho ', str(time.time() - cur_time)
         cur_time = time.time()
+
+        #write_nc(qg.PSI, 'psi', 'data/input.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/input.nc', qg)
+        if qg.rank == 0: print '----------------------------------------------------'
+        if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
+        cur_time = time.time()
     
         qg.invert_pv()
         if qg.rank == 0: print '----------------------------------------------------'

@@ -101,7 +101,7 @@ class pvinversion():
         mx, my, mz = qg.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
-        D = qg.da.getVecArray(qg.D)
+        D = qg.da.getVecArray(qg.grid.D)
 
         for k in range(zs,ze):
             for j in range(ys, ye):
@@ -150,6 +150,7 @@ class pvinversion():
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            
             # upper ghost area (!!! ze=Nz and not Nz-1)
             if ze > kup+1:
                 for k in range(kup+1,ze):
