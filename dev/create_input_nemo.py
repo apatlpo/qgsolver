@@ -160,7 +160,8 @@ if __name__ == "__main__":
     f0 = np.mean(f)
     
     # load stratification profile
-    N2_file = datadir+'DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_bruntvaisala_bg_mindepth10.nc'
+    # N2_file = datadir+'DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_bruntvaisala_bg_mindepth10.nc'
+    N2_file = datadir+'DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_bruntvaisala_bg_mindepth10_new.nc'
     nc = Dataset(N2_file, 'r')
     N2 = nc.variables['bvfreq_bg'][:]
     nc.close()
@@ -170,9 +171,11 @@ if __name__ == "__main__":
     print '!!! Shape of N2 is %d' %N2.shape
 
     # load PV
-    pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test_good/LMX_y2007m01d01_qgpv_v1.nc'
+    # pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test_good_new/LMX_y2007m01d01_qgpv_v1.nc'
+    pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'
     nc = Dataset(pv_file, 'r')
-    q = nc.variables['qgpv_v1']
+    # q = nc.variables['qgpv_v1']
+    q = nc.variables['qgpv_v2']
 
 
     # store variables

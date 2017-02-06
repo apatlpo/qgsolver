@@ -221,8 +221,8 @@ class pvinversion():
                     for i in range(xs, xe):
                         rhs[i, j, k] = 0.
 
-
-
+        if self._verbose>0:
+            print 'set RHS along boudaries for inversion '
 
 
 #

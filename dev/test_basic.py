@@ -242,7 +242,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 #==================== NEMO case ============================================
 #
 
-def nemo_input_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
+def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     ''' Tests with curvilinear grid
     '''
     
@@ -262,10 +262,12 @@ def nemo_input_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
         # LMX domain: Nx=1032, Ny=756, Nz=300
     
         # vertical subdomain
-        vdom = {'kdown': 0, 'kup': 100-1, 'k0': 150 }
+        # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 150 }
+        vdom = {'kdown': 0, 'kup': 50-1, 'k0': 175 }
     
         # horizontal subdomain
-        hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+        # hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+        hdom = {'istart': 0, 'iend': 100-1, 'i0': 100,'jstart': 0, 'jend': 100-1,  'j0': 400}
         # 448=8x56
         # 512=8x64
     
