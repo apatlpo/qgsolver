@@ -90,7 +90,7 @@ if __name__ == "__main__":
     if  len(sys.argv) < 2:
         print '[syntaxe] : run_caparmor workdir case'
         print 'rundir = directory created in /work/username'
-        print 'case = roms or nemo'
+        print 'case = uniform or roms or nemo'
         quit()
     
     # get useful dirs

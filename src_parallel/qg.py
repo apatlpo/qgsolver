@@ -28,6 +28,7 @@ class qg_model():
                  vdom={}, hdom={},
                  ncores_x=None, ncores_y=None,
                  verbose = 1,
+                 substract_fprime=False
                  ):
         """ QG object creation
         Parameters:
@@ -137,7 +138,7 @@ class qg_model():
         #
         # initiate pv inversion solver
         #
-        self.pvinv = pvinversion(self)
+        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
         #
         # initiate time stepper
         #

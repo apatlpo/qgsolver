@@ -23,7 +23,12 @@ print 'export PYTHONPATH=\"$PYTHONPATH:/Users/aponte/Current_projects/copernicus
 print('python2.7 setup.py build_ext --inplace')
 print('mpirun-openmpi-gcc49 -np 4  python2.7  ./dev/'+script+'.py  -mf -ksp_view -ksp_monitor -ksp_converged_reason')
 
-# print 'All done'
+
+# on caparmor
+print 'On caparmor'
+print 'cd /home/slyne/aponte/natl60/qgsolver/'
+print 'python run_caparmor.py qg_uniform uniform'
+print '(from slyne) ncview /home/caparmor-work/aponte/qg_uniform/dev/data/output.nc'
 
 
 # PETSc options possible 

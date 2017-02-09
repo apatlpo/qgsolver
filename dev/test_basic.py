@@ -41,10 +41,16 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     #vgrid = {'Nz':300}
     #
     
+    #
+    #ncores_x=8; ncores_y=2
+    #hgrid = {'Nx':256, 'Ny':256}
+    #vgrid = {'Nz':50}           
+    
     # :
-    #ncores_x=8; ncores_y=8
-    #hgrid = {'Nx':512, 'Ny':512}
+    ncores_x=16; ncores_y=16
+    hgrid = {'Nx':512, 'Ny':512}
     #vgrid = {'Nz':100}       
+    vgrid = {'Nz':200}
     
     # requires 16x8:
     #ncores_x=16; ncores_y=8
@@ -52,9 +58,9 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     #vgrid = {'Nz':300}    
     
     # requires 16x16
-    ncores_x=16; ncores_y=16
-    hgrid = {'Nx':1024, 'Ny':512}
-    vgrid = {'Nz':300}
+    #ncores_x=16; ncores_y=16
+    #hgrid = {'Nx':1024, 'Ny':512}
+    #vgrid = {'Nz':300}
     # crashes with io
     
     # no io
@@ -245,6 +251,23 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     ''' Tests with curvilinear grid
     '''
+
+
+    # LMX domain: Nx=1032, Ny=756, Nz=300
+
+    # vertical subdomain
+    vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 }
+
+    # horizontal subdomain
+    hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}
+    #hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+    # 448=8x56
+    # 512=8x64
+    
+    # set tiling
+    ncores_x=2; ncores_y=16
+    ncores_x=6; ncores_y=16
+
     
     if ping_mpi_cfg:
         # escape before computing
@@ -259,25 +282,13 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # case must be defined before ncores for run_caparmor.py
         casename = 'nemo'
     
-        # LMX domain: Nx=1032, Ny=756, Nz=300
-    
-        # vertical subdomain
-        # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 150 }
-        vdom = {'kdown': 0, 'kup': 50-1, 'k0': 175 }
-    
-        # horizontal subdomain
-        # hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
-        hdom = {'istart': 0, 'iend': 100-1, 'i0': 100,'jstart': 0, 'jend': 100-1,  'j0': 400}
-        # 448=8x56
-        # 512=8x64
-    
         hgrid = 'data/nemo_metrics.nc'
         vgrid = 'data/nemo_metrics.nc'
         file_q = 'data/nemo_pv.nc'
         file_psi = 'data/nemo_psi.nc'
         file_rho = 'data/nemo_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
-                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y)
+                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, substract_fprime=True)
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'
@@ -365,9 +376,12 @@ def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
 def main(ping_mpi_cfg=False):    
     
-    #qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
+    qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
+    #
     #qg = roms_input_runs(ping_mpi_cfg=ping_mpi_cfg)
-    qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
+    #
+    #qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
+    #
     # qg = test_L(ping_mpi_cfg=ping_mpi_cfg)
     
     if ping_mpi_cfg:

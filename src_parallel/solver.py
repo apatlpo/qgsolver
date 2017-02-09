@@ -15,12 +15,13 @@ class pvinversion():
     """ PV inversion, parallel
     """
     
-    def __init__(self, qg):
+    def __init__(self, qg, substract_fprime):
         """ Setup the PV inversion solver
         """
                 
         self._verbose = qg._verbose
-                        
+        self._substract_fprime = substract_fprime
+        
         # create the operator
         self.L = qg.da.createMat()
         #
@@ -74,12 +75,18 @@ class pvinversion():
     def solve(self, qg):
         """ Compute the PV inversion
         """
-        # qg.pvinv.L.mult(qg.PSI,self._RHS)
-        # write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
+        # debug (nemo):
+        #qg.pvinv.L.mult(qg.PSI,self._RHS)
+        #self.L.mult(qg.PSI, self._RHS)
+        #write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
+        #
         # copy Q into RHS
         qg.Q.copy(self._RHS)
-        # substract f-f0 from PV
-        self.substract_fprime_from_rhs(qg)
+        if self._substract_fprime:
+            # substract f-f0 from PV
+            self.substract_fprime_from_rhs(qg)
+            if self._verbose>0:
+                print 'Substract fprime from pv prior to inversion'
         # fix boundaries
         self.set_rhs_bdy(qg)
         #write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
@@ -87,8 +94,10 @@ class pvinversion():
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
         #
-        # debug test:
-        #self.L.mult(qg.PSI, self._RHS)
+        # debug (uniform):
+        self.L.mult(qg.PSI, self._RHS)
+        #qg.pvinv.L.mult(qg.PSI,self._RHS)
+        write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
         #
         if self._verbose>1:
             print 'Inversion done'
