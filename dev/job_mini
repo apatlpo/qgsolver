@@ -1,0 +1,17 @@
+#!/bin/csh
+#PBS -N minipb 
+#PBS -q parallel8
+#PBS -l select=1:ncpus=8:mpiprocs=8
+
+# cp /home/slyne/aponte/natl60/qgsolver/dev/test_poisson_mini.py . ; qsub job_mini
+# cp /home/slyne/aponte/natl60/qgsolver/dev/test_mini.py . ; qsub job_mini
+
+# cd to the directory you submitted your job
+cd $PBS_O_WORKDIR
+
+# get the path for python
+setenv PYTHONPATH $PBS_O_WORKDIR/..
+
+#cp /home/slyne/aponte/natl60/qgsolver/dev/test_mini.py .
+
+time mpirun -np 8 python test_mini.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi
