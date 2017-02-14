@@ -105,7 +105,7 @@ if __name__ == "__main__":
         print 'unknown case (uniform or roms or nemo)'
         sys.exit()
     goodcase=False
-    RPATH = WORKDIR+'/'+rundir    
+    RPATH = WORKDIR+'/'+rundir
 
     # read py script
     ncores_x, ncores_y, queue, nb_cores, nb_nodes = read_pyscript()

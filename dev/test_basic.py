@@ -10,13 +10,15 @@ PV inversion of an analytical PV distribution
 import time
 import sys
 
-try:
-    from qgsolver.qg import qg_model
-    from qgsolver.io import write_nc
-except:
-    #print 'qgsolver not yet in path'
-    pass
+#try:
+#    from qgsolver.qg import qg_model
+#    from qgsolver.io import write_nc
+#except:
+#    print 'qgsolver not yet in path'
+#    sys.exit
 
+from qgsolver.qg import qg_model
+from qgsolver.io import write_nc
 
 #
 #==================== Uniform case ============================================
@@ -242,7 +244,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 #==================== NEMO case ============================================
 #
 
-def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
+def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     ''' Tests with curvilinear grid
     '''
     
@@ -262,14 +264,19 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # LMX domain: Nx=1032, Ny=756, Nz=300
     
         # vertical subdomain
+        vdom = {'kdown': 0, 'kup': 180 - 1, 'k0': 115}
         # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 150 }
-        vdom = {'kdown': 0, 'kup': 50-1, 'k0': 175 }
+        # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 175 }
     
         # horizontal subdomain
         # hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
-        hdom = {'istart': 0, 'iend': 100-1, 'i0': 100,'jstart': 0, 'jend': 100-1,  'j0': 400}
+        hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}
+        # hdom = {'istart': 0, 'iend': 100-1, 'i0': 100,'jstart': 0, 'jend': 100-1,  'j0': 400}
         # 448=8x56
         # 512=8x64
+
+        # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
+        bdy_type = {'top':'N', 'bottom':'N'}
     
         hgrid = 'data/nemo_metrics.nc'
         vgrid = 'data/nemo_metrics.nc'
@@ -277,7 +284,7 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         file_psi = 'data/nemo_psi.nc'
         file_rho = 'data/nemo_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
-                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y)
+                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y,bdy_type=bdy_type)
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'

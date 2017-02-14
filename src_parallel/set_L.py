@@ -38,31 +38,48 @@ def set_L(L, qg):
             for i in range(xs, xe):
                 row.index = (i,j,k)
                 row.field = 0
+
                 # lateral points outside the domain: dirichlet, psi=...
                 if (i<=istart or j<=jstart or
                     i>=iend or j>=jend):
                     L.setValueStencil(row, row, 1.0)
-                # bottom bdy condition: Neuman dpsi/dz=...
+
+                # bottom bdy condition: default Neuman dpsi/dz=...
                 elif (k==kdown):
-                    for index, value in [
-                        ((i,j,k), -idz),
-                        ((i,j,k+1),  idz)
-                        ]:
-                        col.index = index
-                        col.field = 0
-                        L.setValueStencil(row, col, value)
-                # top bdy condition: Neuman dpsi/dz=...
+                    if qg.bdy_type['bottom']=='N' :
+                        for index, value in [
+                            ((i,j,k), -idz),
+                            ((i,j,k+1),  idz)
+                            ]:
+                            col.index = index
+                            col.field = 0
+                            L.setValueStencil(row, col, value)
+                    elif qg.bdy_type['bottom']=='D':
+                        L.setValueStencil(row, row, 1.0)
+                    else:
+                        print "unknown bottom boundary condition"
+                        sys.exit()
+
+                # top bdy condition: default Neuman dpsi/dz=...
                 elif (k==kup):
-                    for index, value in [
-                        ((i,j,k-1), -idz),
-                        ((i,j,k),  idz),
-                        ]:
-                        col.index = index
-                        col.field = 0
-                        L.setValueStencil(row, col, value)
+                    if qg.bdy_type['top']=='N' :
+                        for index, value in [
+                            ((i,j,k-1), -idz),
+                            ((i,j,k),  idz),
+                            ]:
+                            col.index = index
+                            col.field = 0
+                            L.setValueStencil(row, col, value)
+                    elif qg.bdy_type['top']=='D':
+                        L.setValueStencil(row, row, 1.0)
+                    else:
+                        print "unknown bottom boundary condition"
+                        sys.exit()
+
                 # points below and above the domain
                 elif (k<kdown or k>kup):
                     L.setValueStencil(row, row, 0.0)
+
                 # interior points: pv is prescribed
                 else:
                     for index, value in [
@@ -122,34 +139,52 @@ def set_L_curv(L, qg):
             for i in range(xs, xe):
                 row.index = (i,j,k)
                 row.field = 0
+
                 # lateral points outside the domain: dirichlet, psi=...
                 if (i<=istart or j<=jstart or
                     i>=iend or j>=jend):
                     L.setValueStencil(row, row, 1.0)
-                # bottom bdy condition: Neuman dpsi/dz=...
+
+                # bottom bdy condition: default Neuman dpsi/dz=...
                 elif (k==kdown):
-                    for index, value in [
-                        ((i,j,k), -idzc[k]),
-                        ((i,j,k+1),  idzc[k])
-                        ]:
-                        col.index = index
-                        col.field = 0
-                        L.setValueStencil(row, col, value)
-                # top bdy condition: Neuman dpsi/dz=...
+                    if qg.bdy_type['bottom']=='N' : 
+                        for index, value in [
+                            ((i,j,k), -idzc[k]),
+                            ((i,j,k+1),  idzc[k])
+                            ]:
+                            col.index = index
+                            col.field = 0
+                            L.setValueStencil(row, col, value)
+                    elif qg.bdy_type['bottom']=='D' :
+                        L.setValueStencil(row, row, 1.0)
+                    else:
+                        print "unknown bottom boundary condition"
+                        sys.exit()
+
+                # top bdy condition: default Neuman dpsi/dz=...
                 elif (k==kup):
-                    for index, value in [
-                        ((i,j,k-1), -idzc[k-1]),
-                        ((i,j,k),  idzc[k-1]),
-                        ]:
-                        col.index = index
-                        col.field = 0
-                        L.setValueStencil(row, col, value)
+                    if qg.bdy_type['top']=='N' : 
+                        for index, value in [
+                            ((i,j,k-1), -idzc[k-1]),
+                            ((i,j,k),  idzc[k-1]),
+                            ]:
+                            col.index = index
+                            col.field = 0
+                            L.setValueStencil(row, col, value)
+                    elif qg.bdy_type['top']=='D':
+                        L.setValueStencil(row, row, 1.0)
+                    else:
+                        print "unknown top boundary condition"
+                        sys.exit()
+
                 # points below and above the domain
                 elif (k<kdown) or (k>kup):
                     L.setValueStencil(row, row, 0.0)
                     # L.setValueStencil(row, row, 1.0)
+                    
                 # interior points: pv is prescribed
                 else:
+                    
                     for index, value in [
                         ((i,j,k-1), qg._sparam[k]*idzc[k-1]*idzf[k]),
                         ((i,j-1,k), 1./D[i,j,kdx]/D[i,j,kdy] \
@@ -172,6 +207,8 @@ def set_L_curv(L, qg):
                         col.index = index
                         col.field = 0
                         L.setValueStencil(row, col, value)
+
+               
     L.assemble()
     return
 

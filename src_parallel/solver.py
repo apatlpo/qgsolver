@@ -3,6 +3,7 @@
 
 
 import sys
+import numpy as np
 
 from .set_L import *
 from .io import write_nc
@@ -74,7 +75,11 @@ class pvinversion():
     def solve(self, qg):
         """ Compute the PV inversion
         """
+	# compute L*PSI and store in self._RHS
+        # ONE = qg.set_identity()
+        # write_nc([ONE], ['id'], 'data/identity.nc', qg)
         # qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # store L*PSI in netcdf file lpsi.nc
         # write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
@@ -82,7 +87,8 @@ class pvinversion():
         self.substract_fprime_from_rhs(qg)
         # fix boundaries
         self.set_rhs_bdy(qg)
-        #write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        # store RHS in netcdf file rhs.nc
+        # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
@@ -147,9 +153,18 @@ class pvinversion():
                             rhs[i,j,k]=sys.float_info.epsilon
             # bottom bdy
             k = kdown
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            if qg.bdy_type['bottom']=='N' : 
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(qg.rho0*qg.f0)
+            elif qg.bdy_type['bottom']=='D':
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi[i,j,k]
+            else:
+                print "unknown bottom boundary condition"
+                sys.exit()
+
             
             # upper ghost area (!!! ze=Nz and not Nz-1)
             if ze > kup+1:
@@ -159,9 +174,17 @@ class pvinversion():
                             rhs[i,j,k]=sys.float_info.epsilon                
             # upper bdy
             k = kup
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    rhs[i, j, k] = - qg.g*rho[i, j, k]/(qg.rho0*qg.f0)
+            if qg.bdy_type['top']=='N' : 
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
+            elif qg.bdy_type['top']=='D' :
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi[i,j,k]
+            else:
+                print "unknown bottom boundary condition"
+                sys.exit()
             
             # debug: computes vertical bdy from psi
             # bottom bdy
