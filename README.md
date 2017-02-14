@@ -45,7 +45,7 @@ conda install -c juanlu001 petsc4py=3.6.0
 conda install -y netcdf4
 ```
 
-### with conda on caparmor (pb size < 512x252x100)
+### with conda on caparmor 
 
 Proper conda install on Caparmor:
 ```csh
@@ -58,7 +58,7 @@ source activate petsc
 conda install -c conda-forge petsc=3.7.4 
 conda install -c conda-forge petsc4py=3.7.0
 conda install -c conda-forge netcdf4=1.2.7
-
+```
 Use of qgsolver on Caparmor
 ```csh
 bash
