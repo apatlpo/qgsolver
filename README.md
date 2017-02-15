@@ -1,5 +1,3 @@
-
-
 # Overview
 
 This library implements a 3D z-level QG solver in regular grid or in lon/lat 
@@ -14,10 +12,11 @@ It relies on petsc4py for parallelized PV inversions but can also work in serial
 
 Download and install with:
 ```csh
-git clone https://apatlpo@bitbucket.org/apatlpo/qgsolver.git
+git clone https://yourlogin@bitbucket.org/apatlpo/qgsolver.git
 cd qgsolver
 python setup.py
 ```
+where yourlogin is your login
 
 ## libraries required
 
@@ -131,6 +130,3 @@ cd petsc-3.7.4/
 ./configure PETSC_ARCH=linux-gnu-intel --with-cc=mpiicc --with-fc=mpiifort --with-blas-lapack-dir=/appli/intel/Compiler/11.1/073/mkl  --with-64-bit-indices   --download-petsc4py
 make all test
 ```
-
-
-
