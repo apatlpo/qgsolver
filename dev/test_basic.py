@@ -10,13 +10,15 @@ PV inversion of an analytical PV distribution
 import time
 import sys
 
-try:
-    from qgsolver.qg import qg_model
-    from qgsolver.io import write_nc
-except:
-    #print 'qgsolver not yet in path'
-    pass
+#try:
+#    from qgsolver.qg import qg_model
+#    from qgsolver.io import write_nc
+#except:
+#    print 'qgsolver not yet in path'
+#    sys.exit
 
+from qgsolver.qg import qg_model
+from qgsolver.io import write_nc
 
 #
 #==================== Uniform case ============================================
@@ -248,7 +250,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 #==================== NEMO case ============================================
 #
 
-def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
+def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     ''' Tests with curvilinear grid
     '''
 
@@ -282,13 +284,17 @@ def nemo_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # case must be defined before ncores for run_caparmor.py
         casename = 'nemo'
     
+        # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
+        bdy_type = {'top':'N', 'bottom':'N'}
+    
         hgrid = 'data/nemo_metrics.nc'
         vgrid = 'data/nemo_metrics.nc'
         file_q = 'data/nemo_pv.nc'
         file_psi = 'data/nemo_psi.nc'
         file_rho = 'data/nemo_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
-                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, substract_fprime=True)
+                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
+                      bdy_type=bdy_type, substract_fprime=True)
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'

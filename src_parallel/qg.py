@@ -244,5 +244,9 @@ class qg_model():
         """ Compute horizontal velocities
         """
 
-
+    def set_identity(self):
+    	ONE = self.da.createGlobalVec()
+	one = self.da.getVecArray(ONE)
+        one[:] = 1.
+        return ONE
 

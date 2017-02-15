@@ -35,6 +35,7 @@ export PYTHONPATH=$PYTHONPATH:/home/slyne/aponte/natl60/python/oocgcm/
 Proper conda install on Linux:
 ```csh
 wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
+bash Miniconda-latest-Linux-x86_64.sh
 (specify .miniconda2 and not miniconda2 as target dir for conda)
 bash
 conda update conda
@@ -44,20 +45,24 @@ conda install -c juanlu001 petsc4py=3.6.0
 conda install -y netcdf4
 ```
 
-### with conda on caparmor (pb size < 512x252x100)
+### with conda on caparmor 
 
 Proper conda install on Caparmor:
 ```csh
-conda create --name petsc_env python
-source activate petsc_env
-conda install -c sed-pro-inria petsc4py=3.4
-conda install -y netcdf4
-```
+bash Miniconda2-4.2.12-Linux-x86_64.sh
+(specify .miniconda2 and not miniconda2 as target dir for conda)
 
+conda update conda
+conda create --name petsc python
+source activate petsc
+conda install -c conda-forge petsc=3.7.4 
+conda install -c conda-forge petsc4py=3.7.0
+conda install -c conda-forge netcdf4=1.2.7
+```
 Use of qgsolver on Caparmor
 ```csh
 bash
-source activate petsc_env
+source activate petsc
 cd .../qgsolver/dev
 python run_caparmor.py workdir
 ```
@@ -81,7 +86,7 @@ export WORKDIR="/work/aponte/"
 source activate petsc
 ```
 
-### with pip on caparmor (pb size >= 512x252x100)
+### with pip on caparmor (pb size >= 512x252x100) doesn't work!!!
 
 When the problem is larger than 256x256x100 (approximately),
 petsc needs to have been compiled with the option --with-64-bit-indices.
@@ -112,7 +117,7 @@ pip install --user netcdf4
 ```
 
 I should also be possible to compile petsc4py within a petsc compilation with
-something like (not tested):
+something like (not tested): doesn't work!!!
 ```csh
 module load python/2.7.10_gnu-4.9.2
 setenv MPICC mpiicc

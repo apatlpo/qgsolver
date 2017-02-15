@@ -16,7 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.fftpack._fftpack import zfft
 
 d2r = np.pi/180.
-
+reflev=250
 
 def create_nc(filename, lon, lat, zc, zf):
     
@@ -51,7 +51,8 @@ if __name__ == "__main__":
     
     
     ### NEMO grid file
-    datadir='/home7/pharos/othr/NATL60/'
+    # datadir='/home7/pharos/othr/NATL60/'
+    datadir='data/'
     griddir=datadir+'NATL60-I/BOXES/'
     
     
@@ -92,6 +93,7 @@ if __name__ == "__main__":
     zc = -vgrid.variables['gdept_0'][0,::-1]
     zf = -vgrid.variables['gdepw_0'][0,::-1]    
     e3 = np.diff(zf)
+    dzc = np.diff(zc)
     
 
     # plot vertical grid
@@ -218,14 +220,14 @@ if __name__ == "__main__":
     
     psi_file = datadir+'DIAG_DIMUP/psi0/LMX/LMX_y2007m01d01_psi0.nc'
     nc = Dataset(psi_file, 'r')
-    psi = nc.variables['psi0'][:]
-    
+    psi = nc.variables['psi0'][:] 
+
     rootgrp = create_nc('data/nemo_psi.nc', lon, lat, zc, zf)
     #
     nc_psi = rootgrp.createVariable('psi',dtype,('zc','y','x'))
     for k in xrange(zc.size):
-        nc_psi[k,...] = psi[psi.shape[0]-1-k,...]    
-    
+        nc_psi[k,...] = psi[psi.shape[0]-1-k,...]  
+
   
     # plot psi
     plt.figure(figsize=(8,3))
@@ -256,14 +258,13 @@ if __name__ == "__main__":
     ncbg = Dataset(rhobg_file, 'r')
     rhobg = ncbg.variables['density_bg'][:]
     
-    
-    
     rootgrp = create_nc('data/nemo_rho.nc', lon, lat, zc, zf)
     #
     nc_rho = rootgrp.createVariable('rho',dtype,('zc','y','x'))
     for k in xrange(zc.size):
         nc_rho[k,...] = rho[rho.shape[0]-1-k,...] - rhobg[rho.shape[0]-1-k,None,None]
     
+
     # plot horizontal metrics
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())
