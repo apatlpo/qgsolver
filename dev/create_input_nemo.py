@@ -19,7 +19,7 @@ from scipy.fftpack._fftpack import zfft
 d2r = np.pi/180.
 fillvalue = netCDF4.default_fillvals['f8']
 
-def create_nc(filename, lon, lat, zc, zf):
+def create_nc(filename, lon, lat, zt, zw):
     
     ### create a netcdf file
     rootgrp = Dataset(filename, 'w',
@@ -28,22 +28,22 @@ def create_nc(filename, lon, lat, zc, zf):
     # create dimensions
     rootgrp.createDimension('x', lon.shape[1])
     rootgrp.createDimension('y', lat.shape[0])
-    rootgrp.createDimension('zc', zc.size)
-    rootgrp.createDimension('zf', zf.size)
+    rootgrp.createDimension('zt', zt.size)
+    rootgrp.createDimension('zw', zw.size)
     
     # create variables
     dtype='f8'
     nc_lon = rootgrp.createVariable('lon',dtype,('y','x'))
     nc_lat = rootgrp.createVariable('lat',dtype,('y','x'))
-    nc_zc = rootgrp.createVariable('zc',dtype,('zc'))
-    nc_zf = rootgrp.createVariable('zf',dtype,('zf'))
+    nc_zt = rootgrp.createVariable('zt',dtype,('zt'))
+    nc_zw = rootgrp.createVariable('zw',dtype,('zw'))
     
     nc_lon[:] = lon
     nc_lat[:] = lat
-    nc_zc[:] = zc
-    nc_zf[:] = zf
+    nc_zt[:] = zt
+    nc_zw[:] = zw
         
-    # rootgrp.createVariable(name,dtype,('zc','y','x',)))
+    # rootgrp.createVariable(name,dtype,('zt','y','x',)))
     return rootgrp
 
 
@@ -51,7 +51,7 @@ def create_nc(filename, lon, lat, zc, zf):
 if __name__ == "__main__":
     
     # doesn't keep levels under the depth mask_depth
-    mask_depth = -4500.
+    mask_depth = -3000.
     # mask_depth = -7000.
 
 
@@ -68,8 +68,13 @@ if __name__ == "__main__":
     hgrid = Dataset(hgrid_file, 'r')
     lon = hgrid.variables['nav_lon'][:]
     lat = hgrid.variables['nav_lat'][:]
-    e1 = hgrid.variables['e1t'][:]
-    e2 = hgrid.variables['e2t'][:]
+    dxt = hgrid.variables['e1t'][:]
+    dyt = hgrid.variables['e2t'][:]
+    dxu = hgrid.variables['e1u'][:]
+    dyu = hgrid.variables['e2u'][:]
+    dxv = hgrid.variables['e1v'][:]
+    dyv = hgrid.variables['e2v'][:]
+    
     L = lon.shape[1]
     M = lat.shape[0]
 
@@ -99,20 +104,20 @@ if __name__ == "__main__":
     vgrid_file=griddir+'NATL60LMX_v4.1_cdf_mesh_zgr.nc'
     
     vgrid = Dataset(vgrid_file, 'r')
-    zc = -vgrid.variables['gdept_0'][0,::-1]
-    zf = -vgrid.variables['gdepw_0'][0,::-1]    
-    N = zc.shape[0]
-    # dzc = vgrid.variables['e3w_0'][0,::-1]
-    # dzf = vgrid.variables['e3t_0'][0,::-1]
+    zt = -vgrid.variables['gdept_0'][0,::-1]
+    zw = -vgrid.variables['gdepw_0'][0,::-1]    
+    N = zt.shape[0]
+    dzt = vgrid.variables['e3t_0'][0,::-1]
+    dzw = vgrid.variables['e3w_0'][0,::-1]
 
-    # find nearest index in zc for mask_depth
-    index_mask_depth = min(range(len(zc)), key=lambda i: abs(zc[i]-mask_depth))
+    # find nearest index in zt for mask_depth
+    index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
     print "mask reference at level:",index_mask_depth
 
     # # plot vertical grid
     # plt.figure()
-    # plt.plot(zf,'k+')
-    # plt.plot(zf,'k.')
+    # plt.plot(zw,'k+')
+    # plt.plot(zw,'k.')
     # plt.grid()
     # plt.savefig('figs/nemo_input_vgrid.jpg', dpi=300)
         
@@ -144,17 +149,29 @@ if __name__ == "__main__":
 
         
     # store metric terms
-    #zc = np.hstack((zc,zc[[-1]]))
+    #zt = np.hstack((zt,zt[[-1]]))
     print "create metrics grid"
-    # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zc[index_mask_depth:], zf[index_mask_depth:])
-    metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zc, zf)
+    # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
+    metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt, zw)
     #
     dtype='f8'
     # 
-    nc_e1 = metricsout.createVariable('e1',dtype,('y','x'))
-    nc_e1[:] = e1
-    nc_e2 = metricsout.createVariable('e2',dtype,('y','x'))
-    nc_e2[:] = e2
+    nc_dxt = metricsout.createVariable('dxt',dtype,('y','x'))
+    nc_dxt[:] = dxt
+    nc_dyt = metricsout.createVariable('dyt',dtype,('y','x'))
+    nc_dyt[:] = dyt
+    nc_dxu = metricsout.createVariable('dxu',dtype,('y','x'))
+    nc_dxu[:] = dxu
+    nc_dyu = metricsout.createVariable('dyu',dtype,('y','x'))
+    nc_dyu[:] = dyu
+    nc_dxv = metricsout.createVariable('dxv',dtype,('y','x'))
+    nc_dxv[:] = dxv
+    nc_dyv = metricsout.createVariable('dyv',dtype,('y','x'))
+    nc_dyv[:] = dyv
+    nc_dzt = metricsout.createVariable('dzt',dtype,('zt'))
+    nc_dzt[:] = dzt
+    nc_dzw = metricsout.createVariable('dzw',dtype,('zw'))
+    nc_dzw[:] = dzw
 
     
     # metricsout.close()
@@ -191,7 +208,7 @@ if __name__ == "__main__":
 
     # store PV
     print "store pv"
-    pvout = create_nc('data/nemo_pv.nc', lon, lat, zc, zf)
+    pvout = create_nc('data/nemo_pv.nc', lon, lat, zt, zw)
     #
     nc_f = pvout.createVariable('f',dtype,('y','x'))
     nc_f[:] = f  
@@ -199,10 +216,10 @@ if __name__ == "__main__":
     nc_f0 = pvout.createVariable('f0',dtype)
     nc_f0[:] = f0
     #
-    nc_N2 = pvout.createVariable('N2',dtype,('zf'))
+    nc_N2 = pvout.createVariable('N2',dtype,('zw'))
     nc_N2[:] = np.flipud(N2)
     #
-    nc_q = pvout.createVariable('q',dtype,('zc','y','x'), fill_value=q._FillValue)
+    nc_q = pvout.createVariable('q',dtype,('zt','y','x'), fill_value=q._FillValue)
     nc_q[:] = np.flipud(q)
   
 
@@ -227,7 +244,7 @@ if __name__ == "__main__":
     # ax.set_extent(lims,ccrs.PlateCarree())
     # im = ax.pcolormesh(lon,lat,q[5,:,:]/f0,transform=ccrs.PlateCarree())
     # cbar = plt.colorbar(im, format="%.2f")
-    # plt.title('q/f0(z=%0.0f) [1]' %zc[-5-1], size=10) # to modify the title
+    # plt.title('q/f0(z=%0.0f) [1]' %zt[-5-1], size=10) # to modify the title
     # ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
     # ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     # ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
@@ -251,13 +268,13 @@ if __name__ == "__main__":
     # store psi
     print "create psi file"
     if old:
-        # psiout = create_nc('data/nemo_psi.nc', lon, lat, zc[index_mask_depth:], zf[index_mask_depth:])
-        psiout = create_nc('data/nemo_psi.nc', lon, lat, zc, zf)
-        nc_psi = psiout.createVariable('psi',dtype,('zc','y','x'))
+        # psiout = create_nc('data/nemo_psi.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
+        psiout = create_nc('data/nemo_psi.nc', lon, lat, zt, zw)
+        nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
         nc_psi[:] = np.flipud(psi) 
     else:
-        psiout = create_nc('data/nemo_psi.nc', lon, lat, zc, zf)
-        nc_psi = psiout.createVariable('psi',dtype,('zc','y','x'))
+        psiout = create_nc('data/nemo_psi.nc', lon, lat, zt, zw)
+        nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
         nc_psi[:] = np.flipud(psi[:,:,:]+psi_surf[None,:,:])
   
     # # plot psi
@@ -266,7 +283,7 @@ if __name__ == "__main__":
     # ax.set_extent(lims,ccrs.PlateCarree())
     # im = ax.pcolormesh(lon,lat,psi[5,:,:],transform=ccrs.PlateCarree())
     # cbar = plt.colorbar(im, format="%.2f")
-    # plt.title('psi(z=%0.0f) [m^2/s]' %zc[-5-1], size=10) # to modify the title
+    # plt.title('psi(z=%0.0f) [m^2/s]' %zt[-5-1], size=10) # to modify the title
     # ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
     # ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     # ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
@@ -294,8 +311,8 @@ if __name__ == "__main__":
     
     # store rho - background
     print "create rho file"
-    rhoout = create_nc('data/nemo_rho.nc', lon, lat, zc, zf)
-    nc_rho = rhoout.createVariable('rho',dtype,('zc','y','x'))
+    rhoout = create_nc('data/nemo_rho.nc', lon, lat, zt, zw)
+    nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
     nc_rho[:] = np.flipud(rho[:,:,:] - rhobg[:,None,None])
     
 
@@ -305,7 +322,7 @@ if __name__ == "__main__":
     # ax.set_extent(lims,ccrs.PlateCarree())
     # im = ax.pcolormesh(lon,lat,rho[5,:,:]-rhobg[5],transform=ccrs.PlateCarree())
     # cbar = plt.colorbar(im, format="%.2f")
-    # plt.title('rho(z=%0.0f) [kg/m^3]' %zc[-5-1], size=10) # to modify the title
+    # plt.title('rho(z=%0.0f) [kg/m^3]' %zt[-5-1], size=10) # to modify the title
     # ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
     # ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     # ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
