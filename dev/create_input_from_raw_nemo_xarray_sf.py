@@ -73,7 +73,7 @@ def create_nc(filename, lon, lat, zc, zf):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcFalse_fvertTrue'
+    stest='mode2_fcFalse_fvertFalse'
 
     # - Control parameters
 
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     rhobg_file = datadir+'DIAG_DIMUP/2007_2008/'+xp.region+'/bg/'+xp.region\
        +'_2007_2008_density_bg_mindepth10.nc'
     rhobg_xr,N2_xr=phy.call_background(xp,xp.region,xp.grd,xp.vgrd,z=None,mindepth=10,
-           N2file=N2_file,rhobgfile=rhobg_file)
+           N2file=N2_file,rhobgfile=rhobg_file,fN2gridT=True)
     #N2[1:] = N2[:-1]
     print N2_file
     print N2_xr
@@ -243,10 +243,13 @@ if __name__ == "__main__":
     print '!!! Shape of N2 is %d' %N2.shape
 
     # compute density, psi, PV
-    rho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=None,fcstretch=False,
+    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=None,fcstretch=False,
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
         dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file) 
-    print rho_xr,psi_xr,q_xr
+    print arho_xr,psi_xr,q_xr
+    rho_xr = arho_xr*oopp.rau0
+    rhobg_xr['depth']=rho_xr['depth']
+    rho_xr+= rhobg_xr
     rho = rho_xr.to_masked_array()
     psi = psi_xr.to_masked_array()
     q = q_xr.to_masked_array()
@@ -305,7 +308,6 @@ if __name__ == "__main__":
     
 
     ### load and store rho
-    rho_xr = arho_xr*oopp.rau0+rhobg_xr
     rho=rho_xr.to_masked_array()
     
     # load background density
@@ -322,7 +324,7 @@ if __name__ == "__main__":
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())
     ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,vrho[5,:,:]-vrhobg[5],transform=ccrs.PlateCarree())
+    im = ax.pcolormesh(vlon,vlat,rho[5,:,:]-rhobg[5],transform=ccrs.PlateCarree())
     cbar = plt.colorbar(im, format="%.2f")
     plt.title('rho(z=%0.0f) [kg/m^3]' %zc[-5-1], size=10) # to modify the title
     ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
