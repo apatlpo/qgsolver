@@ -72,7 +72,7 @@ def create_nc(filename, lon, lat, zt, zw):
 
 if __name__ == "__main__":
 
-    stest='mod/mode2_fcFalse_fvertTrue'
+    stest='mode2_fcFalse_fvertTrue'
 
     # - Control parameters
 
@@ -210,8 +210,6 @@ if __name__ == "__main__":
         
     # store metric terms
     #zt = np.hstack((zt,zt[[-1]]))
-    rootgrp = create_nc('data/'+stest+'/nemo_metrics.nc', vlon, vlat, zt, zw)
-    #zt = np.hstack((zt,zt[[-1]]))
     print "create metrics grid"
     # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
     metricsout = create_nc('data/nemo_metrics.nc', vlon, vlat, zt, zw)    #
@@ -296,7 +294,7 @@ if __name__ == "__main__":
     nc_f0[:] = f0
     #
     nc_N2 = pvout.createVariable('N2',dtype,('zw'))
-    nc_N2[:] = N2[::-1]
+    nc_N2[:] = np.flipud(N2)
     #
     nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
     nc_q[:] = np.flipud(q)
@@ -308,16 +306,12 @@ if __name__ == "__main__":
     nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
     nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
 
-    for k in xrange(zt.size):
-        nc_q[k,...] = q[q.shape[0]-1-k,...]
     #
-    pvout.close()
 
     # enlarge the mask: if the i,j point has an adjacent land point then it becames land
     dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
     nc_mask[1:-1,1:-1] = np.where(dummy == 0, nc_mask[1:-1,1:-1], 1.)
     metricsout.close()
-    pvin.close()
     pvout.close()
 
     ### load and store psi    
@@ -355,8 +349,8 @@ if __name__ == "__main__":
     rhoout = create_nc('data/'+stest+'/nemo_rho.nc', vlon, vlat, zt, zw)
     #
     nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
-    nc_rho[k,...] = np.flipud(rho[:,:,:] - rhobg[:,None,None])
-    
+    nc_rho[k,...] = np.flipud(rho[:,:,:])
+
     rhoout.close()
 
     # plot rho                      
