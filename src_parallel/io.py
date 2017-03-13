@@ -111,43 +111,40 @@ def read_nc_petsc(V, vname, filename, qg):
     for k in range(zs, ze):
         for j in range(ys, ye):
             for i in range(xs, xe):
-                v[i, j, k] = vread[k-zs,j-ys,i-xs]
+                v[i, j, k] = vread[k-zs,j-ys,i-xs]                  
 
     rootgrp.close()
     qg.comm.barrier()
-    #if qg.rank ==0: print 'Variable '+vname+' read from '+filename
-    if qg._verbose: print '... done'
-#     # number of variables to read
-#     Nv=len(vname)
-#     # process rank
-#     rank = qg.rank
-# 
-#     if rank == 0:
-# 
-#         ### create a netcdf file to store QG pv for inversion
-#         rootgrp = Dataset(filename, 'r')
-# 
-#         # 3D variables
-#         nc_V=[]
-#         for name in vname:
-#             nc_V.append(rootgrp.createVariable(name,dtype,('t','z','y','x',)))
-#     
-#     # loop around variables now and store them
-#     Vn = qg.da.createNaturalVec()
-#     for i in xrange(Nv):
-#         qg.da.globalToNatural(V[i], Vn)
-#         #qg.da.naturalToGlobal(Vn,V[i])
-#         scatter, Vn0 = PETSc.Scatter.toAll(Vn)
-#         if rank == 0:
-#             Vf = nc_V[i][-1,...]
-#         scatter.scatter(Vn0, Vn, False, PETSc.Scatter.Mode.FORWARD)
-#         qg.comm.barrier()
-#       
-#     if rank == 0:
-#         # close the netcdf file
-#         rootgrp.close()
-        
-        
+
+def read_nc_petsc_2D(V, vname, filename, level, qg):    
+    """
+    Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level 
+    Parameters:
+        V one(!) petsc vector
+        vname corresponding name in netcdf file
+        filename
+        level vertical index to store 2D variable in 3D petsc vector
+        qg object
+    """
+    v = qg.da.getVecArray(V)
+    (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+    istart = xs + qg.grid.i0
+    iend = xe + qg.grid.i0
+    jstart = ys + qg.grid.j0
+    jend = ye + qg.grid.j0
+
+    rootgrp = Dataset(filename, 'r')
+    ndim=len(rootgrp.variables[vname].shape)
+    if ndim==2:
+        vread = rootgrp.variables[vname][jstart:jend,istart:iend]
+    else:
+        print "error in read_nc_petsc_2D"
+        sys.exit()
+    for j in range(ys, ye):
+        for i in range(xs, xe):
+            v[i, j, level] = vread[j-ys,i-xs]                  
+    rootgrp.close()
+               
         
 def read_nc(vnames, filename,qg):
     """ Read variables from a netcdf file

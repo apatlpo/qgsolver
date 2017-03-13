@@ -12,7 +12,9 @@ petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 import numpy as np
-from .io import read_nc_petsc
+from .io import read_nc_petsc, read_nc_petsc_2D
+from .io import write_nc
+
 
 
 
@@ -27,6 +29,7 @@ class qg_model():
                  dt = 86400.e-1,
                  vdom={}, hdom={},
                  ncores_x=None, ncores_y=None,
+                 bdy_type_in={},
                  verbose = 1,
                  substract_fprime=False
                  ):
@@ -40,7 +43,6 @@ class qg_model():
         # Build grid object
         #
         self.grid = grid(hgrid, vgrid, vdom, hdom, verbose=verbose)
-
 
         #
         # init petsc
@@ -66,6 +68,13 @@ class qg_model():
                     +str(self.da.proc_sizes) 
             #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
 
+
+        # print out grid information
+        if self.rank is 0 and verbose>0:
+            self._verbose=verbose
+        else:
+            self._verbose=0
+
         #
         # finalize grid/metric loading
         #
@@ -74,11 +83,10 @@ class qg_model():
         if not self.grid._flag_hgrid_uniform or not self.grid._flag_vgrid_uniform:
             self.grid.load_metric_terms(self.da, self.comm)
         
-        # print out grid information
-        if self.rank is 0 and verbose>0:
-            self._verbose=verbose
-        else:
-            self._verbose=0
+        # initialize mask
+        # self.set_mask()
+        self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm)
+
         #
         if self._verbose>0:
             # general information
@@ -92,10 +100,11 @@ class qg_model():
             #     print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
             #              %(self.istart, self.iend, self.jstart, self.jend)
 
+
         #
         # vertical stratification and Coriolis
         #
-        # N2 is at w points (cell faces), N2[i] is between q[i-1] and q[i]
+        # N2 is at w points (cell faces), N2[k] is between q[k] and q[k+1]
         if f0N2_file is not None:
             if self._verbose:
                 print 'Reads N2 from '+f0N2_file
@@ -106,7 +115,7 @@ class qg_model():
                 print 'Set N2 from user prescribed value = '+str(N2)+' 1/s^2'
             #
             self.N2 = N2*np.ones(self.grid.Nz)
-            #self.N2 = N2*np.ones(self.grid.Nz+1)
+
         #
         if f0N2_file is not None:
             if self._verbose:
@@ -121,7 +130,7 @@ class qg_model():
             self.f0 = f0
             if self._verbose:
                 print 'Sets f0 to %.3e' %f0
-
+                
         #
         self._sparam = self.f0**2/self.N2
         self.K = K
@@ -134,19 +143,21 @@ class qg_model():
         self.PSI = self.da.createGlobalVec()
         # density
         self.RHO = self.da.createGlobalVec()
-                
-        #
+
+        # default top and bottom boudary condition = 'N' pour Neumann. 
+        # Other possibility 'D' for Direchlet
+        self.bdy_type = {'top':'N','bottom':'N'}
+        self.bdy_type.update(bdy_type_in)
+
         # initiate pv inversion solver
-        #
         self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
-        #
+
         # initiate time stepper
         #
         self.tstepper = time_stepper(self, dt)
         #print 'debug: time stepper object created'
-        
-    
-        
+
+
     def set_psi(self, analytical_psi=True, file_psi=None):
         """
         Set psi to a given value
@@ -154,7 +165,8 @@ class qg_model():
         if file_psi is not None:
             if self._verbose:
                 print 'Set psi from file '+file_psi+' ...'
-            read_nc_petsc(self.PSI, 'psi', file_psi, self)
+            read_nc_petsc(self.PSI, 'psi', file_psi, self) 
+
         elif analytical_psi:
             self.set_psi_analytically()
 
@@ -163,6 +175,7 @@ class qg_model():
         """ Set psi analytically
         """
         psi = self.da.getVecArray(self.PSI)
+        psi_surf = self.da.getVecArray(self.PSI_SURF)
         mx, my, mz = self.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #

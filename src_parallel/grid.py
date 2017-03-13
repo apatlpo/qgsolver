@@ -35,6 +35,7 @@ class grid(object):
             hgrid = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'Nx':150, 'Ny':100}
             hgrid.update(hgrid_in)
             self._build_hgrid_uniform(**hgrid)
+
         else:
             # curvilinear grid
             #print '!!! need to determine Nx and Ny from files'
@@ -72,7 +73,8 @@ class grid(object):
                 sys.exit()
         if not hasattr(self,'Nz'):
             try:
-                self.Nz = vdom_in['kup']-vdom_in['kdown']+1
+                # self.Nz = vdom_in['kup']-vdom_in['kdown']+1
+                self.Nz = vdom_in['kup']-vdom_in['kdown']+2
             except:
                 print '!!! you need to prescribe one of the two variables: Nz, kup'
                 sys.exit()
@@ -111,7 +113,8 @@ class grid(object):
                 print '!!! jend cannot be determined'
         if 'kup' not in vdom_in:
             try:
-                self.kup=self.kdown+self.Nz-1
+                # self.kup=self.kdown+self.Nz-1
+                self.kup=self.kdown+self.Nz-2
             except:
                 print '!!! kup cannot be determined'                
                  
@@ -122,8 +125,9 @@ class grid(object):
             sys.exit()
         elif self.jend-self.jstart+1!=self.Ny:
             print '!!! jend-jstart+1 not equal to Ny'
-            sys.exit()
-        elif self.kup-self.kdown+1!=self.Nz:
+        #     sys.exit()
+        # elif self.kup-self.kdown+1!=self.Nz:
+        elif self.kup-self.kdown+2!=self.Nz:
             print '!!! kup-kdown+1 not equal to Nz'
             sys.exit()
 
@@ -144,7 +148,8 @@ class grid(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         # compute metric terms
-        self.dz=self.H/(self.Nz-1.)
+        # self.dz=self.H/(self.Nz-1.)
+        self.dz=self.H/(self.Nz-2.)
     
     #
     # Curvilinear horizontal grid
@@ -164,19 +169,24 @@ class grid(object):
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension of 
-        self._k_dx =zs
-        self._k_dy =zs+1
-        self._k_lon=zs+2
-        self._k_lat=zs+3
+        self._k_dxt =zs
+        self._k_dyt =zs+1
+        self._k_dxu =zs+2
+        self._k_dyu =zs+3
+        self._k_dxv =zs+4
+        self._k_dyv =zs+5
+        self._k_lon=zs+6
+        self._k_lat=zs+7
 
+        # Initialize xt,yt,dxt,dyt
         if self.hgrid_file is None:
             # roms input
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, self._k_dx] = self.dx
-                    v[i, j, self._k_dy] = self.dy                   
+                    v[i, j, self._k_dxt] = self.dx
+                    v[i, j, self._k_dyt] = self.dy                   
                     v[i, j, self._k_lon] = i*self.dx
-                    v[i, j, self._k_lat] = j*self.dy
+                    v[i, j, self._k_lat] = j*self.dy        
                     
         else:
             # open and read netcdf file
@@ -185,12 +195,22 @@ class grid(object):
             # curvilinear metric
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, self._k_dx] = rootgrp.variables['e1'][j+self.j0,i+self.i0]
-                    v[i, j, self._k_dy] = rootgrp.variables['e2'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_dxt] = rootgrp.variables['e1'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_dyt] = rootgrp.variables['e2'][j+self.j0,i+self.i0]
                     v[i, j, self._k_lon] = rootgrp.variables['lon'][j+self.j0,i+self.i0]
                     v[i, j, self._k_lat] = rootgrp.variables['lat'][j+self.j0,i+self.i0]
-            rootgrp.close()
-        #
+        rootgrp.close()
+
+
+        # Initialize dxu,dyu,dyv,dyv
+        v[xs:xe-1,:, self._k_dxu] = 0.5*(v[xs:xe-1,:, self._k_dxt]+v[xs+1:xe,:, self._k_dxt])
+        v[xe-1,:, self._k_dxu] = v[xe-2,:, self._k_dxu]
+        v[:,:, self._k_dyu] = v[:,:, self._k_dyt]
+
+        v[:,:, self._k_dxv] = v[:,:, self._k_dxt]
+        v[:,ys:ye-1, self._k_dyv] = 0.5*(v[:,ys:ye-1, self._k_dyt]+v[:,ys+1:ye, self._k_dyt])
+        v[:,ye-1, self._k_dyv] = v[:,ye-2, self._k_dyv]
+        
 
         if self._flag_vgrid_uniform:
             self.zc = np.ones(self.Nz)
@@ -198,17 +218,16 @@ class grid(object):
             for k in range(zs,ze):
                 self.zc[k]=(k-0.5)*self.dz
                 self.zf[k]=k*self.dz
-            self.dzc = np.diff(self.zc)
-            self.dzf = np.diff(self.zf)
         else:
             # open netdc file
             rootgrp = Dataset(self.vgrid_file, 'r')
             self.zc = rootgrp.variables['zc'][zs+self.k0:ze+self.k0]
             self.zf = rootgrp.variables['zf'][zs+self.k0:ze+self.k0]
+
             rootgrp.close()
 
-            self.dzc = np.diff(self.zc)
-            self.dzf = np.diff(self.zf)
+        self.dzc = np.diff(self.zf)
+        self.dzf = np.diff(self.zc)
 
         comm.barrier()
         pass
@@ -217,7 +236,7 @@ class grid(object):
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension 
-        self._k_f=zs+4       
+        self._k_f=zs+9       
         # open and read netcdf file
         rootgrp = Dataset(coriolis_file, 'r')
         for j in range(ys, ye):
@@ -227,7 +246,23 @@ class grid(object):
         #
         comm.barrier()
         pass
-    
+     
+    def load_mask(self, mask_file, da, comm):
+        v = da.getVecArray(self.D)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        # indexes along the third dimension 
+        self._k_mask=zs+8       
+        # open and read netcdf file
+        rootgrp = Dataset(mask_file, 'r')
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
+        rootgrp.close()
+
+        #
+        comm.barrier()
+        pass   
+
     #
     # Vertically stretched grid
     #
@@ -237,17 +272,7 @@ class grid(object):
         self.vgrid_file = vgrid_file
         # open netcdf file
         rootgrp = Dataset(vgrid_file, 'r')
-        #self.Nz0 = len(rootgrp.dimensions['zc'])
 
-        # V = read_nc(['zc','zf'], vgrid_filename)
-        # self.zc = V[0]
-        # self.zf = V[1]
-        # #
-        # self.dzc = np.diff(self.zc)
-        # self.dzf = np.diff(self.zf)
-        # #
-        # self.Nz0 = len(self.zc)
-        # if self.verbose>0 : print self.dzc
 
 
 

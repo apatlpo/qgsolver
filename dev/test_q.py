@@ -102,7 +102,8 @@ if __name__ == "__main__":
 
     # load PV
     print "read PV"
-    pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'
+    # pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'
+    pv_file = "/home7/pharos/othr/NATL60/DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc"
     pvin = Dataset(pv_file, 'r')
     q = pvin.variables['qgpv_v2'][level-1:level+2,ys:ye,xs:xe]
 
@@ -148,11 +149,11 @@ if __name__ == "__main__":
     q_stretch=np.zeros_like(psi[k,:,:])
     for j in range(1,M-1):
         for i in range(1,L-1):
-            q_stretch[j,i] = ( f0**2/N2[k+1] * (psi[k+1,j,i]-psi[k,j,i])/e3f[k+1] - \
-                               f0**2/N2[k] * (psi[k,j,i]-psi[k-1,j,i])/e3f[k]) / e3t[k]
+            q_stretch[j,i] = ( f0**2/N2[k+1] *  (psi[k+1,j,i]-psi[k,j,i])/e3f[k+1] - \
+                               f0**2/N2[k] *    (psi[k,j,i]-psi[k-1,j,i])/e3f[k]) / e3t[k]
 
     # store Vorticity
-    q_sum = q_relative + q_stretch
+    q_sum = q_relative + q_stretch + f - f0
 
     # store original PV 
     dtype='f8'
