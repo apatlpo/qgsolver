@@ -73,7 +73,7 @@ def create_nc(filename, lon, lat, zc, zf):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcFalse_fvertFalse'
+    stest='mode2_fcTrue_fvertTrue'
 
     # - Control parameters
 
@@ -243,13 +243,13 @@ if __name__ == "__main__":
     print '!!! Shape of N2 is %d' %N2.shape
 
     # compute density, psi, PV
-    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=None,fcstretch=False,
+    # fout: activate rho and psi outputting
+    # fc* : activate online processing (no intermediate reading)
+    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=True,fccurl=None,fcstretch=True,
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
         dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file) 
     print arho_xr,psi_xr,q_xr
     rho_xr = arho_xr*oopp.rau0
-    rhobg_xr['depth']=rho_xr['depth']
-    rho_xr+= rhobg_xr
     rho = rho_xr.to_masked_array()
     psi = psi_xr.to_masked_array()
     q = q_xr.to_masked_array()
@@ -316,7 +316,7 @@ if __name__ == "__main__":
     #
     nc_rho = rootgrp.createVariable('rho',dtype,('zc','y','x'))
     for k in xrange(zc.size):
-        nc_rho[k,...] = rho[rho.shape[0]-1-k,...] - rhobg[rho.shape[0]-1-k,None,None]
+        nc_rho[k,...] = rho[rho.shape[0]-1-k,...]
     
     rootgrp.close()
 
