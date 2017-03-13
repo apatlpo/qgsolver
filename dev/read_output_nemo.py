@@ -21,7 +21,9 @@ d2r = np.pi/180.
 if __name__ == "__main__":
     
     # data path
-    datadir='/home/caparmor-work/aponte/qg_nemo/dev/data/'
+    # datadir='/home/caparmor-work/aponte/qg_nemo/dev/data/'
+    datadir='/home/caparmor-work/slgentil/nemotest/dev/data/'
+    # datadir='/home/mulroy/slgentil/models/natl60/qgsolver/dev/data/'
 
 
     # NEMO output file
@@ -40,19 +42,26 @@ if __name__ == "__main__":
     grid_file=datadir+'nemo_metrics.nc'
     ncg = Dataset(grid_file, 'r')
     lon = ncg.variables['lon'][:,:]
-    lat = ncg.variables['lat'][:,:]    
+    lat = ncg.variables['lat'][:,:]
     hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 100,'jstart': 0, 'jend': 100-1,  'j0': 400}
     
     lon = lon[hdom['j0']:hdom['j0']+hdom['jend']+1,hdom['i0']:hdom['i0']+hdom['iend']+1]
     lat = lat[hdom['j0']:hdom['j0']+hdom['jend']+1,hdom['i0']:hdom['i0']+hdom['iend']+1]
     #lon=nci.variables['x']
     #lat=nci.variables['y']
+
     z=nci.variables['z']
   
-    # plt parameters 
-    lims=[-73,-63, 33, 38]
-    lon_tcks = range(-73,-63, 2)
-    lat_tcks = range(33,37,1)
+    # plt parameters
+
+    xmin = np.floor(lon[0, 0])
+    xmax = np.floor(lon[-1, -1]) + 1
+    ymin = np.floor(lat[0, 0])
+    ymax = np.floor(lat[-1, -1]) + 1
+    lims=[xmin,xmax,ymin,ymax]
+    lon_tcks = range(np.int(xmin),np.int(xmax),1)
+    lat_tcks = range(np.int(ymin),np.int(ymax),1)
 
     # depth selection
     zlvl = [0, -200, -1000]
@@ -74,7 +83,7 @@ if __name__ == "__main__":
         ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
         ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
         ax.gridlines()
-        plt.savefig('figs/nemo_input_psi_in_k'+str(k)+'.jpg', dpi=300)
+        plt.savefig('figs/nemo_input_v2_psi_in_k'+str(k)+'.jpg', dpi=300)
                 
     
         # plot psi out
@@ -88,7 +97,7 @@ if __name__ == "__main__":
         ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
         ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
         ax.gridlines()
-        plt.savefig('figs/nemo_input_psi_out_k'+str(k)+'.jpg', dpi=300)
+        plt.savefig('figs/nemo_input_v2_psi_out_k'+str(k)+'.jpg', dpi=300)
     
     
     
@@ -108,7 +117,7 @@ if __name__ == "__main__":
         lax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
         lax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
         lax.gridlines()
-        #plt.savefig('figs/nemo_input_qpsi_in_k'+str(k)+'.jpg', dpi=300)
+        #plt.savefig('figs/nemo_input_v2_qpsi_in_k'+str(k)+'.jpg', dpi=300)
 
         #lax = ax[1]
         #lax=plt.axes(projection=ccrs.PlateCarree())
@@ -123,7 +132,7 @@ if __name__ == "__main__":
         lax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
         lax.gridlines()
         
-        plt.savefig('figs/nemo_input_qpsi_inout_k'+str(k)+'.jpg', dpi=300)
+        plt.savefig('figs/nemo_input_v2_qpsi_inout_k'+str(k)+'.jpg', dpi=300)
 
     sys.exit()
   
@@ -148,9 +157,12 @@ if __name__ == "__main__":
     
     
     # plot hgrid
-    lims=[-80,-55, 30, 45]
-    lon_tcks = range(-80,-55, 5)
-    lat_tcks = range(30,45,5)
+    # lims=[-80,-55, 30, 45]
+    # lon_tcks = range(-80,-55, 5)
+    # lat_tcks = range(30,45,5)
+    lims=[-71,-65, 31, 38]
+    lon_tcks = range(-71,-65, 5)
+    lat_tcks = range(31,38,5)
     #
     plt.figure(figsize=(8,3))
     ax=plt.axes(projection=ccrs.PlateCarree())
@@ -163,7 +175,7 @@ if __name__ == "__main__":
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
     #figname='figs/snapshot_'+vkey.replace (" ", "_")+'_magnitude.jpg'
-    plt.savefig('figs/nemo_input_hgrid.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_hgrid.jpg', dpi=300)
     #print figname+' printed'
     
     
@@ -181,7 +193,7 @@ if __name__ == "__main__":
     plt.plot(zf,'k+')
     plt.plot(zf,'k.')
     plt.grid()
-    plt.savefig('figs/nemo_input_vgrid.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_vgrid.jpg', dpi=300)
         
     # plot horizontal metrics
     plt.figure(figsize=(8,3))
@@ -194,7 +206,7 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()    
-    plt.savefig('figs/nemo_input_e1.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_e1.jpg', dpi=300)
 
     # plot horizontal metrics
     plt.figure(figsize=(8,3))
@@ -207,7 +219,7 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()    
-    plt.savefig('figs/nemo_input_e2.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_e2.jpg', dpi=300)
 
         
     # store metric terms
@@ -286,7 +298,7 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
-    plt.savefig('figs/nemo_input_q.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_q.jpg', dpi=300)
 
     # close file
     nc.close()
@@ -317,7 +329,7 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
-    plt.savefig('figs/nemo_input_psi.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_psi.jpg', dpi=300)
     
     # close file
     nc.close()    
@@ -354,7 +366,7 @@ if __name__ == "__main__":
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
-    plt.savefig('figs/nemo_input_rho.jpg', dpi=300)
+    plt.savefig('figs/nemo_input_v2_rho.jpg', dpi=300)
     
     # close file
     nc.close()    

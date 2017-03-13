@@ -74,11 +74,11 @@ if __name__ == "__main__":
     vgrid_file=griddir+'NATL60LMX_v4.1_cdf_mesh_zgr.nc'
     
     vgrid = Dataset(vgrid_file, 'r')
-    zc = vgrid.variables['gdept_0'][0,level-1:level+2]
-    zf = vgrid.variables['gdepw_0'][0,level-1:level+2] 
+    zc = vgrid.variables['gdept_0'][0,level-2:level+3]
+    zf = vgrid.variables['gdepw_0'][0,level-2:level+3] 
     N = zc.shape[0]
-    e3f = vgrid.variables['e3w_0'][0,level-1:level+2]
-    e3t = vgrid.variables['e3t_0'][0,level-1:level+2]
+    e3f = vgrid.variables['e3w_0'][0,level-2:level+3]
+    e3t = vgrid.variables['e3t_0'][0,level-2:level+3]
     print zc
     print zf
         
@@ -97,14 +97,15 @@ if __name__ == "__main__":
     print "read stratification"
     N2_file = datadir+'DIAG_DIMUP/2007_2008/LMX/bg/LMX_2007_2008_bruntvaisala_bg_mindepth10_new.nc'
     nc = Dataset(N2_file, 'r')
-    N2 = nc.variables['bvfreq_bg'][level-1:level+2]
+    N2 = nc.variables['bvfreq_bg'][level-2:level+3]
     nc.close()
 
     # load PV
     print "read PV"
-    pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'
+    # pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'
+    pv_file = "/home7/pharos/othr/NATL60/DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc"
     pvin = Dataset(pv_file, 'r')
-    q = pvin.variables['qgpv_v2'][level-1:level+2,ys:ye,xs:xe]
+    q = pvin.variables['qgpv_v2'][level-2:level+3,ys:ye,xs:xe]
 
     # pvin.close()
 
@@ -116,11 +117,11 @@ if __name__ == "__main__":
     if old :
         psi_file = datadir+'DIAG_DIMUP/psi0/LMX/LMX_y2007m01d01_psi0.nc'
         psiin = Dataset(psi_file, 'r')
-        psi = psiin.variables['psi0'][level-1:level+2,ys:ye,xs:xe] 
+        psi = psiin.variables['psi0'][level-2:level+3,ys:ye,xs:xe] 
     else:
         psi_file = datadir+'DIAG_DIMUP/psi0/LMX/LMX_y2007m01d01_psi0_split.nc'
         psiin = Dataset(psi_file, 'r')
-        psi = psiin.variables['psi0_hydrostatic'][level-1:level+2,ys:ye,xs:xe]    
+        psi = psiin.variables['psi0_hydrostatic'][level-2:level+3,ys:ye,xs:xe]    
         psi_surf = psiin.variables['psi0_surface_pressure'][ys:ye,xs:xe]
         psi[:,:,:] = psi[:,:,:] + psi_surf[None,:,:]
 
@@ -146,13 +147,16 @@ if __name__ == "__main__":
 
     # Calculate stretching term, caution: level 0 is the surface
     q_stretch=np.zeros_like(psi[k,:,:])
+    print f.shape, lat.shape
     for j in range(1,M-1):
         for i in range(1,L-1):
-            q_stretch[j,i] = ( f0**2/N2[k+1] * (psi[k+1,j,i]-psi[k,j,i])/e3f[k+1] - \
-                               f0**2/N2[k] * (psi[k,j,i]-psi[k-1,j,i])/e3f[k]) / e3t[k]
+            q_stretch[j,i] = ( f0**2/N2[k+1] *  (psi[k+1,j,i]-psi[k,j,i])/e3f[k+1] - \
+                               f0**2/N2[k] *    (psi[k,j,i]-psi[k-1,j,i])/e3f[k]) / e3t[k]
 
     # store Vorticity
-    q_sum = q_relative + q_stretch
+    fcor=np.zeros_like(psi[k,:,:])
+    fcor[1:,1:] = 0.25*(f[1:,1:]+f[1:,:-1]+f[:-1,:-1]+f[:-1,1:])
+    q_sum = q_relative + q_stretch + f - f0
 
     # store original PV 
     dtype='f8'

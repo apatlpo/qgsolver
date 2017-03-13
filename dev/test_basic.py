@@ -258,17 +258,22 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     # LMX domain: Nx=1032, Ny=756, Nz=300
 
     # vertical subdomain
-    vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 }
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # for linux
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 41 }    # for mask
+    vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 } # for caparmor
 
     # horizontal subdomain
-    hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}
-    #hdom = {'istart': 0, 'iend': 448-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # for linux
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 530,'jstart': 0, 'jend': 100-1,  'j0': 520}   # for mask
+    # hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165} # for caparmor
+    hdom = {'istart': 0, 'iend': 672-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}  # datarmor
     # 448=8x56
     # 512=8x64
     
     # set tiling
-    ncores_x=2; ncores_y=16
-    ncores_x=6; ncores_y=16
+    # ncores_x=2; ncores_y=4 # for linux
+    # ncores_x=2; ncores_y=8 # for caparmor
+    ncores_x=21; ncores_y=8  # datarmor
 
     
     if ping_mpi_cfg:
@@ -294,7 +299,7 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         file_rho = 'data/nemo_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type=bdy_type, substract_fprime=True)
+                      bdy_type_in=bdy_type, substract_fprime=True)
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'
@@ -315,9 +320,9 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for set_rho ', str(time.time() - cur_time)
         cur_time = time.time()
-
-        #write_nc(qg.PSI, 'psi', 'data/input.nc', qg)
+   
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/input.nc', qg)
+
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
         cur_time = time.time()
@@ -326,7 +331,7 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for invert_pv ', str(time.time() - cur_time)
         cur_time = time.time()
-    
+
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
@@ -382,11 +387,11 @@ def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
 def main(ping_mpi_cfg=False):    
     
-    qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
+    # qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
     #
     #qg = roms_input_runs(ping_mpi_cfg=ping_mpi_cfg)
     #
-    #qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
+    qg = nemo_input_runs(ping_mpi_cfg=ping_mpi_cfg)
     #
     # qg = test_L(ping_mpi_cfg=ping_mpi_cfg)
     

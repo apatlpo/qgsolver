@@ -12,8 +12,8 @@ Lpsi = rootgrp.variables["Lpsi"][0,...]
 print Lpsi.shape
 rootgrp.close()
 
-rootgrp = Dataset("data/rhsinv.nc", 'r')
-rhs = rootgrp.variables["rhsinv"][0,...]
+rootgrp = Dataset("data/rhs.nc", 'r')
+rhs = rootgrp.variables["rhs"][0,...]
 print rhs.shape
 rootgrp.close()
 

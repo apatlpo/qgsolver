@@ -34,6 +34,7 @@ class pvinversion():
             set_L(self.L, qg)
         else:
             set_L_curv(self.L, qg)
+            set_L_mask(self.L, qg)
 
         #
         if self._verbose>0:
@@ -51,8 +52,8 @@ class pvinversion():
         self.ksp.create(PETSc.COMM_WORLD)
         self.ksp.setOperators(self.L)
         # self.ksp.setType('cg')
-        # self.ksp.setType('gmres')
-        self.ksp.setType('bicg')
+        self.ksp.setType('gmres')
+        # self.ksp.setType('bicg')
         self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
         # self.ksp.getPC().setType('icc')
@@ -60,7 +61,7 @@ class pvinversion():
         # self.ksp.getPC().setType('asm')
         #self.ksp.getPC().setType('none')
         # set tolerances
-        # self.ksp.setTolerances(rtol=1e-10) # nope
+        self.ksp.setTolerances(rtol=1e-7) # nope
         self.ksp.setTolerances(max_it=1000)
         #
         #
@@ -76,12 +77,12 @@ class pvinversion():
     def solve(self, qg):
         """ Compute the PV inversion
         """
-	# compute L*PSI and store in self._RHS
         # ONE = qg.set_identity()
         # write_nc([ONE], ['id'], 'data/identity.nc', qg)
-        # qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # compute L*PSI and store in self._RHS
+        qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        # write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
+        write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
         if self._substract_fprime:
@@ -91,17 +92,13 @@ class pvinversion():
                 print 'Substract fprime from pv prior to inversion'
         # fix boundaries
         self.set_rhs_bdy(qg)
+        self.set_rhs_bdy_mask(qg)
         # store RHS in netcdf file rhs.nc
-        # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
-        #
-        # debug (uniform):
-        self.L.mult(qg.PSI, self._RHS)
-        #qg.pvinv.L.mult(qg.PSI,self._RHS)
-        write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
-        #
+
         if self._verbose>1:
             print 'Inversion done'
             
@@ -118,7 +115,7 @@ class pvinversion():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):                    
-                    rhs[i,j,k] -= D[i,j,qg.grid._k_f] - qg.f0
+                    rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.f0
         
         if self._verbose>0:
             print 'Substract f-f0 from pv prior to inversion'
@@ -151,12 +148,45 @@ class pvinversion():
             psi = qg.da.getVecArray(qg.PSI)
             rho = qg.da.getVecArray(qg.RHO)
 
+
+
+            # # south bdy
+            # if ys <= jstart:
+            #     #j = 0
+            #     for k in range(zs, ze):
+            #         for j in range(ys,min(ye,jstart+1)):
+            #             for i in range(xs, xe):
+            #                 rhs[i, j, k] = psi[i, j, k]
+            # # north bdy
+            # if ye >= jend:
+            #     #j = my - 1
+            #     for k in range(zs, ze):
+            #         for j in range(max(ys,jend),ye):
+            #             for i in range(xs, xe):
+            #                 rhs[i, j, k] = psi[i, j, k]
+            # # west bdy
+            # if xs <= istart:
+            #     #i = 0
+            #     for k in range(zs, ze):
+            #         for j in range(ys, ye):
+            #             for i in range(xs,min(xe,istart+1)):
+            #                 rhs[i, j, k] = psi[i, j, k]
+            # # east bdy
+            # if xe >= iend:
+            #     #i = mx - 1
+            #     for k in range(zs, ze):
+            #         for j in range(ys, ye):
+            #             for i in range(max(xs,iend),xe):
+            #                 rhs[i, j, k] = psi[i, j, k]
+
+
             # lower ghost area
             if zs < kdown:
                 for k in range(zs,kdown):
                     for j in range(ys, ye):
                         for i in range(xs, xe):                    
-                            rhs[i,j,k]=sys.float_info.epsilon
+                            # rhs[i,j,k]=sys.float_info.epsilon
+                            rhs[i,j,k]=psi[i, j, k]
             # bottom bdy
             k = kdown
             if qg.bdy_type['bottom']=='N' : 
@@ -171,40 +201,34 @@ class pvinversion():
                 print "unknown bottom boundary condition"
                 sys.exit()
 
-            
-            # upper ghost area (!!! ze=Nz and not Nz-1)
+            # debug: computes vertical bdy from psi
+            # for j in range(ys, ye):
+            #     for i in range(xs, xe):
+            #         rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzf[k] 
+
+
             if ze > kup+1:
                 for k in range(kup+1,ze):
                     for j in range(ys, ye):
                         for i in range(xs, xe):
-                            rhs[i,j,k]=sys.float_info.epsilon                
+                            # rhs[i,j,k]=sys.float_info.epsilon   
+                            rhs[i,j,k]= psi[i,j,k]            
             # upper bdy
             k = kup
             if qg.bdy_type['top']=='N' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
+                        # rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
                         rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
+
             elif qg.bdy_type['top']=='D' :
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i,j,k]
+
             else:
                 print "unknown bottom boundary condition"
                 sys.exit()
-            
-            # debug: computes vertical bdy from psi
-            # bottom bdy
-            # if zs == 0:
-            #     k = 0
-            #     for j in range(ys, ye):
-            #         for i in range(xs, xe):
-            #             rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzc[k]
-            # # upper bdy
-            # if ze == mz:
-            #     k = mz-1
-            #     for j in range(ys, ye):
-            #         for i in range(xs, xe):
-            #             rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzc[k-1]
 
             # south bdy
             if ys <= jstart:
@@ -234,6 +258,11 @@ class pvinversion():
                     for j in range(ys, ye):
                         for i in range(max(xs,iend),xe):
                             rhs[i, j, k] = psi[i, j, k]
+                            
+            # debug: computes vertical bdy from psi    
+            # for j in range(ys, ye):
+            #     for i in range(xs, xe):
+            #         rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzf[k-1]
 
         else:
 
@@ -253,6 +282,44 @@ class pvinversion():
         if self._verbose>0:
             print 'set RHS along boudaries for inversion '
 
+    def set_rhs_bdy_mask(self, qg):
+        """
+        Set South/North, East/West, Bottom/Top boundary conditions
+        Set RHS along boundaries for inversion, may be an issue
+        for time stepping
+        :param da: abstract distributed memory object of the domain
+        :param qg: qg_model instance
+        :return:
+        """
+
+        rhs = qg.da.getVecArray(self._RHS)
+        mask = qg.da.getVecArray(qg.grid.D)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        istart = qg.grid.istart
+        iend = qg.grid.iend
+        jstart = qg.grid.jstart
+        jend = qg.grid.jend
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+        kmask = qg.grid._k_mask
+
+        if qg.case == "roms" or 'nemo' or 'uniform':
+
+            psi = qg.da.getVecArray(qg.PSI)
+
+            
+            # interior
+            for k in range(kdown,kup+1):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        if mask[i,j,kmask]==1:
+                            rhs[i, j, k] = psi[i,j,k]
+                            print "mask, i,j=",i,j
+
+        if self._verbose>0:
+            print 'set RHS mask for inversion '
 
 #
 #==================== Time stepper ============================================
