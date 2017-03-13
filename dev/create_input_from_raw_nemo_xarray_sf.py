@@ -160,6 +160,7 @@ if __name__ == "__main__":
     zt_xr = -xp.vgrd._arrays['depth_at_t_location'].isel(t=0)
     zt = zt_xr.to_masked_array()
     zt = zt[::-1]
+    N = zt.shape[0]
     zw_xr = -xp.vgrd._arrays['depth_at_w_location'].isel(t=0)
     zw = zw_xr.to_masked_array()
     zw = zw[::-1]
@@ -349,22 +350,22 @@ if __name__ == "__main__":
     rhoout = create_nc('data/'+stest+'/nemo_rho.nc', vlon, vlat, zt, zw)
     #
     nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
-    nc_rho[k,...] = np.flipud(rho[:,:,:])
+    nc_rho[:] = np.flipud(rho[:,:,:])
 
     rhoout.close()
 
     # plot rho                      
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,rho[5,:,:]-rhobg[5],transform=ccrs.PlateCarree())
-    cbar = plt.colorbar(im, format="%.2f")
-    plt.title('rho(z=%0.0f) [kg/m^3]' %zt[-5-1], size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()
-    plt.savefig('figs/'+stest+'/nemo_input_rho.jpg', dpi=300)
+    #plt.figure(figsize=(8,3))
+    #ax=plt.axes(projection=ccrs.PlateCarree())
+    #ax.set_extent(lims,ccrs.PlateCarree())
+    #im = ax.pcolormesh(vlon,vlat,rho[5,:,:]-rhobg[5],transform=ccrs.PlateCarree())
+    #cbar = plt.colorbar(im, format="%.2f")
+    #plt.title('rho(z=%0.0f) [kg/m^3]' %zt[-5-1], size=10) # to modify the title
+    #ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    #ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    #ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    #ax.gridlines()
+    #plt.savefig('figs/'+stest+'/nemo_input_rho.jpg', dpi=300)
     
    # plt.ion()
    # plt.show(); 
