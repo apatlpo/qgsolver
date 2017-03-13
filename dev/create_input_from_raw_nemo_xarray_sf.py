@@ -35,14 +35,13 @@ import natl60lib.phylib_natl60_new_clean as phy
 import oocgcm.parameters.physicalparameters as oopp
 
 # maybe temporary
-import matplotlib as mpl
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.fftpack._fftpack import zfft
+#import matplotlib as mpl
+#from mpl_toolkits.axes_grid1 import make_axes_locatable
+#from scipy.fftpack._fftpack import zwft
 
 d2r = np.pi/180.
-reflev=250
 
-def create_nc(filename, lon, lat, zc, zf):
+def create_nc(filename, lon, lat, zt, zw):
     
     ### create a netcdf file
     rootgrp = Dataset(filename, 'w',
@@ -51,20 +50,20 @@ def create_nc(filename, lon, lat, zc, zf):
     # create dimensions
     rootgrp.createDimension('x', lon.shape[1])
     rootgrp.createDimension('y', lat.shape[0])
-    rootgrp.createDimension('zc', zc.size)
-    rootgrp.createDimension('zf', zf.size)
+    rootgrp.createDimension('zt', zt.size)
+    rootgrp.createDimension('zw', zw.size)
     
     # create variables
     dtype='f8'
     nc_lon = rootgrp.createVariable('lon',dtype,('y','x'))
     nc_lat = rootgrp.createVariable('lat',dtype,('y','x'))
-    nc_zc = rootgrp.createVariable('zc',dtype,('zc'))
-    nc_zf = rootgrp.createVariable('zf',dtype,('zf'))
+    nc_zt = rootgrp.createVariable('zt',dtype,('zt'))
+    nc_zw = rootgrp.createVariable('zw',dtype,('zw'))
     
     nc_lon[:] = lon
     nc_lat[:] = lat
-    nc_zc[:] = zc
-    nc_zf[:] = zf
+    nc_zt[:] = zt
+    nc_zw[:] = zw
         
     #rootgrp.createVariable(name,dtype,('z','y','x',)))
     return rootgrp
@@ -73,7 +72,7 @@ def create_nc(filename, lon, lat, zc, zf):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcTrue_fvertTrue'
+    stest='mod/mode2_fcFalse_fvertTrue'
 
     # - Control parameters
 
@@ -97,6 +96,10 @@ if __name__ == "__main__":
     dfilt=False    #  density filtering (input of pressure calculation)
     pfilt=False    #  pressure filtering (output pressure)
 
+    # doesn't keep levels under the depth mask_depth
+    mask_depth = -3000.
+    # mask_depth = -7000.
+
     # - Main
 
     iolib.mkdirp('figs/'+stest)
@@ -116,107 +119,129 @@ if __name__ == "__main__":
     datadir=xp.natl60_path
 
     ### horizontal grid 
+    print "read horizontal grid"
     lon=xp.grd._arrays['longitude_at_t_location']
     lat=xp.grd._arrays['latitude_at_t_location']
-    e1=xp.grd._arrays['cell_x_size_at_t_location'] 
-    e2=xp.grd._arrays['cell_y_size_at_t_location'] 
-   
+    dxt=xp.grd._arrays['cell_x_size_at_t_location'].to_masked_array() 
+    dyt=xp.grd._arrays['cell_y_size_at_t_location'].to_masked_array() 
+    dxt = xp.grd._arrays['cell_x_size_at_t_location'].to_masked_array()
+    dyt = xp.grd._arrays['cell_y_size_at_t_location'].to_masked_array()
+    dxu = xp.grd._arrays['cell_x_size_at_u_location'].to_masked_array()
+    dyu = xp.grd._arrays['cell_y_size_at_u_location'].to_masked_array()
+    dxv = xp.grd._arrays['cell_x_size_at_v_location'].to_masked_array()
+    dyv = xp.grd._arrays['cell_y_size_at_v_location'].to_masked_array()
+
     vlon=lon.to_masked_array()
     vlat=lat.to_masked_array()
-    ve1=e1.to_masked_array()
-    ve2=e2.to_masked_array()
-     
-    # plot hgrid
-    lims=[-80,-55, 30, 45]
-    lon_tcks = range(-80,-55, 5)
-    lat_tcks = range(30,45,5)
-    #
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    ax.plot(vlon[::10,::10],vlat[::10,::10],'k-',transform=ccrs.PlateCarree())
-    ax.plot(vlon.transpose()[::10,::10],vlat.transpose()[::10,::10],'k-',transform=ccrs.PlateCarree())
-    plt.title('Horizontal grid (every 10 points)', size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()
-    #figname='figs/'+stest+'/snapshot_'+vkey.replace (" ", "_")+'_magnitude.jpg'
-    plt.savefig('figs/'+stest+'/nemo_input_hgrid.jpg', dpi=300)
-    #print figname+' printed'
+
+    ## plot hgrid
+    #lims=[-80,-55, 30, 45]
+    #lon_tcks = range(-80,-55, 5)
+    #lat_tcks = range(30,45,5)
+    ##
+    #plt.figure(figsize=(8,3))
+    #ax=plt.axes(projection=ccrs.PlateCarree())
+    #ax.set_extent(lims,ccrs.PlateCarree())
+    #ax.plot(vlon[::10,::10],vlat[::10,::10],'k-',transform=ccrs.PlateCarree())
+    #ax.plot(vlon.transpose()[::10,::10],vlat.transpose()[::10,::10],'k-',transform=ccrs.PlateCarree())
+    #plt.title('Horizontal grid (every 10 points)', size=10) # to modify the title
+    #ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    #ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    #ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    #ax.gridlines()
+    ##figname='figs/'+stest+'/snapshot_'+vkey.replace (" ", "_")+'_magnitude.jpg'
+    #plt.savefig('figs/'+stest+'/nemo_input_hgrid.jpg', dpi=300)
+    ##print figname+' printed'
     
-    ### vertical grid
+    ### vertical grid, caution: level 0 in nemo correspond to the surface, level N correspond to positive depth
+    print "read vertical grid"
     ### NATL60 grid is homogeneous with depth: metric coefficients are stored as 1-D. 
     ### (but could be different with other NEMO simulations)
-    zc_xr = -xp.vgrd._arrays['depth_at_t_location'].isel(t=0)
-    zc = zc_xr.to_masked_array()
-    zc = zc[::-1]
-    zf_xr = -xp.vgrd._arrays['depth_at_w_location'].isel(t=0)
-    zf = zf_xr.to_masked_array()
-    zf = zf[::-1]
+    zt_xr = -xp.vgrd._arrays['depth_at_t_location'].isel(t=0)
+    zt = zt_xr.to_masked_array()
+    zt = zt[::-1]
+    zw_xr = -xp.vgrd._arrays['depth_at_w_location'].isel(t=0)
+    zw = zw_xr.to_masked_array()
+    zw = zw[::-1]
  
-    # e3 is defined positive in NEMO
-    e3_xr = xp.vgrd._arrays['cell_z_size_at_t_location'].isel(x=0,y=0)
-    e3 = e3_xr.to_masked_array()
-    dzc_xr = xp.vgrd._arrays['cell_z_size_at_w_location'].isel(x=0,y=0)
-    dzc = dzc_xr.to_masked_array()
+    # dzw is defined positive in NEMO
+    dzt_xr = xp.vgrd._arrays['cell_z_size_at_t_location'].isel(x=0,y=0)
+    dzt = dzt_xr.to_masked_array()
+    dzw_xr = xp.vgrd._arrays['cell_z_size_at_w_location'].isel(x=0,y=0)
+    dzw = dzw_xr.to_masked_array()
+
+    # find nearest index in zt for mask_depth
+    index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
+    print "mask reference at level:",index_mask_depth
 
     # plot vertical grid
-    plt.figure()
-    plt.plot(zf,'k+')
-    plt.plot(zf,'k.')
-    plt.grid()
-    plt.savefig('figs/'+stest+'/nemo_input_vgrid.jpg', dpi=300)
+    #plt.figure()
+    #plt.plot(zw,'k+')
+    #plt.plot(zw,'k.')
+    #plt.grid()
+    #plt.savefig('figs/'+stest+'/nemo_input_vgrid.jpg', dpi=300)
         
-    # plot horizontal metrics
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,ve1,transform=ccrs.PlateCarree())
-    cbar = plt.colorbar(im, format="%.1f")
-    plt.title('e1 [m]', size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()    
-    plt.savefig('figs/'+stest+'/nemo_input_e1.jpg', dpi=300)
+    ## plot horizontal metrics
+    #plt.figure(figsize=(8,3))
+    #ax=plt.axes(projection=ccrs.PlateCarree())
+    #ax.set_extent(lims,ccrs.PlateCarree())
+    #im = ax.pcolormesh(vlon,vlat,dxt,transform=ccrs.PlateCarree())
+    #cbar = plt.colorbar(im, format="%.1f")
+    #plt.title('dxt [m]', size=10) # to modify the title
+    #ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    #ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    #ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    #ax.gridlines()    
+    #plt.savefig('figs/'+stest+'/nemo_input_dxt.jpg', dpi=300)
 
-    # plot horizontal metrics
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,ve2,transform=ccrs.PlateCarree())
-    cbar = plt.colorbar(im, format="%.1f")
-    plt.title('e2 [m]', size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()    
-    plt.savefig('figs/'+stest+'/nemo_input_e2.jpg', dpi=300)
+    ## plot horizontal metrics
+    #plt.figure(figsize=(8,3))
+    #ax=plt.axes(projection=ccrs.PlateCarree())
+    #ax.set_extent(lims,ccrs.PlateCarree())
+    #im = ax.pcolormesh(vlon,vlat,dyt,transform=ccrs.PlateCarree())
+    #cbar = plt.colorbar(im, format="%.1f")
+    #plt.title('dyt [m]', size=10) # to modify the title
+    #ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    #ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    #ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    #ax.gridlines()    
+    #plt.savefig('figs/'+stest+'/nemo_input_dyt.jpg', dpi=300)
 
         
     # store metric terms
-    #zc = np.hstack((zc,zc[[-1]]))
-    rootgrp = create_nc('data/'+stest+'/nemo_metrics.nc', vlon, vlat, zc, zf)
-    #
+    #zt = np.hstack((zt,zt[[-1]]))
+    rootgrp = create_nc('data/'+stest+'/nemo_metrics.nc', vlon, vlat, zt, zw)
+    #zt = np.hstack((zt,zt[[-1]]))
+    print "create metrics grid"
+    # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
+    metricsout = create_nc('data/nemo_metrics.nc', vlon, vlat, zt, zw)    #
+
     dtype='f8'
-    #nc_zf = rootgrp.createVariable('zf',dtype,('zf'))
-    #nc_zf[:] = zf
+    #nc_zw = rootgrp.createVariable('zw',dtype,('zw'))
+    #nc_zw[:] = zw
     # 
-    nc_e1 = rootgrp.createVariable('e1',dtype,('y','x'))
-    nc_e1[:] = ve1
-    nc_e2 = rootgrp.createVariable('e2',dtype,('y','x'))
-    nc_e2[:] = ve2
-    #nc_e3 = rootgrp.createVariable('e3',dtype,('zc'))
-    ##nc_e3[:] = e3.append(e3[-1])
-    #nc_e3[:] = np.hstack((e3,e3[[-1]]))
-    
-    rootgrp.close()
+    nc_dxt = metricsout.createVariable('dxt',dtype,('y','x'))
+    nc_dxt[:] = dxt
+    nc_dyt = metricsout.createVariable('dyt',dtype,('y','x'))
+    nc_dyt[:] = dyt
+    nc_dxu = metricsout.createVariable('dxu',dtype,('y','x'))
+    nc_dxu[:] = dxu
+    nc_dyu = metricsout.createVariable('dyu',dtype,('y','x'))
+    nc_dyu[:] = dyu
+    nc_dxv = metricsout.createVariable('dxv',dtype,('y','x'))
+    nc_dxv[:] = dxv
+    nc_dyv = metricsout.createVariable('dyv',dtype,('y','x'))
+    nc_dyv[:] = dyv
+    nc_dzt = metricsout.createVariable('dzt',dtype,('zt'))
+    nc_dzt[:] = dzt
+    nc_dzw = metricsout.createVariable('dzw',dtype,('zw'))
+    nc_dzw[:] = dzw    
+    # metricsout.close()
         
     ###
     
     # compute the Coriolis frequency and a reference value
-    # from oocgcm/oocgcm/parameters/physicalparameters.py
+	# from oocgcm/oocgcm/parameters/physicalparameters.py
     grav = oopp.grav              # acceleration due to gravity (m.s-2)
     omega = oopp.omega            # earth rotation rate (s-1)
     earthrad = oopp.earthrad      # mean earth radius (m)
@@ -224,6 +249,7 @@ if __name__ == "__main__":
     f0 = phy.average_coriolis_parameter2(xp.region)
     
     # load stratification profile
+    print "read stratification"
     N2_file = datadir+'DIAG_DIMUP/2007_2008/'+xp.region+'/bg/'+xp.region\
        +'_2007_2008_bruntvaisala_bg_mindepth10_new.nc'
     rhobg_file = datadir+'DIAG_DIMUP/2007_2008/'+xp.region+'/bg/'+xp.region\
@@ -241,11 +267,14 @@ if __name__ == "__main__":
     np.hstack((N2[0],N2))
     #np.hstack((N2,N2[-1]))
     print '!!! Shape of N2 is %d' %N2.shape
-
+  
+    # load PV
+    print "compute PV"
+    print "Execution might be longer than 30 minutes, please wait..."
     # compute density, psi, PV
     # fout: activate rho and psi outputting
     # fc* : activate online processing (no intermediate reading)
-    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=True,fccurl=None,fcstretch=True,
+    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=None,fcstretch=False,
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
         dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file) 
     print arho_xr,psi_xr,q_xr
@@ -256,69 +285,79 @@ if __name__ == "__main__":
 
 
     # store variables
-    rootgrp = create_nc('data/'+stest+'/nemo_pv.nc', vlon, vlat, zc, zf)
+
+    # store PV
+    print "store pv"
+    pvout = create_nc('data/'+stest+'/nemo_pv.nc', vlon, vlat, zt, zw)
     #
-    nc_f = rootgrp.createVariable('f',dtype,('y','x'))
+    nc_f = pvout.createVariable('f',dtype,('y','x'))
     nc_f[:] = f    
-    nc_f0 = rootgrp.createVariable('f0',dtype)
+    nc_f0 = pvout.createVariable('f0',dtype)
     nc_f0[:] = f0
     #
-    nc_N2 = rootgrp.createVariable('N2',dtype,('zf'))
+    nc_N2 = pvout.createVariable('N2',dtype,('zw'))
     nc_N2[:] = N2[::-1]
     #
-    nc_q = rootgrp.createVariable('q',dtype,('zc','y','x'))
-    for k in xrange(zc.size):
+    nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
+    nc_q[:] = np.flipud(q)
+
+    #create 2D mask at reference level index_mask_depth (land=1, water=0)
+    print "store mask"
+    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=q._FillValue)
+    nc_mask[:] = q[N-index_mask_depth-1,:,:]
+    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
+    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
+
+    for k in xrange(zt.size):
         nc_q[k,...] = q[q.shape[0]-1-k,...]
     #
-    rootgrp.close()
+    pvout.close()
 
-    # plot pv
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,q[5,:,:]/f0,transform=ccrs.PlateCarree())
-    cbar = plt.colorbar(im, format="%.2f")
-    plt.title('q/f0(z=%0.0f) [1]' %zc[-5-1], size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()
-    plt.savefig('figs/'+stest+'/nemo_input_q.jpg', dpi=300)
+    # enlarge the mask: if the i,j point has an adjacent land point then it becames land
+    dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
+    nc_mask[1:-1,1:-1] = np.where(dummy == 0, nc_mask[1:-1,1:-1], 1.)
+    metricsout.close()
+    pvin.close()
+    pvout.close()
 
-    rootgrp = create_nc('data/'+stest+'/nemo_psi.nc', vlon, vlat, zc, zf)
-    #
-    nc_psi = rootgrp.createVariable('psi',dtype,('zc','y','x'))
-    for k in xrange(zc.size):
-        nc_psi[k,...] = psi[psi.shape[0]-1-k,...]  
+    ### load and store psi    
+    print "read psi"
+    old=False
 
-    rootgrp.close()
+    # store psi
+    print "create psi file"
+    # psiout = create_nc('data/nemo_psi.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
+    psiout = create_nc('data/'+stest+'nemo_psi.nc', vlon, vlat, zt, zw)
+    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+    nc_psi[:] = np.flipud(psi) 
+
+    ## plot psi
+    #plt.figure(figsize=(8,3))
+    #ax=plt.axes(projection=ccrs.PlateCarree())
+    #ax.set_extent(lims,ccrs.PlateCarree())
+    #im = ax.pcolormesh(vlon,vlat,psi[5,:,:],transform=ccrs.PlateCarree())
+    #cbar = plt.colorbar(im, format="%.2f")
+    #plt.title('psi(z=%0.0f) [m^2/s]' %zt[-5-1], size=10) # to modify the title
+    #ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
+    #ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
+    #ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
+    #ax.gridlines()
+    #plt.savefig('figs/'+stest+'/nemo_input_psi.jpg', dpi=300)
   
-    # plot psi
-    plt.figure(figsize=(8,3))
-    ax=plt.axes(projection=ccrs.PlateCarree())
-    ax.set_extent(lims,ccrs.PlateCarree())
-    im = ax.pcolormesh(vlon,vlat,psi[5,:,:],transform=ccrs.PlateCarree())
-    cbar = plt.colorbar(im, format="%.2f")
-    plt.title('psi(z=%0.0f) [m^2/s]' %zc[-5-1], size=10) # to modify the title
-    ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
-    ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
-    ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
-    ax.gridlines()
-    plt.savefig('figs/'+stest+'/nemo_input_psi.jpg', dpi=300)
-    
+    psiout.close()
 
-    ### load and store rho
-    rho=rho_xr.to_masked_array()
-    
-    # load background density
-    
-    rootgrp = create_nc('data/'+stest+'/nemo_rho.nc', vlon, vlat, zc, zf)
+    ### load rho and background  
+
+    print "read rho"
+   
+    # store rho - background
+    print "create rho file"
+    rhoout = create_nc('data/'+stest+'/nemo_rho.nc', vlon, vlat, zt, zw)
     #
-    nc_rho = rootgrp.createVariable('rho',dtype,('zc','y','x'))
-    for k in xrange(zc.size):
-        nc_rho[k,...] = rho[rho.shape[0]-1-k,...]
+    nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
+    nc_rho[k,...] = np.flipud(rho[:,:,:] - rhobg[:,None,None])
     
-    rootgrp.close()
+    rhoout.close()
 
     # plot rho                      
     plt.figure(figsize=(8,3))
@@ -326,12 +365,12 @@ if __name__ == "__main__":
     ax.set_extent(lims,ccrs.PlateCarree())
     im = ax.pcolormesh(vlon,vlat,rho[5,:,:]-rhobg[5],transform=ccrs.PlateCarree())
     cbar = plt.colorbar(im, format="%.2f")
-    plt.title('rho(z=%0.0f) [kg/m^3]' %zc[-5-1], size=10) # to modify the title
+    plt.title('rho(z=%0.0f) [kg/m^3]' %zt[-5-1], size=10) # to modify the title
     ax.set_xticks(lon_tcks, crs=ccrs.PlateCarree())
     ax.set_yticks(lat_tcks, crs=ccrs.PlateCarree())
     ax.coastlines(resolution='50m') # Currently can be one of “110m”, “50m”, and “10m”
     ax.gridlines()
     plt.savefig('figs/'+stest+'/nemo_input_rho.jpg', dpi=300)
     
-    plt.ion()
-    plt.show(); 
+   # plt.ion()
+   # plt.show(); 
