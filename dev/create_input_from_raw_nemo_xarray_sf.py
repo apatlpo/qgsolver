@@ -72,7 +72,7 @@ def create_nc(filename, lon, lat, zt, zw):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcFalse_fvertTrue'
+    stest='mode2_fcTrue_fvertTrue'
 
     # - Control parameters
 
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     #zt = np.hstack((zt,zt[[-1]]))
     print "create metrics grid"
     # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
-    metricsout = create_nc('data/nemo_metrics.nc', vlon, vlat, zt, zw)    #
+    metricsout = create_nc('data/'+stest+'/nemo_metrics.nc', vlon, vlat, zt, zw)    #
 
     dtype='f8'
     #nc_zw = rootgrp.createVariable('zw',dtype,('zw'))
@@ -254,7 +254,7 @@ if __name__ == "__main__":
     rhobg_file = datadir+'DIAG_DIMUP/2007_2008/'+xp.region+'/bg/'+xp.region\
        +'_2007_2008_density_bg_mindepth10.nc'
     rhobg_xr,N2_xr=phy.call_background(xp,xp.region,xp.grd,xp.vgrd,z=None,mindepth=10,
-           N2file=N2_file,rhobgfile=rhobg_file,fN2gridT=True)
+           N2file=N2_file,rhobgfile=rhobg_file,fN2gridT=False)
     #N2[1:] = N2[:-1]
     print N2_file
     print N2_xr
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     # compute density, psi, PV
     # fout: activate rho and psi outputting
     # fc* : activate online processing (no intermediate reading)
-    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=None,fcstretch=False,
+    arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=True,fccurl=None,fcstretch=True,
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
         dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file) 
     print arho_xr,psi_xr,q_xr
@@ -281,6 +281,8 @@ if __name__ == "__main__":
     rho = rho_xr.to_masked_array()
     psi = psi_xr.to_masked_array()
     q = q_xr.to_masked_array()
+   
+    q._FillValue=-999.
 
 
     # store variables
@@ -302,7 +304,7 @@ if __name__ == "__main__":
 
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
     print "store mask"
-    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=q._FillValue)
+    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=-q._FillValue)
     nc_mask[:] = q[N-index_mask_depth-1,:,:]
     nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
     nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
@@ -322,7 +324,7 @@ if __name__ == "__main__":
     # store psi
     print "create psi file"
     # psiout = create_nc('data/nemo_psi.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
-    psiout = create_nc('data/'+stest+'nemo_psi.nc', vlon, vlat, zt, zw)
+    psiout = create_nc('data/'+stest+'/nemo_psi.nc', vlon, vlat, zt, zw)
     nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
     nc_psi[:] = np.flipud(psi) 
 
