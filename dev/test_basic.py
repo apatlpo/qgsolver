@@ -258,22 +258,21 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     # LMX domain: Nx=1032, Ny=756, Nz=300
 
     # vertical subdomain
-    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # for linux
-    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 41 }    # for mask
-    vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 } # for caparmor
-
+    vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # linux
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 41 }     # with mask
+    # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 }     # Datarmor
     # horizontal subdomain
-    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # for linux
-    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 530,'jstart': 0, 'jend': 100-1,  'j0': 520}   # for mask
-    # hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165} # for caparmor
-    hdom = {'istart': 0, 'iend': 672-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}  # datarmor
+    hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # linux
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 530,'jstart': 0, 'jend': 100-1,  'j0': 520}   # with mask
+    # hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}     # medium datarmor
+    # hdom = {'istart': 0, 'iend': 672-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}   # large datarmor
     # 448=8x56
     # 512=8x64
     
     # set tiling
-    # ncores_x=2; ncores_y=4 # for linux
-    # ncores_x=2; ncores_y=8 # for caparmor
-    ncores_x=21; ncores_y=8  # datarmor
+    ncores_x=2; ncores_y=4 #   linux
+    # ncores_x=2; ncores_y=8   #   medium datarmor
+    # ncores_x=21; ncores_y=8  # large datarmor
 
     
     if ping_mpi_cfg:
@@ -292,11 +291,13 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
         bdy_type = {'top':'N', 'bottom':'N'}
     
-        hgrid = 'data/nemo_metrics.nc'
-        vgrid = 'data/nemo_metrics.nc'
-        file_q = 'data/nemo_pv.nc'
-        file_psi = 'data/nemo_psi.nc'
-        file_rho = 'data/nemo_rho.nc'
+        datapath = 'data/'
+        # datapath = '/home7/pharos/othr/NATL60/DIAG_DIMUP/qgsolver/mode2_fcTrue_fvertTrue/'
+        hgrid = datapath+'nemo_metrics.nc'
+        vgrid = datapath+'nemo_metrics.nc'
+        file_q = datapath+'nemo_pv.nc'
+        file_psi = datapath+'nemo_psi.nc'
+        file_rho = datapath+'nemo_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
                       bdy_type_in=bdy_type, substract_fprime=True)

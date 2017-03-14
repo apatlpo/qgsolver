@@ -167,7 +167,7 @@ def read_nc(vnames, filename,qg):
                 V.append(rootgrp.variables[name][kstart:kend])
             elif name == 'f0':
                 V.append(rootgrp.variables[name][:])
-            # elif name == 'zc' or name == 'zf':
+            # elif name == 'zt' or name == 'zw':
             #     V.append(rootgrp.variables[name][kstart:kend])
             else:
                 print 'error in read_nc: unknown variable '+name
@@ -177,7 +177,7 @@ def read_nc(vnames, filename,qg):
             V = rootgrp.variables[vnames][kstart:kend]
         elif vnames == 'f0':
             V = rootgrp.variables[vnames][:]
-        # elif vnames == 'zc' or vnames == 'zf':
+        # elif vnames == 'zt' or vnames == 'zw':
         #     V = rootgrp.variables[vnames][kstart:kend]
         else:
             print 'error in read_nc: unknown variable '+vnames

@@ -204,7 +204,7 @@ class pvinversion():
             # debug: computes vertical bdy from psi
             # for j in range(ys, ye):
             #     for i in range(xs, xe):
-            #         rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzf[k] 
+            #         rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
 
 
             if ze > kup+1:
@@ -218,7 +218,6 @@ class pvinversion():
             if qg.bdy_type['top']=='N' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        # rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
                         rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
 
             elif qg.bdy_type['top']=='D' :
@@ -262,7 +261,7 @@ class pvinversion():
             # debug: computes vertical bdy from psi    
             # for j in range(ys, ye):
             #     for i in range(xs, xe):
-            #         rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzf[k-1]
+            #         rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzw[k-1]
 
         else:
 

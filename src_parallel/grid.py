@@ -73,8 +73,7 @@ class grid(object):
                 sys.exit()
         if not hasattr(self,'Nz'):
             try:
-                # self.Nz = vdom_in['kup']-vdom_in['kdown']+1
-                self.Nz = vdom_in['kup']-vdom_in['kdown']+2
+                self.Nz = vdom_in['kup']-vdom_in['kdown']+1
             except:
                 print '!!! you need to prescribe one of the two variables: Nz, kup'
                 sys.exit()
@@ -113,8 +112,7 @@ class grid(object):
                 print '!!! jend cannot be determined'
         if 'kup' not in vdom_in:
             try:
-                # self.kup=self.kdown+self.Nz-1
-                self.kup=self.kdown+self.Nz-2
+                self.kup=self.kdown+self.Nz-1
             except:
                 print '!!! kup cannot be determined'                
                  
@@ -126,8 +124,7 @@ class grid(object):
         elif self.jend-self.jstart+1!=self.Ny:
             print '!!! jend-jstart+1 not equal to Ny'
         #     sys.exit()
-        # elif self.kup-self.kdown+1!=self.Nz:
-        elif self.kup-self.kdown+2!=self.Nz:
+        elif self.kup-self.kdown+1!=self.Nz:
             print '!!! kup-kdown+1 not equal to Nz'
             sys.exit()
 
@@ -148,8 +145,7 @@ class grid(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         # compute metric terms
-        # self.dz=self.H/(self.Nz-1.)
-        self.dz=self.H/(self.Nz-2.)
+        self.dz=self.H/(self.Nz-1.)
     
     #
     # Curvilinear horizontal grid
@@ -195,39 +191,70 @@ class grid(object):
             # curvilinear metric
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, self._k_dxt] = rootgrp.variables['e1'][j+self.j0,i+self.i0]
-                    v[i, j, self._k_dyt] = rootgrp.variables['e2'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_dxt] = rootgrp.variables['dxt'][j+self.j0,i+self.i0]
+                    v[i, j, self._k_dyt] = rootgrp.variables['dyt'][j+self.j0,i+self.i0]
                     v[i, j, self._k_lon] = rootgrp.variables['lon'][j+self.j0,i+self.i0]
                     v[i, j, self._k_lat] = rootgrp.variables['lat'][j+self.j0,i+self.i0]
+                    try:
+                        v[i, j, self._k_dxu] = rootgrp.variables['dxu'][j+self.j0,i+self.i0]
+                    except:
+                        print '!!! must init dxu'
+                        sys.exit()
+                    try:
+                        v[i, j, self._k_dyu] = rootgrp.variables['dyu'][j+self.j0,i+self.i0]
+                    except:                        
+                        print '!!! must init dyu' 
+                        sys.exit()    
+                    try:
+                        v[i, j, self._k_dxv] = rootgrp.variables['dxv'][j+self.j0,i+self.i0]
+                    except:
+                        print '!!! must init dxv ' 
+                        sys.exit()    
+                    try:
+                        v[i, j, self._k_dyv] = rootgrp.variables['dyv'][j+self.j0,i+self.i0]
+                    except:
+                        print '!!!  must init dyv' 
+                        sys.exit()    
+
         rootgrp.close()
 
 
         # Initialize dxu,dyu,dyv,dyv
-        v[xs:xe-1,:, self._k_dxu] = 0.5*(v[xs:xe-1,:, self._k_dxt]+v[xs+1:xe,:, self._k_dxt])
-        v[xe-1,:, self._k_dxu] = v[xe-2,:, self._k_dxu]
-        v[:,:, self._k_dyu] = v[:,:, self._k_dyt]
+        # v[xs:xe-1,:, self._k_dxu] = 0.5*(v[xs:xe-1,:, self._k_dxt]+v[xs+1:xe,:, self._k_dxt])
+        # v[xe-1,:, self._k_dxu] = v[xe-2,:, self._k_dxu]
+        # v[:,:, self._k_dyu] = v[:,:, self._k_dyt]
 
-        v[:,:, self._k_dxv] = v[:,:, self._k_dxt]
-        v[:,ys:ye-1, self._k_dyv] = 0.5*(v[:,ys:ye-1, self._k_dyt]+v[:,ys+1:ye, self._k_dyt])
-        v[:,ye-1, self._k_dyv] = v[:,ye-2, self._k_dyv]
+        # v[:,:, self._k_dxv] = v[:,:, self._k_dxt]
+        # v[:,ys:ye-1, self._k_dyv] = 0.5*(v[:,ys:ye-1, self._k_dyt]+v[:,ys+1:ye, self._k_dyt])
+        # v[:,ye-1, self._k_dyv] = v[:,ye-2, self._k_dyv]
         
 
         if self._flag_vgrid_uniform:
-            self.zc = np.ones(self.Nz)
-            self.zf = np.ones(self.Nz)
+            self.zt = np.ones(self.Nz)
+            self.zw = np.ones(self.Nz)
             for k in range(zs,ze):
-                self.zc[k]=(k-0.5)*self.dz
-                self.zf[k]=k*self.dz
+                self.zt[k]=(k-0.5)*self.dz
+                self.zw[k]=k*self.dz
         else:
             # open netdc file
             rootgrp = Dataset(self.vgrid_file, 'r')
-            self.zc = rootgrp.variables['zc'][zs+self.k0:ze+self.k0]
-            self.zf = rootgrp.variables['zf'][zs+self.k0:ze+self.k0]
+            self.zt = rootgrp.variables['zt'][zs+self.k0:ze+self.k0]
+            self.zw = rootgrp.variables['zw'][zs+self.k0:ze+self.k0]
+            try:
+                self.dzt = rootgrp.variables['dzt'][zs+self.k0:ze+self.k0] 
+            except:
+                print '!!! must init dzt ' 
+                sys.exit()   
+            try:
+                self.dzw = rootgrp.variables['dzw'][zs+self.k0:ze+self.k0] 
+            except:
+                print '!!! must init dzw ' 
+                sys.exit()   
 
             rootgrp.close()
 
-        self.dzc = np.diff(self.zf)
-        self.dzf = np.diff(self.zc)
+        # self.dzt = np.diff(self.zw)
+        # self.dzw = np.diff(self.zt)
 
         comm.barrier()
         pass
@@ -303,10 +330,10 @@ class grid(object):
         else:
             out += 'The vertical grid is stretched with:\n' \
                 + '  Nz = %i' % (self.Nz) \
-                + '  min(dzf) = %e , mean(dzf) = %e, max(dzf) = %e \n' \
-                    % (np.min(self.dzf), np.mean(self.dzf), np.max(self.dzf)) \
-                + '  min(dzc) = %e , mean(dzc) = %e, max(dzc) = %e \n' \
-                    % (np.min(self.dzc), np.mean(self.dzc), np.max(self.dzc))
+                + '  min(dzw) = %e , mean(dzw) = %e, max(dzw) = %e \n' \
+                    % (np.min(self.dzw), np.mean(self.dzw), np.max(self.dzw)) \
+                + '  min(dzt) = %e , mean(dzt) = %e, max(dzt) = %e \n' \
+                    % (np.min(self.dzt), np.mean(self.dzt), np.max(self.dzt))
 
         if self._flag_hdom:
             print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
@@ -340,7 +367,7 @@ class grid(object):
         if self._flag_vgrid_uniform:
             z=np.linspace(0,self.H,self.Nz)
         else:
-            z=self.zc
+            z=self.zt
         return z
    
 
