@@ -18,7 +18,7 @@ print "------------"
 
 
 # read files
-rootgrp = Dataset("data/lpsi.nc", 'r')
+rootgrp = Dataset("data/lpsiout.nc", 'r')
 Lpsi = rootgrp.variables["Lpsi"][0,...]
 Nx = Lpsi.shape[2]
 Ny = Lpsi.shape[1]
@@ -181,17 +181,59 @@ for k in range(0,Nz):
 	rms_diff[k] = np.sqrt(np.mean(np.square(psi_in[k,:,:] - psi_out[k,:,:])))
 
 # plot 
+
+# read psi out for rtol= 1e-10,1e-7,1e-4,1e-1
+rootgrp = Dataset('data/output10.nc', 'r')
+psi10 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+rootgrp = Dataset('data/output7.nc', 'r')
+psi7 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+rootgrp = Dataset('data/output4.nc', 'r')
+psi4 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+rootgrp = Dataset('data/output3.nc', 'r')
+psi3 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+rootgrp = Dataset('data/output2.nc', 'r')
+psi2 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+rootgrp = Dataset('data/output1.nc', 'r')
+psi1 = rootgrp.variables['psi'][0,...]
+rootgrp.close()
+# calculate for each psi
+rms10 = np.zeros_like(psi_in[0:Nz,0,0])
+rms7  = np.zeros_like(psi_in[0:Nz,0,0])
+rms4  = np.zeros_like(psi_in[0:Nz,0,0])
+rms3  = np.zeros_like(psi_in[0:Nz,0,0])
+rms2  = np.zeros_like(psi_in[0:Nz,0,0])
+rms1  = np.zeros_like(psi_in[0:Nz,0,0])
+for k in range(0,Nz):
+	rms10[k] = np.sqrt(np.mean(np.square(psi10[k,:,:])))
+	rms7[k] = np.sqrt(np.mean(np.square(psi7[k,:,:])))
+	rms4[k] = np.sqrt(np.mean(np.square(psi4[k,:,:])))
+	rms3[k] = np.sqrt(np.mean(np.square(psi4[k,:,:])))
+	rms2[k] = np.sqrt(np.mean(np.square(psi4[k,:,:])))
+	rms1[k] = np.sqrt(np.mean(np.square(psi1[k,:,:])))
 # create a PdfPages object
 pdf = PdfPages('figs/rms.pdf')
 fig1=plt.figure()
-plt.plot(rms,z[0:Nz], 'k--')
-plt.title('RMS PSI from NATL60')
+plt.plot(rms,z[0:Nz], 'k')
+plt.plot(rms10,z[0:Nz], 'r', label='rtol=1.e-10')
+plt.plot(rms7,z[0:Nz], 'b', label='rtol=1.e-7')
+plt.plot(rms4,z[0:Nz], 'm', label='rtol=1.e-4')
+# plt.plot(rms3,z[0:Nz], 'y', label='rtol=1.e-3')
+# plt.plot(rms2,z[0:Nz], 'm', label='rtol=1.e-2')
+plt.plot(rms1,z[0:Nz], 'c', label='rtol=1.e-1')
+plt.legend(loc='best')
+plt.title('RMS PSI_IN vs PSI_INV for several rtol')
 pdf.savefig(fig1)
-# plt.savefig('figs/rms.jpg', dpi=300)
-fig2=plt.figure()
-plt.plot(rms_diff,z[0:Nz], 'k.')
-plt.title('RMS (PSI - PSI_INV)')
-pdf.savefig(fig2)
+
+plt.savefig('figs/rms.jpg', dpi=300)
+# fig2=plt.figure()
+# plt.plot(rms_diff,z[0:Nz], 'k.')
+# plt.title('RMS (PSI - PSI_INV)')
+# pdf.savefig(fig2)
 plt.ion()
 plt.show()
 pdf.close()

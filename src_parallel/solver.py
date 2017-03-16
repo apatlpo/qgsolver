@@ -54,14 +54,16 @@ class pvinversion():
         # self.ksp.setType('cg')
         self.ksp.setType('gmres')
         # self.ksp.setType('bicg')
-        self.ksp.setInitialGuessNonzero(True)
+        self.ksp.setInitialGuessNonzero(False)
         # and incomplete Cholesky for preconditionning
         # self.ksp.getPC().setType('icc')
         # self.ksp.getPC().setType('bjacobi')
         # self.ksp.getPC().setType('asm')
-        #self.ksp.getPC().setType('none')
+        # self.ksp.getPC().setType('mg')
+        # self.ksp.getPC().setType('none')
+        # self.ksp.setNormType(2)
         # set tolerances
-        self.ksp.setTolerances(rtol=1e-7) # nope
+        self.ksp.setTolerances(rtol=1e-7)
         self.ksp.setTolerances(max_it=1000)
         #
         #
@@ -82,7 +84,7 @@ class pvinversion():
         # compute L*PSI and store in self._RHS
         qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['Lpsi'], 'data/lpsi.nc', qg)
+        write_nc([self._RHS], ['Lpsi'], 'data/lpsiin.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
         if self._substract_fprime:
@@ -98,6 +100,10 @@ class pvinversion():
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
+        # compute L*PSI and store in self._RHS
+        qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # store L*PSI in netcdf file lpsi.nc
+        write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
 
         if self._verbose>1:
             print 'Inversion done'
@@ -219,7 +225,6 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
-
             elif qg.bdy_type['top']=='D' :
                 for j in range(ys, ye):
                     for i in range(xs, xe):
@@ -257,7 +262,7 @@ class pvinversion():
                     for j in range(ys, ye):
                         for i in range(max(xs,iend),xe):
                             rhs[i, j, k] = psi[i, j, k]
-                            
+
             # debug: computes vertical bdy from psi    
             # for j in range(ys, ye):
             #     for i in range(xs, xe):

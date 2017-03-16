@@ -195,24 +195,6 @@ def set_L_curv(L, qg):
                 else:
                     
                     for index, value in [
-                        # ((i,j,k-1), qg._sparam[k]*idzt[k-1]*idzw[k]),
-                        # ((i,j-1,k), 1./D[i,j,kdx]/D[i,j,kdy] \
-                        #  * (D[i,j-1,kdx]+D[i,j,kdx])/(D[i,j-1,kdy]+D[i,j,kdy])),
-                        # ((i-1,j,k), 1./D[i,j,kdx]/D[i,j,kdy] \
-                        #  * (D[i-1,j,kdy]+D[i,j,kdy])/(D[i-1,j,kdx]+D[i,j,kdx])),
-                        # ((i, j, k), -1./D[i,j,kdx]/D[i,j,kdy]*( \
-                        #                  (D[i,j-1,kdx]+D[i,j,kdx])/(D[i,j-1,kdy]+D[i,j,kdy]) \
-                        #                 +(D[i-1,j,kdy]+D[i,j,kdy])/(D[i-1,j,kdx]+D[i,j,kdx]) \
-                        #                 +(D[i,j,kdy]+D[i+1,j,kdy])/(D[i+1,j,kdx]+D[i,j,kdx]) \
-                        #                 +(D[i,j,kdx]+D[i,j+1,kdx])/(D[i,j,kdy]+D[i,j+1,kdy]) \
-                        #                                        ) \
-                        #  - (qg._sparam[k]*idzt[k-1]*idzw[k]+qg._sparam[k+1]*idzt[k]*idzw[k])),
-                        # ((i+1,j,k), 1./D[i,j,kdx]/D[i,j,kdy] \
-                        #  * (D[i,j,kdy]+D[i+1,j,kdy])/(D[i+1,j,kdx]+D[i,j,kdx])),
-                        # ((i,j+1,k), 1./D[i,j,kdx]/D[i,j,kdy] \
-                        #  * (D[i,j,kdx]+D[i,j+1,kdx])/(D[i,j,kdy]+D[i,j+1,kdy])),
-                        # ((i,j,k+1), qg._sparam[k+1]*idzt[k]*idzw[k])
-
 
                         ((i,j,k-1), qg._sparam[k-1]*idzt[k]*idzw[k-1]),
                         ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),

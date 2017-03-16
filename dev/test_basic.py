@@ -293,6 +293,7 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     
         datapath = 'data/'
         # datapath = '/home7/pharos/othr/NATL60/DIAG_DIMUP/qgsolver/mode2_fcTrue_fvertTrue/'
+        # datapath = '/home7/pharos/othr/NATL60/DIAG_DIMUP/qgsolver/mode2_fcTrue_fvertTrue_new/'
         hgrid = datapath+'nemo_metrics.nc'
         vgrid = datapath+'nemo_metrics.nc'
         file_q = datapath+'nemo_pv.nc'
