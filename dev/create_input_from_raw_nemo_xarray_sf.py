@@ -17,14 +17,9 @@
             (testing needed).
 """
 
-import sys, os
-import numpy as np
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
-from netCDF4 import Dataset
 
-# xarray 0.8.2
-import xarray as xr
+import numpy as np
+from netCDF4 import Dataset
 
 # natl60lib
 import natl60lib.initlib_natl60 as init
@@ -35,6 +30,10 @@ import natl60lib.phylib_natl60_new_clean as phy
 import oocgcm.parameters.physicalparameters as oopp
 
 # maybe temporary
+import matplotlib.pyplot as plt
+import cartopy.crs as ccrs
+import xarray as xr
+import sys, os
 #import matplotlib as mpl
 #from mpl_toolkits.axes_grid1 import make_axes_locatable
 #from scipy.fftpack._fftpack import zwft
@@ -72,7 +71,7 @@ def create_nc(filename, lon, lat, zt, zw):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcTrue_fvertTrue'
+    stest='mode2_fcTrue_fvertTrue_oldnormdens'
 
     # - Control parameters
 
@@ -113,7 +112,7 @@ if __name__ == "__main__":
     # Manual chunks: if user wants to test other chunking options
     # (time chunk is hard-coded as 1, since QG solver does not need time differencing).
     if fchunk:
-       xp.init_chunks(xp.region,chunksy=chunksy,chunksx=chunksx,chunksz=chunksz)
+        xp.init_chunks(xp.region,chunksy=chunksy,chunksx=chunksx,chunksz=chunksz)
 
     ### NEMO dir
     datadir=xp.natl60_path
@@ -240,7 +239,7 @@ if __name__ == "__main__":
     ###
     
     # compute the Coriolis frequency and a reference value
-	# from oocgcm/oocgcm/parameters/physicalparameters.py
+    # from oocgcm/oocgcm/parameters/physicalparameters.py
     grav = oopp.grav              # acceleration due to gravity (m.s-2)
     omega = oopp.omega            # earth rotation rate (s-1)
     earthrad = oopp.earthrad      # mean earth radius (m)
@@ -266,7 +265,7 @@ if __name__ == "__main__":
     np.hstack((N2[0],N2))
     #np.hstack((N2,N2[-1]))
     print '!!! Shape of N2 is %d' %N2.shape
-  
+
     # load PV
     print "compute PV"
     print "Execution might be longer than 30 minutes, please wait..."
@@ -275,16 +274,14 @@ if __name__ == "__main__":
     # fc* : activate online processing (no intermediate reading)
     arho_xr,psi_xr,q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=True,fccurl=None,fcstretch=True,
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
-        dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file) 
+        dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file)
     print arho_xr,psi_xr,q_xr
     rho_xr = arho_xr*oopp.rau0
-    rho = rho_xr.to_masked_array()
-    psi = psi_xr.to_masked_array()
     q = q_xr.to_masked_array()
-   
+
+    # force FillValue
     q._FillValue=-999.
-
-
+  
     # store variables
 
     # store PV
@@ -308,9 +305,7 @@ if __name__ == "__main__":
     nc_mask[:] = q[N-index_mask_depth-1,:,:]
     nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
     nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
-
     #
-
     # enlarge the mask: if the i,j point has an adjacent land point then it becames land
     dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
     nc_mask[1:-1,1:-1] = np.where(dummy == 0, nc_mask[1:-1,1:-1], 1.)
@@ -319,8 +314,7 @@ if __name__ == "__main__":
 
     ### load and store psi    
     print "read psi"
-    old=False
-
+    psi = psi_xr.to_masked_array()
     # store psi
     print "create psi file"
     # psiout = create_nc('data/nemo_psi.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
@@ -346,7 +340,7 @@ if __name__ == "__main__":
     ### load rho and background  
 
     print "read rho"
-   
+    rho = rho_xr.to_masked_array()   
     # store rho - background
     print "create rho file"
     rhoout = create_nc('data/'+stest+'/nemo_rho.nc', vlon, vlat, zt, zw)
