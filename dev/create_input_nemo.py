@@ -56,8 +56,8 @@ if __name__ == "__main__":
 
 
     ### NEMO grid file
-    # datadir='/home7/pharos/othr/NATL60/'
-    datadir='data/'
+    datadir='/home7/pharos/othr/NATL60/'
+    # datadir='data/'
     griddir=datadir+'NATL60-I/BOXES/'
     
     
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     print "read PV"
     # pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test_good_new/LMX_y2007m01d01_qgpv_v1.nc'
     # pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test.nc'    
-    pv_file = "/home7/pharos/othr/NATL60/DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc"
+    pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc'
     pvin = Dataset(pv_file, 'r')
     # q = nc.variables['qgpv_v1']
     q = pvin.variables['qgpv_v2']
@@ -219,7 +219,8 @@ if __name__ == "__main__":
     nc_N2 = pvout.createVariable('N2',dtype,('zw'))
     nc_N2[:] = np.flipud(N2)
     #
-    nc_q = pvout.createVariable('q',dtype,('zt','y','x'), fill_value=q._FillValue)
+    # nc_q = pvout.createVariable('q',dtype,('zt','y','x'), fill_value=q._FillValue)
+    nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
     nc_q[:] = np.flipud(q)
   
 
@@ -227,12 +228,12 @@ if __name__ == "__main__":
     print "store mask"
     nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=q._FillValue)
     nc_mask[:] = q[N-index_mask_depth-1,:,:]
-    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
-    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
+    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
+    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.) 
 
     # enlarge the mask: if the i,j point has an adjacent land point then it becames land
     dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
-    nc_mask[1:-1,1:-1] = np.where(dummy == 0, nc_mask[1:-1,1:-1], 1.)
+    nc_mask[1:-1,1:-1] = np.where(dummy == 5, nc_mask[1:-1,1:-1], 0.)
     metricsout.close()
     pvin.close()
     pvout.close()

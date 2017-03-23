@@ -275,16 +275,29 @@ class grid(object):
         pass
      
     def load_mask(self, mask_file, da, comm):
+        """
+        load reference mask from metrics file
+        input:
+        - mask_file : netcdf file containning the mask
+        - da : instance of data management object
+        - comm : The communicator for the DMDA object da
+        output:
+        - grid.D[grid._k_mask,:,:] : contains the mask
+        """
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        # indexes along the third dimension 
-        self._k_mask=zs+8       
-        # open and read netcdf file
-        rootgrp = Dataset(mask_file, 'r')
-        for j in range(ys, ye):
-            for i in range(xs, xe):
-                v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
-        rootgrp.close()
+        # index of the mask along the third dimension 
+        self._k_mask=zs+8    
+        try:   
+            # open the netcdf file and read the mask
+            rootgrp = Dataset(mask_file, 'r')
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
+            rootgrp.close()
+        except:
+            # no mask found, only sea
+            v[:, :, self._k_mask] = 1.
 
         #
         comm.barrier()

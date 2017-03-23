@@ -6,6 +6,7 @@ from petsc4py import PETSc
 
 import numpy as np
 from netCDF4 import Dataset
+import netCDF4
 
 #
 #==================== Pure IO ============================================
@@ -24,6 +25,8 @@ def write_nc(V, vname, filename, qg, create=True):
     Nv=len(vname)
     # process rank
     rank = qg.rank
+    # get global mask for rank 0 (None for other proc)
+    global_D = get_global(qg.grid.D, qg)
 
     if rank == 0 and create:
 
@@ -44,6 +47,9 @@ def write_nc(V, vname, filename, qg, create=True):
         nc_z = rootgrp.createVariable('z',dtype,('z'))
         #x,y,z=qg.grid.get_xyz()
         nc_x[:], nc_y[:], nc_z[:] = qg.grid.get_xyz()
+        # 2D mask
+        nc_mask = rootgrp.createVariable('mask',dtype,('y','x'))
+        nc_mask[:]= global_D[qg.grid._k_mask,:,:]
         # 3D variables
         nc_V=[]
         for name in vname:
@@ -60,19 +66,15 @@ def write_nc(V, vname, filename, qg, create=True):
         
 
     # loop around variables now and store them
-    Vn = qg.da.createNaturalVec()
-    for i in xrange(Nv):    
-        qg.da.globalToNatural(V[i], Vn)
-        scatter, Vn0 = PETSc.Scatter.toZero(Vn)
-        scatter.scatter(Vn, Vn0, False, PETSc.Scatter.Mode.FORWARD)
+    for i in xrange(Nv):  
+        #  get global variable for rank 0 (None for other proc) 
+        vglobal = get_global(V[i], qg)
         if rank == 0:
-            Vf = Vn0[...].reshape(qg.da.sizes[::-1], order='c')
             if create:
-                nc_V[i][:] = Vf[np.newaxis,...]
+                nc_V[i][:] = vglobal[np.newaxis,...]
             else:
                 if i==0: it=nc_V[i].shape[0]
-                nc_V[i][it,...] = Vf[:]
-        qg.comm.barrier()
+                nc_V[i][it,...] = vglobal[:]
       
     if rank == 0:
         # close the netcdf file
@@ -80,7 +82,7 @@ def write_nc(V, vname, filename, qg, create=True):
         
 
 
-def read_nc_petsc(V, vname, filename, qg):    
+def read_nc_petsc(V, vname, filename, qg, fillmask=None):    
     """
     Read a variable from a netcdf file and stores it in a petsc Vector
     Parameters:
@@ -88,6 +90,7 @@ def read_nc_petsc(V, vname, filename, qg):
         vname corresponding name in netcdf file
         filename
         qg object
+        fillmask : value to replace default netCDF fill value transformed in Nan
     """
     v = qg.da.getVecArray(V)
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
@@ -107,7 +110,11 @@ def read_nc_petsc(V, vname, filename, qg):
         # https://github.com/Unidata/netcdf4-python/issues/306
         vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
     else:
-        vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]
+        vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend] 
+    # replace the default fill value of netCDF by the input fillmask value
+    if fillmask is not None:
+        mx = np.ma.masked_values (vread, netCDF4.default_fillvals['f8'])
+        vread[:]=mx.filled(fill_value=fillmask)
     for k in range(zs, ze):
         for j in range(ys, ye):
             for i in range(xs, xe):
@@ -145,7 +152,6 @@ def read_nc_petsc_2D(V, vname, filename, level, qg):
             v[i, j, level] = vread[j-ys,i-xs]                  
     rootgrp.close()
                
-        
 def read_nc(vnames, filename,qg):
     """ Read variables from a netcdf file
     Parameters:
@@ -201,7 +207,23 @@ def read_hgrid_dimensions(hgrid_file):
 
 
 
+def get_global(V, qg):
+    """
+    Returns a copy of the global V array on process 0, otherwise returns None
+    """    
+    rank = qg.rank
+    Vn = qg.da.createNaturalVec()
+    qg.da.globalToNatural(V, Vn)
+    scatter, Vn0 = PETSc.Scatter.toZero(Vn)
+    scatter.scatter(Vn, Vn0, False, PETSc.Scatter.Mode.FORWARD)
+    if rank == 0:
+        Vf = Vn0[...].reshape(qg.da.sizes[::-1], order='c')
+    else:
+        Vf = None
 
+    scatter.destroy()
+    Vn0.destroy()
+    return Vf
 
 #
 #==================== Data input ============================================

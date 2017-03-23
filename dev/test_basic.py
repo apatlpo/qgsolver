@@ -258,12 +258,12 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     # LMX domain: Nx=1032, Ny=756, Nz=300
 
     # vertical subdomain
-    vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # linux
-    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 41 }     # with mask
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # linux
+    vdom = {'kdown': 0, 'kup': 50-1, 'k0': 98 }     # linux with mask
     # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 }     # Datarmor
     # horizontal subdomain
-    hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # linux
-    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 530,'jstart': 0, 'jend': 100-1,  'j0': 520}   # with mask
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # linux
+    hdom = {'istart': 0, 'iend': 100-1, 'i0': 410,'jstart': 0, 'jend': 100-1,  'j0': 590}   # linux with mask
     # hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}     # medium datarmor
     # hdom = {'istart': 0, 'iend': 672-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}   # large datarmor
     # 448=8x56

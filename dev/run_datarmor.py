@@ -40,7 +40,7 @@ def write_batchfile():
     os.mkdir(RPATH+'/dev/data')
     shutil.copy(HOMEDIR+'/dev/test_basic.py','./dev')
 
-    # make job.caparmor
+    # make job.datarmor
     os.chdir(RPATH+'/dev')
     fo = open('job_datarmor','w')
     fo.write('#!/bin/csh\n')
@@ -92,6 +92,7 @@ if __name__ == "__main__":
     startdir=os.getcwd()
     HOMEDIR = startdir+"/.."
     WORKDIR = os.getenv("DATAWORK")
+    # WORKDIR = os.getenv("SCRATCH")
     # get args
     rundir = sys.argv[1]
     casename = sys.argv[2]

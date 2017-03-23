@@ -115,6 +115,7 @@ def set_L_curv(L, qg):
     local_D  = qg.da.createLocalVec()
     qg.da.globalToLocal(qg.grid.D, local_D)
     D = qg.da.getVecArray(local_D)
+    kmask = qg.grid._k_mask
     kdxu = qg.grid._k_dxu
     kdyu = qg.grid._k_dyu
     kdxv = qg.grid._k_dxv
@@ -144,8 +145,12 @@ def set_L_curv(L, qg):
                 row.index = (i,j,k)
                 row.field = 0
 
+                # masked points (land=0), L=1
+                if D[i,j,kmask]==0.:
+                    L.setValueStencil(row, row, 1.)
+
                 # lateral points outside the domain: dirichlet, psi=...
-                if (i<=istart or j<=jstart or
+                elif (i<=istart or j<=jstart or
                     i>=iend or j>=jend):
                     L.setValueStencil(row, row, 1.0)
 
@@ -212,40 +217,6 @@ def set_L_curv(L, qg):
                         col.index = index
                         col.field = 0
                         L.setValueStencil(row, col, value)
-
-               
-    L.assemble()
-    return
-
-def set_L_mask(L, qg):
-    """ 
-    Complete the laplacian operator: where mask is defined, L=1
-    """
-    
-    if qg._verbose>0:
-        print '  ... set L mask'
-    #
-    mx, my, mz = qg.da.getSizes()
-    (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
-    #
-    local_MASK  = qg.da.createLocalVec()
-    qg.da.globalToLocal(qg.grid.D, local_MASK)
-    mask = qg.da.getVecArray(local_MASK)
-    kmask = qg.grid._k_mask
-    #
-    # L.zeroEntries()
-    row = PETSc.Mat.Stencil()
-    col = PETSc.Mat.Stencil()
-    #
-    for k in range(zs, ze):
-        for j in range(ys, ye):
-            for i in range(xs, xe):
-                row.index = (i,j,k)
-                row.field = 0
-
-                # lateral points outside the domain: dirichlet, psi=...
-                if mask[i,j,kmask]==1:
-                    L.setValueStencil(row, row, 1.)
 
                
     L.assemble()

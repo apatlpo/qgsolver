@@ -84,7 +84,6 @@ class qg_model():
             self.grid.load_metric_terms(self.da, self.comm)
         
         # initialize mask
-        # self.set_mask()
         self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm)
 
         #
@@ -165,11 +164,9 @@ class qg_model():
         if file_psi is not None:
             if self._verbose:
                 print 'Set psi from file '+file_psi+' ...'
-            read_nc_petsc(self.PSI, 'psi', file_psi, self) 
-
+            read_nc_petsc(self.PSI, 'psi', file_psi, self, fillmask=0.)
         elif analytical_psi:
             self.set_psi_analytically()
-
 
     def set_psi_analytically(self):
         """ Set psi analytically
@@ -193,7 +190,7 @@ class qg_model():
         if file_q is not None:
             if self._verbose:
                 print 'Set q from file '+file_q+' ...'
-            read_nc_petsc(self.Q, 'q', file_q, self)
+            read_nc_petsc(self.Q, 'q', file_q, self, fillmask=0.)
         elif analytical_q:
             self.set_q_analytically()
 
@@ -223,7 +220,7 @@ class qg_model():
         if file_rho is not None:
             if self._verbose:
                 print 'Set rho from file '+file_rho+' ...'
-            read_nc_petsc(self.RHO, 'rho', file_rho, self)
+            read_nc_petsc(self.RHO, 'rho', file_rho, self, fillmask=0.)
         elif analytical_rho:
             self.set_rho_analytically()
 
@@ -259,7 +256,8 @@ class qg_model():
 
     def set_identity(self):
     	ONE = self.da.createGlobalVec()
-	one = self.da.getVecArray(ONE)
+        one = self.da.getVecArray(ONE)
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         one[:] = 1.
         return ONE
 

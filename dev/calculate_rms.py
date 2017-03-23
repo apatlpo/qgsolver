@@ -8,6 +8,14 @@ import matplotlib.pyplot as plt
 from util import outnc
 from matplotlib.backends.backend_pdf import PdfPages
 
+
+# ------------------------------
+# Read mask
+# ------------------------------
+rootgrp = Dataset('data/output.nc', 'r') 
+mask2d = rootgrp.variables['mask'] [...]  
+rootgrp.close()
+
 # ------------------------------
 # Calculate RMS ( L*PSI - RHS)
 # ------------------------------
@@ -19,16 +27,21 @@ print "------------"
 
 # read files
 rootgrp = Dataset("data/lpsiout.nc", 'r')
-Lpsi = rootgrp.variables["Lpsi"][0,...]
-Nx = Lpsi.shape[2]
-Ny = Lpsi.shape[1]
-Nz = Lpsi.shape[0]
+dummy = rootgrp.variables["Lpsi"][0,...]
+Nx = dummy.shape[2]
+Ny = dummy.shape[1]
+Nz = dummy.shape[0]
 print "Nx, Ny,Nz =",Nx,Ny,Nz
 rootgrp.close()
+# expand 2d mask in Z axis
+mask3d = np.tile(mask2d, (Nz,1, 1))
+# mask Lpsi with mask3d
+Lpsi = np.ma.masked_where(mask3d==1, dummy)
 
 rootgrp = Dataset("data/rhs.nc", 'r')
-rhs = rootgrp.variables["rhs"][0,...]
+dummy = rootgrp.variables["rhs"][0,...]
 rootgrp.close()
+rhs = np.ma.masked_where(mask3d==1, dummy)
 
 # Surface
 tab_lpsi = np.array(Lpsi[Nz-1,1:-1,1:-1])
@@ -101,13 +114,14 @@ print "-------------------------------------"
 
 rootgrp = Dataset('data/output.nc', 'r') 
 z = rootgrp.variables['z'] [:] 
-psi_out = rootgrp.variables['psi'] [0,...]  
+dummy = rootgrp.variables['psi'] [0,...]  
 rootgrp.close()
+psi_out = np.ma.masked_where(mask3d==1, dummy)
 
 rootgrp = Dataset('data/input.nc', 'r')
-psi_in = rootgrp.variables['psi'][0,...]
+dummy = rootgrp.variables['psi'][0,...]
 rootgrp.close()
-
+psi_in = np.ma.masked_where(mask3d==1, dummy)
 
 # Surface
 tab_in = np.array(psi_in[Nz-1,1:-1,1:-1])
