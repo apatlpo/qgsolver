@@ -71,7 +71,7 @@ def create_nc(filename, lon, lat, zt, zw):
 
 if __name__ == "__main__":
 
-    stest='mode2_fcTrue_fvertTrue_oldnormdens'
+    stest='mode2_fcTrue_fvertTrue'
 
     # - Control parameters
 
@@ -157,18 +157,25 @@ if __name__ == "__main__":
     ### NATL60 grid is homogeneous with depth: metric coefficients are stored as 1-D. 
     ### (but could be different with other NEMO simulations)
     zt_xr = -xp.vgrd._arrays['depth_at_t_location'].isel(t=0)
-    zt = zt_xr.to_masked_array()
-    zt = zt[::-1]
+    zti = zt_xr.to_masked_array()
+    zt = np.flipud(zti)
     N = zt.shape[0]
     zw_xr = -xp.vgrd._arrays['depth_at_w_location'].isel(t=0)
-    zw = zw_xr.to_masked_array()
-    zw = zw[::-1]
+    zwi = zw_xr.to_masked_array()
+    zw = np.flipud(zwi)
  
-    # dzw is defined positive in NEMO
-    dzt_xr = xp.vgrd._arrays['cell_z_size_at_t_location'].isel(x=0,y=0)
-    dzt = dzt_xr.to_masked_array()
-    dzw_xr = xp.vgrd._arrays['cell_z_size_at_w_location'].isel(x=0,y=0)
-    dzw = dzw_xr.to_masked_array()
+    # dzt/dzw is defined positive in NEMO
+    dzt_xr = xp.vgrd._arrays['cell_z_size_at_t_location'].isel(t=0,x=0,y=0)
+    dzti = dzt_xr.to_masked_array()
+    dzt = np.flipud(dzti)
+    dzw_xr = xp.vgrd._arrays['cell_z_size_at_w_location'].isel(t=0,x=0,y=0)
+    dzwi = dzw_xr.to_masked_array()
+    dzw = np.flipud(dzwi)
+    
+    print zt
+    print zw
+    print dzt
+    print dzw
 
     # find nearest index in zt for mask_depth
     index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
@@ -296,12 +303,12 @@ if __name__ == "__main__":
     nc_N2 = pvout.createVariable('N2',dtype,('zw'))
     nc_N2[:] = np.flipud(N2)
     #
-    nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
+    nc_q = pvout.createVariable('q',dtype,('zt','y','x'),fill_value=q._FillValue)
     nc_q[:] = np.flipud(q)
 
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
     print "store mask"
-    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=-q._FillValue)
+    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=q._FillValue)
     nc_mask[:] = q[N-index_mask_depth-1,:,:]
     nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
     nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
