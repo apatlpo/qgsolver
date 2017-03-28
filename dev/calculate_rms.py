@@ -251,3 +251,15 @@ plt.savefig('figs/rms.jpg', dpi=300)
 plt.ion()
 plt.show()
 pdf.close()
+
+
+### create a netcdf file with psi_in and psi_out masked
+rootgrp = Dataset('psiinmask.nc', 'w',
+                  format='NETCDF4_CLASSIC', clobber=True)
+# create dimensions
+rootgrp.createDimension('x', Nx)
+rootgrp.createDimension('y', Ny)
+rootgrp.createDimension('z', Nz)
+# create variables
+dtype='f8'
+psiin = rootgrp.createVariable('psi',dtype,('z','y','x'))
