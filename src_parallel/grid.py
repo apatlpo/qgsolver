@@ -163,6 +163,7 @@ class grid(object):
         self.D = da.createGlobalVec()
         # load curvilinear metric terms
         v = da.getVecArray(self.D)
+        v[:] = 0.
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension of 
         self._k_dxt =zs
