@@ -303,19 +303,19 @@ if __name__ == "__main__":
     nc_N2 = pvout.createVariable('N2',dtype,('zw'))
     nc_N2[:] = np.flipud(N2)
     #
-    nc_q = pvout.createVariable('q',dtype,('zt','y','x'),fill_value=q._FillValue)
+    nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
     nc_q[:] = np.flipud(q)
 
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
     print "store mask"
     nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=q._FillValue)
     nc_mask[:] = q[N-index_mask_depth-1,:,:]
-    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 0.) 
-    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 1.) 
+    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
+    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.) 
     #
     # enlarge the mask: if the i,j point has an adjacent land point then it becames land
     dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
-    nc_mask[1:-1,1:-1] = np.where(dummy == 0, nc_mask[1:-1,1:-1], 1.)
+    nc_mask[1:-1,1:-1] = np.where(dummy == 5, nc_mask[1:-1,1:-1], 0.)
     metricsout.close()
     pvout.close()
 
