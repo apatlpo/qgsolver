@@ -169,12 +169,21 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(qg.rho0*qg.f0)
+            elif qg.bdy_type['bottom']=='NBG' : 
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
             elif qg.bdy_type['bottom']=='D':
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i,j,k]
+            elif qg.bdy_type['bottom']=='DBG':
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi[i,j,k]
+                        
             else:
-                print "unknown bottom boundary condition"
+                print qg.bdy_type['bottom']+" unknown bottom boundary condition"
                 sys.exit()
 
             # debug: computes vertical bdy from psi
@@ -195,13 +204,21 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
+            elif qg.bdy_type['top']=='NBG' : 
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
             elif qg.bdy_type['top']=='D' :
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi[i,j,k]
+            elif qg.bdy_type['top']=='DBG' :
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i,j,k]
 
             else:
-                print "unknown bottom boundary condition"
+                print qg.bdy_type['bottom']+" unknown bottom boundary condition"
                 sys.exit()
 
             # south bdy
