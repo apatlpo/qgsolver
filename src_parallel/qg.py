@@ -145,7 +145,7 @@ class qg_model():
 
         # default top and bottom boudary condition = 'N' pour Neumann. 
         # Other possibility 'D' for Direchlet
-        self.bdy_type = {'top':'N','bottom':'N'}
+        self.bdy_type = {'top':'N','bottom':'N','lateral':'D'}
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
@@ -242,7 +242,7 @@ class qg_model():
         """ wrapper around solver solve method
         """
         self.pvinv.solve(self)
-
+        
 
     def tstep(self, nt=1):
         """ Time step wrapper
