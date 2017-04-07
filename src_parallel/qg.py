@@ -140,14 +140,12 @@ class qg_model():
         self.Q = self.da.createGlobalVec()
         # streamfunction
         self.PSI = self.da.createGlobalVec()
-        self.PSI_BG = self.da.createGlobalVec()
-        self.PSI_OT = self.da.createGlobalVec()
         # density
         self.RHO = self.da.createGlobalVec()
 
         # default top and bottom boudary condition = 'N' pour Neumann. 
         # Other possibility 'D' for Direchlet
-        self.bdy_type = {'top':'N','bottom':'N','lateral':'D'}
+        self.bdy_type = {'top':'N','bottom':'N'}
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
@@ -157,6 +155,93 @@ class qg_model():
         #
         self.tstepper = time_stepper(self, dt)
         #print 'debug: time stepper object created'
+
+
+    def set_psi(self, analytical_psi=True, file_psi=None):
+        """
+        Set psi to a given value
+        """
+        if file_psi is not None:
+            if self._verbose:
+                print 'Set psi from file '+file_psi+' ...'
+            read_nc_petsc(self.PSI, 'psi', file_psi, self, fillmask=0.)
+        elif analytical_psi:
+            self.set_psi_analytically()
+
+    def set_psi_analytically(self):
+        """ Set psi analytically
+        """
+        psi = self.da.getVecArray(self.PSI)
+        psi_surf = self.da.getVecArray(self.PSI_SURF)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #
+        if self._verbose:
+            print 'Set psi analytically'
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    psi[i, j, k] = 0.
+
+    def set_q(self, analytical_q=True, file_q=None):
+        """ Set q to a given value
+        """
+        #
+        if file_q is not None:
+            if self._verbose:
+                print 'Set q from file '+file_q+' ...'
+            read_nc_petsc(self.Q, 'q', file_q, self, fillmask=0.)
+        elif analytical_q:
+            self.set_q_analytically()
+
+
+    def set_q_analytically(self):
+        """ Set q analytically
+        """
+        q = self.da.getVecArray(self.Q)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #
+        if self._verbose:
+            print 'Set q analytically'
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
+                                              + (j/float(my-1)-0.5)**2)/0.1**2)
+                    q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
+                    q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
+
+
+    def set_rho(self, analytical_rho=True, file_rho=None):
+        """ Set rho to a given value
+        """
+        #
+        if file_rho is not None:
+            if self._verbose:
+                print 'Set rho from file '+file_rho+' ...'
+            read_nc_petsc(self.RHO, 'rho', file_rho, self, fillmask=0.)
+        elif analytical_rho:
+            self.set_rho_analytically()
+
+    def set_rho_analytically(self):
+        """ Set rho analytically
+        """
+        rho = self.da.getVecArray(self.RHO)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #
+        if self._verbose:
+            print 'Set rho analytically'
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rho[i, j, k] = 0.
+
+    def invert_pv(self):
+        """ wrapper around solver solve method
+        """
+        self.pvinv.solve(self)
 
 
     def tstep(self, nt=1):

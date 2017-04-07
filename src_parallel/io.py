@@ -1,13 +1,12 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
-import sys, os
+import sys
 from petsc4py import PETSc
 
 import numpy as np
 from netCDF4 import Dataset
 import netCDF4
-import time
 
 #
 #==================== Pure IO ============================================
@@ -16,19 +15,11 @@ import time
 def write_nc(V, vname, filename, qg, create=True):    
     """ Write a variable to a netcdf file
     Parameters:
-        V list of petsc vectors ((may contain None)
+        V list of petsc vectors
         vname list of corresponding names
         filename
         qg object
     """
-    
-    # leave out empty inputs
-    for i in range(len(V)):
-        if not hasattr(V[i],'name'):
-            vname[i]=None
-            
-    V=filter(None,V)
-    vname=filter(None,vname)
 
     # number of variables to be stored
     Nv=len(vname)
@@ -62,8 +53,7 @@ def write_nc(V, vname, filename, qg, create=True):
         # 3D variables
         nc_V=[]
         for name in vname:
-            nc_V.append(rootgrp.createVariable(name,dtype,
-                                                   ('t','z','y','x',)))
+            nc_V.append(rootgrp.createVariable(name,dtype,('t','z','y','x',)))
     
     elif rank == 0:
         ### open netcdf file
@@ -74,8 +64,9 @@ def write_nc(V, vname, filename, qg, create=True):
         for name in vname:
             nc_V.append(rootgrp.variables[name])
         
+
     # loop around variables now and store them
-    for i in xrange(Nv):
+    for i in xrange(Nv):  
         #  get global variable for rank 0 (None for other proc) 
         vglobal = get_global(V[i], qg)
         if rank == 0:
@@ -84,51 +75,12 @@ def write_nc(V, vname, filename, qg, create=True):
             else:
                 if i==0: it=nc_V[i].shape[0]
                 nc_V[i][it,...] = vglobal[:]
-         
+      
     if rank == 0:
         # close the netcdf file
         rootgrp.close()
+        
 
-def read_nc_3D(qg, names, filenames, keys=None):
-    """
-    Control reading procedure for any list of input variables from user.
-    
-    Parameters:
-              qg: qg object
-              names: list of variables asked by user
-              filenames: list of files associated to names
-    
-    Note: it could be coupled with a checking procedure on the asked boundary 
-          condition.
-    """
-    
-    # dictionary of keys (NATL60 input convention)
-    key_dict={'Q':'q','RHO':'rho','PSI':'psi','PSI_BG':'psi','PSI_OT':'psi'}  
-
-    for i in range(len(names)):
-        name=str.upper(names[i])
-        filename=filenames[i]      
-        cur_time = time.time()
-        if keys is None:
-            key=key_dict[name]
-        else:
-            key=keys[i]
-        # read variable
-        pet_obj=eval('qg.'+name)
-        read_return=read_nc_petsc(pet_obj, key, filename, qg, fillmask=0.)
-        if qg.rank == 0: 
-            print '----------------------------------------------------'
-            if read_return==1:
-                print 'Elapsed time setting '+name, str(time.time() - cur_time)
-            elif read_return==0 and name in ['Q']:
-                print 'File '+filename+' does not exist. Program will stop.'
-                sys.exit()                
-            elif read_return==0 and name in ['PSI','PSI_BG','PSI_OT','RHO']:
-                print 'File '+filename+' does not exist. '+name+' is set to None. '\
-                       'Program will continue. Please ensure that the chosen boundary '+\
-                       'condition is compatible with input files provided.'
-                pet_obj.destroy()
-                pet_obj=None
 
 def read_nc_petsc(V, vname, filename, qg, fillmask=None):    
     """
@@ -140,6 +92,7 @@ def read_nc_petsc(V, vname, filename, qg, fillmask=None):
         qg object
         fillmask : value to replace default netCDF fill value transformed in Nan
     """
+    v = qg.da.getVecArray(V)
     (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
     istart = xs + qg.grid.i0
     iend = xe + qg.grid.i0
@@ -148,31 +101,26 @@ def read_nc_petsc(V, vname, filename, qg, fillmask=None):
     kdown = zs + qg.grid.k0
     kup = ze + qg.grid.k0
 
-    if os.path.isfile(filename): 
-        v = qg.da.getVecArray(V)
-        rootgrp = Dataset(filename, 'r')
-        ndim=len(rootgrp.variables[vname].shape)
-        if ndim>3:
-            #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
-            # line above does not work for early versions of netcdf4 python library
-            # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
-            # https://github.com/Unidata/netcdf4-python/issues/306
-            vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
-        else:
-            vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend] 
-        # replace the default fill value of netCDF by the input fillmask value
-        if fillmask is not None:
-            mx = np.ma.masked_values (vread, netCDF4.default_fillvals['f8'])
-            vread[:]=mx.filled(fill_value=fillmask)
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    v[i, j, k] = vread[k-zs,j-ys,i-xs]                  
-    
-        rootgrp.close()
-        return 1
+    rootgrp = Dataset(filename, 'r')
+    ndim=len(rootgrp.variables[vname].shape)
+    if ndim>3:
+        #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
+        # line above does not work for early versions of netcdf4 python library
+        # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
+        # https://github.com/Unidata/netcdf4-python/issues/306
+        vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
     else:
-        return 0         
+        vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend] 
+    # replace the default fill value of netCDF by the input fillmask value
+    if fillmask is not None:
+        mx = np.ma.masked_values (vread, netCDF4.default_fillvals['f8'])
+        vread[:]=mx.filled(fill_value=fillmask)
+    for k in range(zs, ze):
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                v[i, j, k] = vread[k-zs,j-ys,i-xs]                  
+
+    rootgrp.close()
     qg.comm.barrier()
 
 def read_nc_petsc_2D(V, vname, filename, level, qg):    
@@ -210,46 +158,41 @@ def read_nc(vnames, filename,qg):
         vnames list of variable names
         filename
     """
-   
-    if os.path.isfile(filename):
-        # open netdc file
-        rootgrp = Dataset(filename, 'r')
-        
-        # loop around variables to load
-        kstart = qg.grid.k0
-        kend = qg.grid.k0 + qg.grid.Nz
-    
-        if isinstance(vnames, list):
-            V=[]
-            for name in vnames:
-                if name == 'N2':
-                    V.append(rootgrp.variables[name][kstart:kend])
-                elif name == 'f0':
-                    V.append(rootgrp.variables[name][:])
-                # elif name == 'zt' or name == 'zw':
-                #     V.append(rootgrp.variables[name][kstart:kend])
-                else:
-                    print 'error in read_nc: unknown variable '+name
-                    sys.exit()
-        else:
-            if vnames == 'N2':
-                V = rootgrp.variables[vnames][kstart:kend]
-            elif vnames == 'f0':
-                V = rootgrp.variables[vnames][:]
-            # elif vnames == 'zt' or vnames == 'zw':
-            #     V = rootgrp.variables[vnames][kstart:kend]
-            else:
-                print 'error in read_nc: unknown variable '+vnames
-                sys.exit()
-    
-        # close the netcdf file
-        rootgrp.close()
-        
-        return V
-    else:
-        print 'Read '+vnames+': file  does not exist. Program will stop.'
-        sys.exit()
 
+    # open netdc file
+    rootgrp = Dataset(filename, 'r')
+    
+    # loop around variables to load
+    kstart = qg.grid.k0
+    kend = qg.grid.k0 + qg.grid.Nz
+
+    if isinstance(vnames, list):
+        V=[]
+        for name in vnames:
+            if name == 'N2':
+                V.append(rootgrp.variables[name][kstart:kend])
+            elif name == 'f0':
+                V.append(rootgrp.variables[name][:])
+            # elif name == 'zt' or name == 'zw':
+            #     V.append(rootgrp.variables[name][kstart:kend])
+            else:
+                print 'error in read_nc: unknown variable '+name
+                sys.exit()
+    else:
+        if vnames == 'N2':
+            V = rootgrp.variables[vnames][kstart:kend]
+        elif vnames == 'f0':
+            V = rootgrp.variables[vnames][:]
+        # elif vnames == 'zt' or vnames == 'zw':
+        #     V = rootgrp.variables[vnames][kstart:kend]
+        else:
+            print 'error in read_nc: unknown variable '+vnames
+            sys.exit()
+
+    # close the netcdf file
+    rootgrp.close()
+    
+    return V
 
 
 def read_hgrid_dimensions(hgrid_file):
