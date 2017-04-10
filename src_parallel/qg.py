@@ -31,10 +31,12 @@ class qg_model():
                  ncores_x=None, ncores_y=None,
                  bdy_type_in={},
                  verbose = 1,
-                 substract_fprime=False
+                 substract_fprime=False,
+                 fbdy=False
                  ):
         """ QG object creation
         Parameters:
+        fbdy=activate external boundary definition
         """
         self.g = 9.81
         self.rho0 = 1000.
@@ -149,7 +151,8 @@ class qg_model():
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
-        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+        if not fbdy:
+            self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
 
         # initiate time stepper
         #
@@ -211,7 +214,7 @@ class qg_model():
                                               + (j/float(my-1)-0.5)**2)/0.1**2)
                     q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
                     q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
-
+                    
 
     def set_rho(self, analytical_rho=True, file_rho=None):
         """ Set rho to a given value

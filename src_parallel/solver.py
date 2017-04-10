@@ -177,10 +177,7 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i,j,k]
-            elif qg.bdy_type['bottom']=='DBG':
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i,j,k]
+
                         
             else:
                 print qg.bdy_type['bottom']+" unknown bottom boundary condition"
@@ -212,13 +209,9 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i,j,k]
-            elif qg.bdy_type['top']=='DBG' :
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i,j,k]
 
             else:
-                print qg.bdy_type['bottom']+" unknown bottom boundary condition"
+                print qg.bdy_type['top']+" unknown top boundary condition"
                 sys.exit()
 
             # south bdy

@@ -8,30 +8,321 @@ import time
 import sys
 
 from qgsolver.qg import qg_model
-from qgsolver.io import write_nc, read_nc_3D, read_nc_petsc
+from qgsolver.io import write_nc, read_nc_petsc
+from qgsolver.solver import pvinversion
+
+
+# Parameters
+
+datapath = 'data/'
+file_q = datapath+'nemo_pvregfrom_sossheig.nc'
+file_psi = datapath+'nemo_psi_true.nc'
+file_rho = datapath+'nemo_rho.nc'
+file_psi_bg = datapath+'nemo_psi_tmean.nc' # optional
+file_psi_ot = datapath+'nemo_psi_tmean.nc'  # optional
+
+# Boundary condition type: 
+#   true boundary conditions: 
+#    'N': Neumann (density-like),
+#    'D': Dirichlet (streamfunction),
+#   other boundary conditions: 
+#    'NBG': Neumann-background,
+#    'DBG': Dirichlet-background,
+#    'NOT': Neumann-other
+#    'DOT': Dirichlet-other
+
+bdy_type = {'top':'NOT', 'bottom':'D', 'lateral': 'DBG'}
+
+# LMX domain: Nx=1032, Ny=756, Nz=300
+
+# vertical subdomain
+#     vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }  
+vdom = {'kdown': 0, 'kup': 10-1, 'k0': 250 }     # linux with mask
+
+# horizontal subdomain
+#     hdom = {'istart': 0, 'iend': 300-1, 'i0': 350,'jstart': 0, 'jend': 300-1,  'j0': 200}
+hdom = {'istart': 0, 'iend': 50-1, 'i0': 410,'jstart': 0, 'jend': 50-1,  'j0': 590}   # linux with mask
+
+# 448=8x56
+# 512=8x64
+
+ncores_x=1; ncores_y=1  # large datarmor  
 
 #================================================================
 
-def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
+# Boundary conditions
+
+def set_rhs_bdy(qg,fpsi_bg,fpsi_ot):
+    """
+    Set South/North, East/West, Bottom/Top boundary conditions
+    Set RHS along boundaries for inversion, may be an issue
+    for time stepping
+    :param da: abstract distributed memory object of the domain
+    :param qg: qg_model instance
+    :return:
+    """
+
+    rhs = qg.da.getVecArray(qg.pvinv._RHS)
+    mx, my, mz = qg.da.getSizes()
+    (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+    istart = qg.grid.istart
+    iend = qg.grid.iend
+    jstart = qg.grid.jstart
+    jend = qg.grid.jend
+    kdown = qg.grid.kdown
+    kup = qg.grid.kup
+
+    if qg.case == "roms" or 'nemo' or 'uniform':
+
+        psi = qg.da.getVecArray(qg.PSI)
+        if fpsi_bg:
+            psi_bg = qg.da.getVecArray(qg.PSI_BG)
+        if fpsi_ot:
+            psi_ot = qg.da.getVecArray(qg.PSI_OT)
+        rho = qg.da.getVecArray(qg.RHO)
+
+        if qg.bdy_type['top'] in ['D']:
+            psi_up=psi
+        if qg.bdy_type['bottom'] in ['D']:
+            psi_down=psi
+        if qg.bdy_type['lateral'] in ['D']:
+            psi_lat=psi
+
+        if qg.bdy_type['top'] in ['N']:
+            rho_up=rho
+        if qg.bdy_type['bottom'] in ['N']:
+            rho_down=rho
+
+        if qg.bdy_type['top'] in ['NBG','DBG']:
+            psi_up=psi_bg
+        if qg.bdy_type['bottom'] in ['NBG','DBG']:
+            psi_down=psi_bg
+        if qg.bdy_type['lateral'] in ['DBG']:
+            psi_lat=psi_bg
+
+        if qg.bdy_type['top'] in ['NOT','DOT']:
+            psi_up=psi_ot
+        if qg.bdy_type['bottom'] in ['NOT','DOT']:
+            psi_down=psi_ot
+        if qg.bdy_type['lateral'] in ['DOT']:
+            psi_lat=psi_ot
+
+        # lower ghost area
+        if zs < kdown:
+            for k in range(zs,kdown):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):                    
+                        # rhs[i,j,k]=sys.float_info.epsilon
+                        rhs[i,j,k]=psi_down[i, j, k]
+        # bottom bdy
+        k = kdown
+        if qg.bdy_type['bottom'] in ['N']: 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = - qg.g*0.5*(rho_down[i, j, k]+rho_down[i, j, k+1])/(qg.rho0*qg.f0)
+        elif qg.bdy_type['bottom'] in ['NBG','NOT']: 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = (psi_down[i,j,k+1]-psi_down[i,j,k])/qg.grid.dzw[k] 
+        elif qg.bdy_type['bottom'] in ['D','DBG','DOT']:
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = psi_down[i,j,k]
+
+                    
+        else:
+            print qg.bdy_type['bottom']+" unknown bottom boundary condition"
+            sys.exit()
+
+        # debug: computes vertical bdy from psi
+        # for j in range(ys, ye):
+        #     for i in range(xs, xe):
+        #         rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+
+
+        if ze > kup+1:
+            for k in range(kup+1,ze):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        # rhs[i,j,k]=sys.float_info.epsilon   
+                        rhs[i,j,k]= psi_up[i,j,k]
+                                    
+        # upper bdy
+        k = kup
+        if qg.bdy_type['top'] in ['N']: 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = - qg.g*0.5*(rho_up[i, j, k]+rho_up[i, j, k-1])/(qg.rho0*qg.f0)
+        elif qg.bdy_type['top'] in ['NBG','NOT']: 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = (psi_up[i,j,k]-psi_up[i,j,k-1])/qg.grid.dzw[k-1] 
+        elif qg.bdy_type['top'] in ['D','DBG','DOT']:
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = psi_up[i,j,k]
+
+        else:
+            print qg.bdy_type['top']+" unknown top boundary condition"
+            sys.exit()
+
+        # south bdy
+        if ys <= jstart:
+            #j = 0
+            for k in range(zs, ze):
+                for j in range(ys,min(ye,jstart+1)):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi_lat[i, j, k]
+        # north bdy
+        if ye >= jend:
+            #j = my - 1
+            for k in range(zs, ze):
+                for j in range(max(ys,jend),ye):
+                    for i in range(xs, xe):
+                        rhs[i, j, k] = psi_lat[i, j, k]
+        # west bdy
+        if xs <= istart:
+            #i = 0
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    for i in range(xs,min(xe,istart+1)):
+                        rhs[i, j, k] = psi_lat[i, j, k]
+        # east bdy
+        if xe >= iend:
+            #i = mx - 1
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    for i in range(max(xs,iend),xe):
+                        rhs[i, j, k] = psi_lat[i, j, k]
+
+        # debug: computes vertical bdy from psi    
+        # for j in range(ys, ye):
+        #     for i in range(xs, xe):
+        #         rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzw[k-1]
+
+    else:
+
+        # bottom bdy
+        if zs == 0:
+            k = 0
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
+        # upper bdy
+        if ze == mz :
+            k = mz-1
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
+
+    if qg.pvinv._verbose>0:
+        print 'set RHS along boudaries for inversion '
+
+#================================================================
+
+def read_petsc(qg,fpsi_bg,fpsi_ot,
+               file_q,file_rho,file_psi,file_psi_bg=None,file_psi_ot=None):
+
+    cur_time = time.time()
+    # set from files
+    read_nc_petsc(qg.Q, 'q', file_q, qg, fillmask=0.)
+    if qg.rank == 0:
+        print '----------------------------------------------------'
+        print 'Elapsed time setting Q ', str(time.time() - cur_time)
+    cur_time = time.time()
+ 
+    read_nc_petsc(qg.PSI, 'psi', file_psi, qg, fillmask=0.)
+    if qg.rank == 0:
+        print '----------------------------------------------------'
+        print 'Elapsed time setting PSI ', str(time.time() - cur_time)
+    cur_time = time.time()
+ 
+    read_nc_petsc(qg.RHO, 'rho', file_rho, qg, fillmask=0.)
+    if qg.rank == 0:
+        print '----------------------------------------------------'
+        print 'Elapsed time setting RHO ', str(time.time() - cur_time)
+    cur_time = time.time()
+
+    if fpsi_bg:
+        qg.PSI_BG = qg.da.createGlobalVec() 
+        read_nc_petsc(qg.PSI_BG, 'psi', file_psi_bg, qg, fillmask=0.)
+        if qg.rank == 0:
+            print '----------------------------------------------------'
+            print 'Elapsed time setting PSI_BG ', str(time.time() - cur_time)
+        cur_time = time.time()
+
+    if fpsi_ot:
+        qg.PSI_OT = qg.da.createGlobalVec()          
+        read_nc_petsc(qg.PSI_OT, 'psi', file_psi_ot, qg, fillmask=0.)
+        if qg.rank == 0:
+            print '----------------------------------------------------'
+            print 'Elapsed time setting PSI_OT ', str(time.time() - cur_time)
+        cur_time = time.time()
+
+
+def pvinv_solver(qg,fpsi_bg,fpsi_ot):
+    
+    # ONE = qg.set_identity()
+    # qg.pvinv.L.mult(ONE,self._RHS)
+    # write_nc([self._RHS], ['id'], 'data/identity.nc', qg)
+
+    # qg.PSI.set(0)
+    
+    # equivalent boundary condition
+    for key, value in qg.bdy_type.items():
+        if 'N' in value:
+            qg.bdy_type[key]='N'
+        if 'D' in value:
+            qg.bdy_type[key]='D'
+        
+    qg.pvinv = pvinversion(qg,substract_fprime=True)
+    
+    # reset boundary condition to prescribed value
+    qg.bdy_type=bdy_type
+    
+    # compute L*PSI and store in self._RHS
+    qg.pvinv.L.mult(qg.PSI,qg.pvinv._RHS)
+    # store L*PSI in netcdf file lpsi.nc
+    write_nc([qg.pvinv._RHS], ['rhs'], 'data/lpsiin.nc', qg)
+    # copy Q into RHS
+    qg.Q.copy(qg.pvinv._RHS)
+    if qg.pvinv._substract_fprime:
+        # substract f-f0 from PV
+        qg.pvinv.substract_fprime_from_rhs(qg)
+        if qg.pvinv._verbose>0:
+            print 'Substract fprime from pv prior to inversion'
+    # fix boundaries
+    #self.set_rhs_bdy(qg)
+    set_rhs_bdy(qg, fpsi_bg, fpsi_ot)
+    # mask rhs 
+    qg.pvinv.set_rhs_mask(qg)
+    # store RHS in netcdf file rhs.nc
+    write_nc([qg.pvinv._RHS], ['rhs'], 'data/rhs.nc', qg)
+    # actually solves the pb
+    qg.pvinv.ksp.solve(qg.pvinv._RHS, qg.PSI)
+    # compute L*PSI and store in self._RHS
+    qg.pvinv.L.mult(qg.PSI,qg.pvinv._RHS)
+    # store L*PSI in netcdf file lpsi.nc
+    write_nc([qg.pvinv._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
+
+def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
     
     """ Set up processing parameters and run qg solver.
     """
 
-    # LMX domain: Nx=1032, Ny=756, Nz=300
-
-    # vertical subdomain
-#     vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }  
-    vdom = {'kdown': 0, 'kup': 10-1, 'k0': 250 }     # linux with mask
-
-    # horizontal subdomain
-#     hdom = {'istart': 0, 'iend': 300-1, 'i0': 350,'jstart': 0, 'jend': 300-1,  'j0': 200}
-    hdom = {'istart': 0, 'iend': 50-1, 'i0': 410,'jstart': 0, 'jend': 50-1,  'j0': 590}   # linux with mask
+    # activate bg or other field
+    fpsi_bg=False
+    fpsi_ot=False
+    for key, value in bdy_type.items():
+        if 'BG' in value:
+            fpsi_bg=True
+        if 'OT' in value:
+            fpsi_ot=True
     
-    # 448=8x56
-    # 512=8x64
-    
-    ncores_x=1; ncores_y=1  # large datarmor
-
+    print bdy_type
+    print fpsi_bg
+    print fpsi_ot
     
     if ping_mpi_cfg:
         # escape before computing
@@ -46,34 +337,14 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         # case must be defined before ncores for run_caparmor.py
         casename = 'nemo'
     
-        # Boundary condition type: 
-        #   true boundary conditions: 
-        #    'N': Neumann (density-like),
-        #    'D': Dirichlet (streamfunction),
-        #   estimated boundary conditions: 
-        #    'NBG': Neumann-background,
-        #    'DBG': Dirichlet-background,
-        #    'NOT': Neumann-other
-        #    'DOT': Dirichlet-other
-        
-        bdy_type = {'top':'N', 'bottom':'N', 'lateral': 'D'}
-        
-        # activate bg or other field
-        fpsi_bg=True
-        fpsi_ot=True  
-    
-        datapath = 'data/'
         hgrid = datapath+'nemo_metrics.nc'
         vgrid = datapath+'nemo_metrics.nc'
-        file_q = datapath+'nemo_pv.nc'
-        file_psi = datapath+'nemo_psi_bad.nc'
-        file_rho = datapath+'nemo_rho.nc'
-        file_psi_bg = datapath+'nemo_psi_bg.nc' # optional
-        file_psi_ot = datapath+'nemo_psi_ot.nc'  # optional
         
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True)
+                      bdy_type_in=bdy_type, substract_fprime=True,fbdy=True)
+        
+        print qg.bdy_type
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'
@@ -87,39 +358,13 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
 
         
         # initialize 3D-variables
-        read_nc_petsc(qg.Q, 'q', file_q, qg, fillmask=0.)
-        if qg.rank == 0:
-            print '----------------------------------------------------'
-            print 'Elapsed time setting Q ', str(time.time() - cur_time)
-        cur_time = time.time()
-     
-        read_nc_petsc(qg.PSI, 'psi', file_psi, qg, fillmask=0.)
-        if qg.rank == 0:
-            print '----------------------------------------------------'
-            print 'Elapsed time setting PSI ', str(time.time() - cur_time)
-        cur_time = time.time()
-     
-        read_nc_petsc(qg.RHO, 'rho', file_rho, qg, fillmask=0.)
-        if qg.rank == 0:
-            print '----------------------------------------------------'
-            print 'Elapsed time setting RHO ', str(time.time() - cur_time)
-        cur_time = time.time()
+        
+        # set analytically
+#         qg.set_q_analytically()
+#         qg.set_rho_analytically()
+#         qg.set_psi_analytically()
 
-        if fpsi_bg:
-            qg.PSI_BG = qg.da.createGlobalVec() 
-            read_nc_petsc(qg.PSI_BG, 'psi', file_psi_bg, qg, fillmask=0.)
-            if qg.rank == 0:
-                print '----------------------------------------------------'
-                print 'Elapsed time setting PSI_BG ', str(time.time() - cur_time)
-            cur_time = time.time()
-
-        if fpsi_ot:
-            qg.PSI_OT = qg.da.createGlobalVec()          
-            read_nc_petsc(qg.PSI_OT, 'psi', file_psi_ot, qg, fillmask=0.)
-            if qg.rank == 0:
-                print '----------------------------------------------------'
-                print 'Elapsed time setting PSI_OT ', str(time.time() - cur_time)
-            cur_time = time.time()
+        read_petsc(qg,fpsi_bg,fpsi_ot,file_q,file_rho,file_psi,file_psi_bg,file_psi_ot)        
 
         # build the list of variables to write in input.nc
         if not fpsi_bg and not fpsi_ot:
@@ -127,21 +372,26 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
             vname_writein=['psi', 'q']            
         elif fpsi_bg and not fpsi_ot:
             petsc_writein=[qg.PSI, qg.PSI_BG, qg.Q]
-            vname_writein=['psi', 'psi', 'q']
+            vname_writein=['psi', 'psi_bg', 'q']
         elif not fpsi_bg and fpsi_ot:
             petsc_writein=[qg.PSI, qg.PSI_OT, qg.Q]
-            vname_writein=['psi', 'psi', 'q']
+            vname_writein=['psi', 'psi_ot', 'q']
         elif fpsi_bg and fpsi_ot:
-            petsc_writein=[qg.PSI, qg.PSI_OT, qg.PSI_BG, qg.Q]
-            vname_writein=['psi', 'psi', 'psi', 'q']        
-            
+            petsc_writein=[qg.PSI, qg.PSI_BG, qg.PSI_OT, qg.Q]
+            vname_writein=['psi', 'psi_bg', 'psi_ot', 'q']
+        
         write_nc(petsc_writein, vname_writein, 'data/input.nc', qg)
-
+            
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
         cur_time = time.time()
-    
-        qg.pvinv.solve(qg)
+
+        if qg._verbose>1:
+            print 'Inversion done'
+
+        # qg.pvinv.solve(qg)
+        pvinv_solver(qg,fpsi_bg,fpsi_ot)
+        
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for invert_pv ', str(time.time() - cur_time)
         cur_time = time.time()
