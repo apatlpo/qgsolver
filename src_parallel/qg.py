@@ -32,11 +32,9 @@ class qg_model():
                  bdy_type_in={},
                  verbose = 1,
                  substract_fprime=False,
-                 fbdy=False
                  ):
         """ QG object creation
         Parameters:
-        fbdy=activate external boundary definition
         """
         self.g = 9.81
         self.rho0 = 1000.
@@ -151,8 +149,7 @@ class qg_model():
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
-        if not fbdy:
-            self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
 
         # initiate time stepper
         #

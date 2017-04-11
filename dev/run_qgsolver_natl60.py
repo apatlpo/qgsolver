@@ -15,11 +15,11 @@ from qgsolver.solver import pvinversion
 # Parameters
 
 datapath = 'data/'
-file_q = datapath+'nemo_pvregfrom_sossheig.nc'
+file_q = datapath+'nemo_pv_true.nc'
 file_psi = datapath+'nemo_psi_true.nc'
-file_rho = datapath+'nemo_rho.nc'
+file_rho = datapath+'nemo_rho_true.nc'
 file_psi_bg = datapath+'nemo_psi_tmean.nc' # optional
-file_psi_ot = datapath+'nemo_psi_tmean.nc'  # optional
+file_psi_ot = datapath+'nemo_psi0regfrom_sossheig.nc'  # optional
 
 # Boundary condition type: 
 #   true boundary conditions: 
@@ -31,22 +31,22 @@ file_psi_ot = datapath+'nemo_psi_tmean.nc'  # optional
 #    'NOT': Neumann-other
 #    'DOT': Dirichlet-other
 
-bdy_type = {'top':'NOT', 'bottom':'D', 'lateral': 'DBG'}
+bdy_type = {'top':'N', 'bottom':'N', 'lateral': 'DOT'}
 
 # LMX domain: Nx=1032, Ny=756, Nz=300
 
 # vertical subdomain
-#     vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }  
-vdom = {'kdown': 0, 'kup': 10-1, 'k0': 250 }     # linux with mask
+vdom = {'kdown': 0, 'kup': 10-1, 'k0': 100 }     # small 
+# vdom = {'kdown': 0, 'kup': 150-1, 'k0': 100 }     # large
 
 # horizontal subdomain
-#     hdom = {'istart': 0, 'iend': 300-1, 'i0': 350,'jstart': 0, 'jend': 300-1,  'j0': 200}
-hdom = {'istart': 0, 'iend': 50-1, 'i0': 410,'jstart': 0, 'jend': 50-1,  'j0': 590}   # linux with mask
+hdom = {'istart': 0, 'iend': 50-1, 'i0': 50, 'jstart': 0, 'jend': 50-1,  'j0': 50}   # small 
+# hdom = {'istart': 0, 'iend': 944-1, 'i0': 50, 'jstart': 0, 'jend': 672-1,  'j0': 50}   # large 
 
 # 448=8x56
 # 512=8x64
 
-ncores_x=1; ncores_y=1  # large datarmor  
+ncores_x=2; ncores_y=2  # large datarmor  
 
 #================================================================
 
@@ -276,8 +276,6 @@ def pvinv_solver(qg,fpsi_bg,fpsi_ot):
         if 'D' in value:
             qg.bdy_type[key]='D'
         
-    qg.pvinv = pvinversion(qg,substract_fprime=True)
-    
     # reset boundary condition to prescribed value
     qg.bdy_type=bdy_type
     
@@ -320,10 +318,6 @@ def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
         if 'OT' in value:
             fpsi_ot=True
     
-    print bdy_type
-    print fpsi_bg
-    print fpsi_ot
-    
     if ping_mpi_cfg:
         # escape before computing
         return ncores_x, ncores_y
@@ -339,14 +333,23 @@ def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
     
         hgrid = datapath+'nemo_metrics.nc'
         vgrid = datapath+'nemo_metrics.nc'
-        
+
+        # equivalent boundary condition (to initialize qg solver)
+        for key, value in bdy_type.items():
+           if 'N' in value:
+              bdy_type[key]='N'
+           if 'D' in value:
+              bdy_type[key]='D'
+
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True,fbdy=True)
+                      bdy_type_in=bdy_type, substract_fprime=True)
         
-        print qg.bdy_type
-        qg.case=casename
+        # reset boundary condition to prescribed value
+        qg.bdy_type=bdy_type
     
+        qg.case=casename
+
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for qg_model ', str(time.time() - cur_time)
         cur_time = time.time()
