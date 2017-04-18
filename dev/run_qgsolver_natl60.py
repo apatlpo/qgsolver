@@ -6,6 +6,7 @@
 
 import time
 import sys
+import copy
 
 from qgsolver.qg import qg_model
 from qgsolver.io import write_nc, read_nc_petsc
@@ -15,7 +16,7 @@ from qgsolver.solver import pvinversion
 # Parameters
 
 datapath = 'data/'
-file_q = datapath+'nemo_pv_true.nc'
+file_q = datapath+'nemo_pvregfrom_sossheig.nc'
 file_psi = datapath+'nemo_psi_true.nc'
 file_rho = datapath+'nemo_rho_true.nc'
 file_psi_bg = datapath+'nemo_psi_tmean.nc' # optional
@@ -31,22 +32,22 @@ file_psi_ot = datapath+'nemo_psi0regfrom_sossheig.nc'  # optional
 #    'NOT': Neumann-other
 #    'DOT': Dirichlet-other
 
-bdy_type = {'top':'N', 'bottom':'N', 'lateral': 'DOT'}
+bdy_type = {'top':'D', 'bottom':'NBG', 'lateral': 'DOT'}
 
 # LMX domain: Nx=1032, Ny=756, Nz=300
 
 # vertical subdomain
-vdom = {'kdown': 0, 'kup': 10-1, 'k0': 100 }     # small 
-# vdom = {'kdown': 0, 'kup': 150-1, 'k0': 100 }     # large
+# vdom = {'kdown': 0, 'kup': 50-1, 'k0': 100 }     # small 
+vdom = {'kdown': 0, 'kup': 150-1, 'k0': 100 }     # large
 
 # horizontal subdomain
-hdom = {'istart': 0, 'iend': 50-1, 'i0': 50, 'jstart': 0, 'jend': 50-1,  'j0': 50}   # small 
-# hdom = {'istart': 0, 'iend': 944-1, 'i0': 50, 'jstart': 0, 'jend': 672-1,  'j0': 50}   # large 
+# hdom = {'istart': 0, 'iend': 200-1, 'i0': 50, 'jstart': 0, 'jend': 200-1,  'j0': 50}   # small 
+hdom = {'istart': 0, 'iend': 944-1, 'i0': 50, 'jstart': 0, 'jend': 672-1,  'j0': 50}   # large 
 
 # 448=8x56
 # 512=8x64
 
-ncores_x=2; ncores_y=2  # large datarmor  
+ncores_x=16; ncores_y=14  # large datarmor  
 
 #================================================================
 
@@ -221,6 +222,52 @@ def set_rhs_bdy(qg,fpsi_bg,fpsi_ot):
 
 #================================================================
 
+def set_rhs_mask(qg):
+        """
+        Set mask on rhs: where mask=0 (land) rhs=psi
+        - param da: abstract distributed memory object of the domain
+        - param qg: qg_model instance
+             qg.grid.D[qg.grid._k_mask]: mask
+        - self.rhs : vorticity whith boundary conditions
+        return: masked rhs
+        """
+
+        rhs = qg.da.getVecArray(qg.pvinv._RHS)
+        mask = qg.da.getVecArray(qg.grid.D)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        istart = qg.grid.istart
+        iend = qg.grid.iend
+        jstart = qg.grid.jstart
+        jend = qg.grid.jend
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+        kmask = qg.grid._k_mask
+
+        if qg.case == "roms" or 'nemo' or 'uniform':
+
+            if qg.bdy_type['lateral'] == 'D':
+                psi = qg.da.getVecArray(qg.PSI)
+            elif qg.bdy_type['lateral'] == 'DBG':
+                psi = qg.da.getVecArray(qg.PSI_BG)
+            elif qg.bdy_type['lateral'] == 'DOT':
+                psi = qg.da.getVecArray(qg.PSI_OT)
+
+            if qg.rank==0: print qg.bdy_type
+            
+            # interior
+            for k in range(zs,ze):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        if mask[i,j,kmask]==0.:
+                            rhs[i, j, k] = psi[i,j,k]
+
+        if qg.pvinv._verbose>0:
+            print 'set RHS mask for inversion '
+
+#================================================================
+
 def read_petsc(qg,fpsi_bg,fpsi_ot,
                file_q,file_rho,file_psi,file_psi_bg=None,file_psi_ot=None):
 
@@ -269,16 +316,6 @@ def pvinv_solver(qg,fpsi_bg,fpsi_ot):
 
     # qg.PSI.set(0)
     
-    # equivalent boundary condition
-    for key, value in qg.bdy_type.items():
-        if 'N' in value:
-            qg.bdy_type[key]='N'
-        if 'D' in value:
-            qg.bdy_type[key]='D'
-        
-    # reset boundary condition to prescribed value
-    qg.bdy_type=bdy_type
-    
     # compute L*PSI and store in self._RHS
     qg.pvinv.L.mult(qg.PSI,qg.pvinv._RHS)
     # store L*PSI in netcdf file lpsi.nc
@@ -294,7 +331,7 @@ def pvinv_solver(qg,fpsi_bg,fpsi_ot):
     #self.set_rhs_bdy(qg)
     set_rhs_bdy(qg, fpsi_bg, fpsi_ot)
     # mask rhs 
-    qg.pvinv.set_rhs_mask(qg)
+    set_rhs_mask(qg)
     # store RHS in netcdf file rhs.nc
     write_nc([qg.pvinv._RHS], ['rhs'], 'data/rhs.nc', qg)
     # actually solves the pb
@@ -313,9 +350,9 @@ def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
     fpsi_bg=False
     fpsi_ot=False
     for key, value in bdy_type.items():
-        if 'BG' in value:
+        if value in ['NBG','DBG']:
             fpsi_bg=True
-        if 'OT' in value:
+        if value in ['NOT','DOT']:
             fpsi_ot=True
     
     if ping_mpi_cfg:
@@ -335,18 +372,19 @@ def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
         vgrid = datapath+'nemo_metrics.nc'
 
         # equivalent boundary condition (to initialize qg solver)
-        for key, value in bdy_type.items():
-           if 'N' in value:
-              bdy_type[key]='N'
-           if 'D' in value:
-              bdy_type[key]='D'
+        bdy_type_tmp=copy.copy(bdy_type)
+        for key, value in bdy_type_tmp.items():
+            if value in ['N','NBG','NOT']:
+                bdy_type_tmp[key]='N'
+            if value in ['D','DBG','DOT']:
+                bdy_type_tmp[key]='D'
 
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True)
+                      bdy_type_in=bdy_type_tmp, substract_fprime=True)
         
         # reset boundary condition to prescribed value
-        qg.bdy_type=bdy_type
+        qg.bdy_type.update(bdy_type)
     
         qg.case=casename
 
@@ -392,7 +430,7 @@ def nemo_input_runs(ncores_x=ncores_x, ncores_y=ncores_y, ping_mpi_cfg=False):
         if qg._verbose>1:
             print 'Inversion done'
 
-        # qg.pvinv.solve(qg)
+        #qg.pvinv.solve(qg)
         pvinv_solver(qg,fpsi_bg,fpsi_ot)
         
         if qg.rank == 0: print '----------------------------------------------------'

@@ -31,7 +31,7 @@ class qg_model():
                  ncores_x=None, ncores_y=None,
                  bdy_type_in={},
                  verbose = 1,
-                 substract_fprime=False,
+                 substract_fprime=False
                  ):
         """ QG object creation
         Parameters:

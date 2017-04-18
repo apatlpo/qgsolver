@@ -53,7 +53,7 @@ class pvinversion():
         # self.ksp.setType('cg')
         self.ksp.setType('gmres')
         # self.ksp.setType('bicg')
-        self.ksp.setInitialGuessNonzero(False)
+        self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
         # self.ksp.getPC().setType('icc')
         # self.ksp.getPC().setType('bjacobi')
