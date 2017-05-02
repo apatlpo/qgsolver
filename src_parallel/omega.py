@@ -5,6 +5,8 @@
 import sys
 import numpy as np
 
+from petsc4py import PETSc
+
 from .io import write_nc
 
 #

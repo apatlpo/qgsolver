@@ -4,7 +4,8 @@
 import sys
 
 from .grid import *
-from .solver import *
+from .pvinv import *
+from .timestepper import *
 
 import petsc4py
 #from Cython.Compiler.Main import verbose

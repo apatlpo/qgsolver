@@ -102,11 +102,15 @@ def read_nc_petsc(V, vname, filename, qg, fillmask=None):
         v = qg.da.getVecArray(V)
         rootgrp = Dataset(filename, 'r')
         ndim=len(rootgrp.variables[vname].shape)
+        if ndim>3:
         #v[i, j, k] = rootgrp.variables['q'][-1,k,j,i]
         # line above does not work for early versions of netcdf4 python library
         # print netCDF4.__version__  1.1.1 has a bug and one cannot call -1 for last index:
         # https://github.com/Unidata/netcdf4-python/issues/306
-        vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
+            vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
+        else:
+            vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]        
+        #vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]
         # replace the default fill value of netCDF by the input fillmask value
         if fillmask is not None:
             mx = np.ma.masked_values (vread, netCDF4.default_fillvals['f8'])

@@ -5,6 +5,8 @@
 import sys
 import numpy as np
 
+from petsc4py import PETSc
+
 from .io import write_nc
 
 #
@@ -83,7 +85,7 @@ class pvinversion():
         # compute L*PSI and store in self._RHS
         qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['rhs'], 'data/lpsiin.nc', qg)
+        write_nc([self._RHS], ['rhs'], 'output/lpsiin.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
         if self._substract_fprime:
@@ -96,14 +98,14 @@ class pvinversion():
         # mask rhs 
         self.set_rhs_mask(qg)
         # store RHS in netcdf file rhs.nc
-        write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
         # compute L*PSI and store in self._RHS
         qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
+        write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
 
         if self._verbose>1:
             print 'Inversion done'
