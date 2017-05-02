@@ -73,7 +73,7 @@ def set_L(L, qg):
                     elif qg.bdy_type['top']=='D':
                         L.setValueStencil(row, row, 1.0)
                     else:
-                        print "unknown bottom boundary condition"
+                        print "unknown top boundary condition"
                         sys.exit()
 
                 # points below and above the domain
