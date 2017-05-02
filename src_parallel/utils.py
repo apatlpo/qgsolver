@@ -2,8 +2,8 @@
 # -*- encoding: utf8 -*-
 
 
-class qg():
-    """ QG object
+class plt():
+    """ perform online basic plots
     """
     
     def __init__(self):

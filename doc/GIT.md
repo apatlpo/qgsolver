@@ -36,3 +36,9 @@ Delete ap_changes branch
 git branch -d ap_changes
 ```
 
+Checkout a file from another branch
+```
+git checkout mybranch
+git checkout otherbranch -- dev/file.py
+```
+
