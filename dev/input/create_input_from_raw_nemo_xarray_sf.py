@@ -24,7 +24,8 @@ from netCDF4 import Dataset
 # natl60lib
 import natl60lib.initlib_natl60 as init
 import natl60lib.iolib_natl60 as iolib
-import natl60lib.phylib_natl60_new_clean as phy
+#import natl60lib.phylib_natl60_new_clean as phy
+import natl60lib.phylib_natl60 as phy
 
 # oocgcm
 import oocgcm.parameters.physicalparameters as oopp
@@ -283,8 +284,8 @@ if __name__ == "__main__":
     #q_xr= phy.call_qgpv(xp,day,mth,yr,z=None,fcdens=False,fccurl=False,fcstretch=False,
         dfilt=dfilt,pfilt=pfilt,mode=2,fout=True,N2file=N2_file,rhobgfile=rhobg_file)
     print arho_xr,psi_xr,q_xr
-    rho_xr = arho_xr*1000.
-    #rho_xr = arho_xr*oopp.rau0
+    #rho_xr = arho_xr*1000.
+    rho_xr = arho_xr*xp.rau0
     q = q_xr.to_masked_array()
 
     # force FillValue
