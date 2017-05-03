@@ -50,7 +50,7 @@ Proper conda install on Caparmor:
 ```csh
 bash Miniconda2-4.2.12-Linux-x86_64.sh
 (specify .miniconda2 and not miniconda2 as target dir for conda)
-
+bash
 conda update conda
 conda create --name petsc python
 source activate petsc
