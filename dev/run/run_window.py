@@ -80,8 +80,11 @@ def window_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
 
         # normalize by its maximum value
         Wmax = win.PSI.norm(norm_type=PETSc.NormType.INF)
-        print Wmax
+        if win.rank == 0: print '----------------------------------------------------'
+        if win.rank == 0: print 'Infinite norm of window is =%f' %Wmax
         win.PSI.scale(1./Wmax)
+        if win.rank == 0: print 'Window is normalized by this infinite norm'
+        
 
         # output the window
         write_nc([win.PSI], ['window'], 'data/output.nc', win)
