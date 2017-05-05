@@ -100,46 +100,13 @@ class window():
         #
         # declare petsc vectors
         #
-        # PV
+        # Q is the right-handside
         self.Q = self.da.createGlobalVec()
-        # streamfunction
+        # PSI will be the window array
         self.PSI = self.da.createGlobalVec()
-        # density
-        #self.RHO = self.da.createGlobalVec()
-
-        # default top and bottom boudary condition = 'N' pour Neumann. 
-        # Other possibility 'D' for Direchlet
-        #self.bdy_type = {'top':'D','bottom':'D'}
-        #self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
         self.wininv = wininversion(self)
-
-
-    #def set_psi(self, analytical_psi=True, file_psi=None):
-    #    """
-    #    Set psi to a given value
-    #    """
-    #    if file_psi is not None:
-    #        if self._verbose:
-    #            print 'Set psi from file '+file_psi+' ...'
-    #        read_nc_petsc(self.PSI, 'psi', file_psi, self, fillmask=0.)
-    #    elif analytical_psi:
-    #        self.set_psi_analytically()
-
-    #def set_psi_analytically(self):
-    #    """ Set psi analytically
-    #    """
-    #    psi = self.da.getVecArray(self.PSI)
-    #    mx, my, mz = self.da.getSizes()
-    #    (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-    #    #
-    #    if self._verbose:
-    #        print 'Set psi analytically'
-    #    for k in range(zs, ze):
-    #        for j in range(ys, ye):
-    #            for i in range(xs, xe):
-    #                psi[i, j, k] = 1.
 
 
     def set_q(self, analytical_q=True, file_q=None):
@@ -161,7 +128,7 @@ class window():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set q analytically'
+            print 'Set rhs analytically to k^⁻2'
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -185,31 +152,27 @@ class wininversion():
     """ Window inversion, parallel
     """
     
-    def __init__(self, qg):
+    def __init__(self, win):
         """ Setup the PV inversion solver
         """
                 
-        self._verbose = qg._verbose
+        self._verbose = win._verbose
         
         # create the operator
-        self.L = qg.da.createMat()
+        self.L = win.da.createMat()
         #
         if self._verbose>0:
             print 'Operator L declared'
 
         # Fill in operator values
-        self._set_L_curv(self.L, qg)
+        self._set_L_curv(self.L, win)
 
         #
         if self._verbose>0:
             print 'Operator L filled'
 
         # global vector for PV inversion
-        self._RHS = qg.da.createGlobalVec()
-
-        # local vectors
-        #self._localRHS  = qg.da.createLocalVec()
-        #self._localPSI  = qg.da.createLocalVec()
+        self._RHS = win.da.createGlobalVec()
 
         # create solver
         self.ksp = PETSc.KSP()
@@ -240,43 +203,43 @@ class wininversion():
             
             
 
-    def solve(self, qg):
+    def solve(self, win):
         """ Compute the PV inversion
         """
         # copy Q into RHS
-        qg.Q.copy(self._RHS)
+        win.Q.copy(self._RHS)
         # fix boundaries
-        self.set_rhs_bdy(qg)
+        self.set_rhs_bdy(win)
         # mask rhs 
-        self.set_rhs_mask(qg)
+        self.set_rhs_mask(win)
         # actually solves the pb
-        self.ksp.solve(self._RHS, qg.PSI)
+        self.ksp.solve(self._RHS, win.PSI)
 
         if self._verbose>1:
             print 'Inversion done'
 
         
 
-    def set_rhs_bdy(self, qg):
+    def set_rhs_bdy(self, win):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
         :param da: abstract distributed memory object of the domain
-        :param qg: qg_model instance
+        :param win: win_model instance
         :return:
         """
 
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = win.da.getVecArray(self._RHS)
+        mx, my, mz = win.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        istart = win.grid.istart
+        iend = win.grid.iend
+        jstart = win.grid.jstart
+        jend = win.grid.jend
+        kdown = win.grid.kdown
+        kup = win.grid.kup
 
         # lower ghost area
         if zs < kdown:
@@ -326,28 +289,28 @@ class wininversion():
             print 'set RHS along boudaries for inversion '
 
 
-    def set_rhs_mask(self, qg):
+    def set_rhs_mask(self, win):
         """
         Set mask on rhs: where mask=0 (land) rhs=psi
         - param da: abstract distributed memory object of the domain
-        - param qg: qg_model instance
-             qg.grid.D[qg.grid._k_mask]: mask
+        - param win: win_model instance
+             win.grid.D[win.grid._k_mask]: mask
         - self.rhs : vorticity whith boundary conditions
         return: masked rhs
         """
 
-        rhs = qg.da.getVecArray(self._RHS)
-        mask = qg.da.getVecArray(qg.grid.D)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = win.da.getVecArray(self._RHS)
+        mask = win.da.getVecArray(win.grid.D)
+        mx, my, mz = win.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
-        kmask = qg.grid._k_mask
+        istart = win.grid.istart
+        iend = win.grid.iend
+        jstart = win.grid.jstart
+        jend = win.grid.jend
+        kdown = win.grid.kdown
+        kup = win.grid.kup
+        kmask = win.grid._k_mask
 
         # interior
         for k in range(zs,ze):
@@ -361,37 +324,36 @@ class wininversion():
 
 
     
-    def _set_L_curv(self,L, qg):
+    def _set_L_curv(self,L, win):
         """ Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
         """
         
-        if qg._verbose>0:
+        if win._verbose>0:
             print '  ... assumes a curvilinear and/or vertically stretched grid'
         #
-        mx, my, mz = qg.da.getSizes()
+        mx, my, mz = win.da.getSizes()
         #
-        #D = qg.da.getVecArray(qg.grid.D)
-        local_D  = qg.da.createLocalVec()
-        qg.da.globalToLocal(qg.grid.D, local_D)
-        D = qg.da.getVecArray(local_D)
-        kmask = qg.grid._k_mask
-        kdxu = qg.grid._k_dxu
-        kdyu = qg.grid._k_dyu
-        kdxv = qg.grid._k_dxv
-        kdyv = qg.grid._k_dyv
-        kdxt = qg.grid._k_dxt
-        kdyt = qg.grid._k_dyt
+        local_D  = win.da.createLocalVec()
+        win.da.globalToLocal(win.grid.D, local_D)
+        D = win.da.getVecArray(local_D)
+        kmask = win.grid._k_mask
+        kdxu = win.grid._k_dxu
+        kdyu = win.grid._k_dyu
+        kdxv = win.grid._k_dxv
+        kdyv = win.grid._k_dyv
+        kdxt = win.grid._k_dxt
+        kdyt = win.grid._k_dyt
         #
 
         #
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
+        istart = win.grid.istart
+        iend = win.grid.iend
+        jstart = win.grid.jstart
+        jend = win.grid.jend
+        kdown = win.grid.kdown
+        kup = win.grid.kup
         #
         L.zeroEntries()
         row = PETSc.Mat.Stencil()
@@ -423,7 +385,7 @@ class wininversion():
                         for index, value in [
                             ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
                             ((i-1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
-                            ((i, j, k), -qg._K2 -1./D[i,j,kdxt]/D[i,j,kdyt]*( \
+                            ((i, j, k), -win._K2 -1./D[i,j,kdxt]/D[i,j,kdyt]*( \
                                              D[i,j,kdyu]/D[i,j,kdxu] \
                                             +D[i-1,j,kdyu]/D[i-1,j,kdxu] \
                                             +D[i,j,kdxv]/D[i,j,kdyv] \
