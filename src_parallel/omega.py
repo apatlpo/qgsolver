@@ -123,7 +123,7 @@ class pvinversion():
         if self._verbose>0:
             print 'Substract f-f0 from pv prior to inversion'
 
-    def set_uv_from_psi(self, qg):
+    def set_uv_from_psi(self, qg, PSI=None):
         """
         Compute U & V from Psi
         U = -dPSIdy
@@ -133,12 +133,19 @@ class pvinversion():
          ### create global vectors
         self._U = qg.da.createGlobalVec()
         self._V = qg.da.createGlobalVec()
+
          ### create local vectors
         local_PSI  = qg.da.createLocalVec()
         local_D = qg.da.createLocalVec()
-        ###
-        qg.da.globalToLocal(qg.PSI, local_PSI)
+
+        #### load vector PSI used to compute U and V
+        if PSI is None:
+            qg.da.globalToLocal(qg.PSI, local_PSI)
+        else:
+            qg.da.globalToLocal(PSI, local_PSI)
+
         qg.da.globalToLocal(qg.grid.D, local_D)
+
         #
         u = qg.da.getVecArray(self._U)
         v = qg.da.getVecArray(self._V)
@@ -175,7 +182,7 @@ class pvinversion():
                              ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
                                0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
 
-    def set_rho_from_psi(self,qg):
+    def set_rho_from_psi(self, qg, PSI=None):
         """
         Compute RHO from Psi
         rho=-f0/g dPSIdz
@@ -187,7 +194,13 @@ class pvinversion():
         ### declare global vectors
         self._RHO = qg.da.createGlobalVec()
         ###
-        qg.da.globalToLocal(qg.PSI, local_PSI)
+
+        #### load vector PSI used to compute RHO
+        if PSI is None:
+            qg.da.globalToLocal(qg.PSI, local_PSI)
+        else:
+            qg.da.globalToLocal(PSI, local_PSI)
+
         qg.da.globalToLocal(qg.grid.D, local_D)
         #
         psi = qg.da.getVecArray(local_PSI)
@@ -218,7 +231,7 @@ class pvinversion():
                              ( 0.5*(psi[i,j,k+1]+psi[i,j,k]) - \
                                0.5*(psi[i,j,k]+psi[i,j,k-1]) )
    
-    def set_jacobian(self,qg):
+    def set_jacobian(self,qg, U=None, V=None, RHO=None):
         """
         # qxu = g/f0/rho0 * (dudx*drhodx + dvdx*drhody) at u point
         # qyv = g/f0/rho0 * (dudy*drhodx + dvdy*drhody) at v point 
@@ -232,11 +245,20 @@ class pvinversion():
         ### declare global vectors
         self._QXU = qg.da.createGlobalVec()
         self._QYV = qg.da.createGlobalVec()
-        ###
+        ### load vector U,V,RHO used to compute the jacobian
         qg.da.globalToLocal(qg.grid.D, local_D)
-        qg.da.globalToLocal(self._U, local_U)
-        qg.da.globalToLocal(self._V, local_V)
-        qg.da.globalToLocal(self._RHO, local_RHO)
+        if U is None:
+            qg.da.globalToLocal(self._U, local_U)
+        else:
+            qg.da.globalToLocal(U, local_U)
+        if V is None:
+            qg.da.globalToLocal(self._V, local_V)
+        else:
+            qg.da.globalToLocal(V, local_V)
+        if RHO is None:
+            qg.da.globalToLocal(self._RHO, local_RHO)
+        else:
+            qg.da.globalToLocal(RHO, local_RHO)
         #
         u = qg.da.getVecArray(local_U)
         v = qg.da.getVecArray(local_V)
@@ -360,6 +382,22 @@ class pvinversion():
         :param qg: qg_model instance
         :return:
         """
+        
+        if self._verbose>0:
+            print 'set RHS along boudaries for inversion '
+
+        self.set_rhs_bdy_bottom(qg)
+        self.set_rhs_bdy_top(qg)
+        self.set_rhs_bdy_lat(qg)
+
+        return
+
+    def set_rhs_bdy_bottom(self, qg, PSI=None, RHO=None):
+        """
+        Set bottom boundary condition
+        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
+        :return:
+        """
 
         rhs = qg.da.getVecArray(self._RHS)
         mx, my, mz = qg.da.getSizes()
@@ -372,119 +410,156 @@ class pvinversion():
         kdown = qg.grid.kdown
         kup = qg.grid.kup
 
-        if qg.case == "roms" or 'nemo' or 'uniform':
-
+        # load vector used to compute boundary conditions
+        if PSI is None:
             psi = qg.da.getVecArray(qg.PSI)
+        else:
+            psi = qg.da.getVecArray(PSI)
+        if RHO is None:
             rho = qg.da.getVecArray(qg.RHO)
+        else:
+            rho = qg.da.getVecArray(RHO)
+           
+        # lower ghost area
+        if zs < kdown:
+            for k in range(zs,kdown):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):                    
+                        # rhs[i,j,k]=sys.float_info.epsilon
+                        rhs[i,j,k]=0.
+        # bottom bdy
+        k = kdown
+        if qg.bdy_type['bottom']=='N' : 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
+        elif qg.bdy_type['bottom']=='NBG' : 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0. 
+        elif qg.bdy_type['bottom']=='D':
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
 
+                    
+        else:
+            print qg.bdy_type['bottom']+" unknown bottom boundary condition"
+            sys.exit()
+                
+        return
 
-            # lower ghost area
-            if zs < kdown:
-                for k in range(zs,kdown):
-                    for j in range(ys, ye):
-                        for i in range(xs, xe):                    
-                            rhs[i,j,k]=0.
-            # bottom bdy
-            k = kdown
-            if qg.bdy_type['bottom']=='N' : 
+            
+    def set_rhs_bdy_top(self, qg, PSI=None, RHO=None):
+        """
+        Set top boundary condition
+        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
+        :return:
+        """
+        
+        rhs = qg.da.getVecArray(self._RHS)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        istart = qg.grid.istart
+        iend = qg.grid.iend
+        jstart = qg.grid.jstart
+        jend = qg.grid.jend
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+
+        # load vector used to compute boundary conditions
+        if PSI is None:
+            psi = qg.da.getVecArray(qg.PSI)
+        else:
+            psi = qg.da.getVecArray(PSI)
+        if RHO is None:
+            rho = qg.da.getVecArray(qg.RHO)
+        else:
+            rho = qg.da.getVecArray(RHO)
+
+        if ze > kup+1:
+            for k in range(kup+1,ze):
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = 0.  
-            elif qg.bdy_type['bottom']=='NBG' : 
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = 0.  
-            elif qg.bdy_type['bottom']=='D':
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = 0.  
-
-                        
-            else:
-                print qg.bdy_type['bottom']+" unknown bottom boundary condition"
-                sys.exit()
-
-            # debug: computes vertical bdy from psi
-            # for j in range(ys, ye):
-            #     for i in range(xs, xe):
-            #         rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
-
-
-            if ze > kup+1:
-                for k in range(kup+1,ze):
-                    for j in range(ys, ye):
-                        for i in range(xs, xe):
-                            rhs[i,j,k]= 0.      
-            # upper bdy
-            k = kup
-            if qg.bdy_type['top']=='N' : 
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = 0.
-            elif qg.bdy_type['top']=='NBG' : 
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = 0.
-            elif qg.bdy_type['top']=='D' :
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        rhs[i, j, k] = 0.
-
-            else:
-                print qg.bdy_type['top']+" unknown top boundary condition"
-                sys.exit()
-
-            # south bdy
-            if ys <= jstart:
-                #j = 0
-                for k in range(zs, ze):
-                    for j in range(ys,min(ye,jstart+1)):
-                        for i in range(xs, xe):
-                            rhs[i, j, k] = 0.
-            # north bdy
-            if ye >= jend:
-                #j = my - 1
-                for k in range(zs, ze):
-                    for j in range(max(ys,jend),ye):
-                        for i in range(xs, xe):
-                            rhs[i, j, k] = 0.
-            # west bdy
-            if xs <= istart:
-                #i = 0
-                for k in range(zs, ze):
-                    for j in range(ys, ye):
-                        for i in range(xs,min(xe,istart+1)):
-                            rhs[i, j, k] = 0.
-            # east bdy
-            if xe >= iend:
-                #i = mx - 1
-                for k in range(zs, ze):
-                    for j in range(ys, ye):
-                        for i in range(max(xs,iend),xe):
-                            rhs[i, j, k] = 0.
-
-            # debug: computes vertical bdy from psi    
-            # for j in range(ys, ye):
-            #     for i in range(xs, xe):
-            #         rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/qg.grid.dzw[k-1]
+                        # rhs[i,j,k]=sys.float_info.epsilon   
+                        rhs[i,j,k]= 0.          
+        # upper bdy
+        k = kup
+        if qg.bdy_type['top']=='N' : 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
+        elif qg.bdy_type['top']=='NBG' : 
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0. 
+        elif qg.bdy_type['top']=='D' :
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rhs[i, j, k] = 0.
 
         else:
+            print qg.bdy_type['top']+" unknown top boundary condition"
+            sys.exit()
 
-            # bottom bdy
-            if zs == 0:
-                k = 0
-                for j in range(ys, ye):
+
+    def set_rhs_bdy_lat(self, qg, PSI=None):
+        """
+        Set lateral boundary condition
+        :param PSI: Petsc vector that will be used to compute the bdy condition
+        :return:
+        """
+        
+        rhs = qg.da.getVecArray(self._RHS)
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        istart = qg.grid.istart
+        iend = qg.grid.iend
+        jstart = qg.grid.jstart
+        jend = qg.grid.jend
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+
+        # load vector used to compute boundary conditions
+        if PSI is None:
+            psi = qg.da.getVecArray(qg.PSI)
+        else:
+            psi = qg.da.getVecArray(PSI)
+
+        # south bdy
+        if ys <= jstart:
+            #j = 0
+            for k in range(zs, ze):
+                for j in range(ys,min(ye,jstart+1)):
                     for i in range(xs, xe):
                         rhs[i, j, k] = 0.
-            # upper bdy
-            if ze == mz :
-                k = mz-1
-                for j in range(ys, ye):
+        # north bdy
+        if ye >= jend:
+            #j = my - 1
+            for k in range(zs, ze):
+                for j in range(max(ys,jend),ye):
                     for i in range(xs, xe):
                         rhs[i, j, k] = 0.
-
-        if self._verbose>0:
-            print 'set RHS along boudaries for inversion '
+        # west bdy
+        if xs <= istart:
+        # if xs <= istart and qg.BoundaryType is not 'periodic':
+            #i = 0
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    for i in range(xs,min(xe,istart+1)):
+                        rhs[i, j, k] = 0.
+        # east bdy
+        if xe >= iend:
+        # if xe >= iend and qg.BoundaryType is not 'periodic':
+            #i = mx - 1
+            for k in range(zs, ze):
+                for j in range(ys, ye):
+                    for i in range(max(xs,iend),xe):
+                        rhs[i, j, k] = 0.
+                        
+        return
 
     def set_rhs_mask(self, qg):
         """
