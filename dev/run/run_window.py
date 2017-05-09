@@ -60,7 +60,7 @@ def window_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         datapath = 'data/'
         hgrid = datapath+'window_metrics.nc'
         vgrid = datapath+'window_metrics.nc'
-        win = window(hgrid=hgrid, vgrid=vgrid, K=1.e-5,
+        win = window(hgrid=hgrid, vgrid=vgrid, K=1.e-5, mask3D=True,
                     vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y)
         win.case=casename
     
