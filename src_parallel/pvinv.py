@@ -150,7 +150,7 @@ class pvinversion():
         return
 
 
-    def set_rhs_bdy_bottom(self, PSI=None, RHO=None, qg):
+    def set_rhs_bdy_bottom(self, qg, PSI=None, RHO=None):
         """
         Set bottom boundary condition
         :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
@@ -208,7 +208,7 @@ class pvinversion():
         return
 
             
-    def set_rhs_bdy_top(self, PSI=None, RHO=None, qg):
+    def set_rhs_bdy_top(self, qg, PSI=None, RHO=None):
         """
         Set top boundary condition
         :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
@@ -262,7 +262,7 @@ class pvinversion():
             sys.exit()
 
 
-    def set_rhs_bdy_lat(self, PSI=None, qg):
+    def set_rhs_bdy_lat(self, qg, PSI=None):
         """
         Set lateral boundary condition
         :param PSI: Petsc vector that will be used to compute the bdy condition
