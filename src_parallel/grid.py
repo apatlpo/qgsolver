@@ -22,7 +22,7 @@ class grid(object):
     #
     def __init__(self, hgrid_in = None, vgrid_in = None, vdom_in={} , hdom_in={}, verbose=1):
 
-        self.verbose = verbose
+        self._verbose = verbose
         
         #
         # horizontal global grids
@@ -283,31 +283,58 @@ class grid(object):
         comm.barrier()
         pass
      
-    def load_mask(self, mask_file, da, comm):
+    def load_mask(self, mask_file, da, comm, mask3D=False):
         """
         load reference mask from metrics file
         input:
         - mask_file : netcdf file containning the mask
         - da : instance of data management object
         - comm : The communicator for the DMDA object da
+        - mask3D: flag for 3D masks (default is False)
         output:
         - grid.D[grid._k_mask,:,:] : contains the mask
         """
-        v = da.getVecArray(self.D)
+        self.mask3D = mask3D
+        if not mask3D:
+            v = da.getVecArray(self.D)
+        else:
+            self.mask3D = da.createGlobalVec()
+            v = da.getVecArray(self.mask3D)
+
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # index of the mask along the third dimension 
-        self._k_mask=zs+8    
-        try:   
-            # open the netcdf file and read the mask
-            rootgrp = Dataset(mask_file, 'r')
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
-            rootgrp.close()
-        except:
-            # no mask found, only sea
-            v[:, :, self._k_mask] = 1.
-
+        self._k_mask=zs+8
+        if not mask3D:
+            try:
+                # open the netcdf file and read the mask
+                rootgrp = Dataset(mask_file, 'r')
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
+                rootgrp.close()
+                if self._verbose:
+                    print 'The mask is 2D and loaded'
+            except:
+                # no mask found, only sea
+                v[:, :, self._k_mask] = 1.   
+                if self._verbose:
+                    print 'The mask is 2D but no data was found'
+        else:
+            try:
+                # open the netcdf file and read the mask
+                rootgrp = Dataset(mask_file, 'r')
+                for k in range(zs, ze):
+                    for j in range(ys, ye):
+                        for i in range(xs, xe):
+                            v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]                
+                rootgrp.close()
+                if self._verbose:
+                    print 'The mask is 3D and loaded'
+            except:
+                # no mask found, only sea
+                v[:, :, :] = 1.
+                if self._verbose:
+                    print 'The mask is 3D but no data was found'
         #
         comm.barrier()
         pass   
