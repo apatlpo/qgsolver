@@ -13,7 +13,7 @@ from .io import write_nc
 #==================== Parallel solver ============================================
 #
 
-class omega():
+class pvinversion():
     """ Omega equation inversion, parallel
     """
     
@@ -54,7 +54,7 @@ class omega():
         # self.ksp.setType('cg')
         self.ksp.setType('gmres')
         # self.ksp.setType('bicg')
-        self.ksp.setInitialGuessNonzero(True)
+        self.ksp.setInitialGuessNonzero(False)
         # and incomplete Cholesky for preconditionning
         # self.ksp.getPC().setType('icc')
         # self.ksp.getPC().setType('bjacobi')
@@ -80,35 +80,30 @@ class omega():
         """ Compute the PV inversion
         """
         # ONE = qg.set_identity()
-        # qg.pvinv.L.mult(ONE,self._RHS)
+        # self.L.mult(ONE,self._RHS)
         # write_nc([self._RHS], ['id'], 'data/identity.nc', qg)
         # compute L*PSI and store in self._RHS
-        qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # qg.omega.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['rhs'], 'data/lpsiin.nc', qg)
-        # copy Q into RHS
-        qg.Q.copy(self._RHS)
-        if self._substract_fprime:
-            # substract f-f0 from PV
-            self.substract_fprime_from_rhs(qg)
-            if self._verbose>0:
-                print 'Substract fprime from pv prior to inversion'
+        # write_nc([self._RHS], ['rhs'], 'data/lpsiin.nc', qg)
+        # Initialize  RHS
+        self.set_rhs(qg)
         # fix boundaries
         self.set_rhs_bdy(qg)
         # mask rhs 
         self.set_rhs_mask(qg)
         # store RHS in netcdf file rhs.nc
-        write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
+        # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
         # compute L*PSI and store in self._RHS
-        qg.pvinv.L.mult(qg.PSI,self._RHS)
+        # self.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
+        # write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
 
         if self._verbose>1:
-            print 'Inversion done'
+            print 'omega equation done'
             
     def substract_fprime_from_rhs(self, qg):
         """
@@ -128,7 +123,233 @@ class omega():
         if self._verbose>0:
             print 'Substract f-f0 from pv prior to inversion'
 
-        
+    def set_uv_from_psi(self, qg):
+        """
+        Compute U & V from Psi
+        U = -dPSIdy
+        V =  dPSIdx
+        """
+
+         ### create global vectors
+        self._U = qg.da.createGlobalVec()
+        self._V = qg.da.createGlobalVec()
+         ### create local vectors
+        local_PSI  = qg.da.createLocalVec()
+        local_D = qg.da.createLocalVec()
+        ###
+        qg.da.globalToLocal(qg.PSI, local_PSI)
+        qg.da.globalToLocal(qg.grid.D, local_D)
+        #
+        u = qg.da.getVecArray(self._U)
+        v = qg.da.getVecArray(self._V)
+        psi = qg.da.getVecArray(local_PSI)
+        D = qg.da.getVecArray(local_D)
+
+
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kmask = qg.grid._k_mask
+        kdxu = qg.grid._k_dxu
+        kdyu = qg.grid._k_dyu
+        kdxv = qg.grid._k_dxv
+        kdyv = qg.grid._k_dyv
+        kdxt = qg.grid._k_dxt
+        kdyt = qg.grid._k_dyt
+
+        # Initialize u=-dpsidy and v=dpsidx
+
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe): 
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
+                        # lateral boundaries
+                        u[i, j, k] = 0.
+                        v[i, j, k] = 0.
+                    else:
+                        u[i,j,k] = - 1. /D[i,j,kdyu] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i+1,j-1,k]+psi[i+1,j,k]+psi[i,j,k]+psi[i,j-1,k]) )
+                        v[i,j,k] =   1. /D[i,j,kdxv] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
+
+    def set_rho_from_psi(self,qg):
+        """
+        Compute RHO from Psi
+        rho=-f0/g dPSIdz
+        """
+     
+        ### declare local vectors
+        local_PSI  = qg.da.createLocalVec()
+        local_D = qg.da.createLocalVec()
+        ### declare global vectors
+        self._RHO = qg.da.createGlobalVec()
+        ###
+        qg.da.globalToLocal(qg.PSI, local_PSI)
+        qg.da.globalToLocal(qg.grid.D, local_D)
+        #
+        psi = qg.da.getVecArray(local_PSI)
+        rho = qg.da.getVecArray(self._RHO)
+        D = qg.da.getVecArray(local_D)
+
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kmask = qg.grid._k_mask
+        kdxu = qg.grid._k_dxu
+        kdyu = qg.grid._k_dyu
+        kdxv = qg.grid._k_dxv
+        kdyv = qg.grid._k_dyv
+        kdxt = qg.grid._k_dxt
+        kdyt = qg.grid._k_dyt
+
+
+        # Initialize rho=-f0/g dpsidz
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe): 
+                    if (k==0    or k==mz-1):
+                        # top and bottom boundaries
+                        rho[i, j, k] = 0.
+                    else:
+                        rho[i,j,k] = - qg.f0/qg.g/qg.grid.zt[k] * \
+                             ( 0.5*(psi[i,j,k+1]+psi[i,j,k]) - \
+                               0.5*(psi[i,j,k]+psi[i,j,k-1]) )
+   
+    def set_jacobian(self,qg):
+        """
+        # qxu = g/f0/rho0 * (dudx*drhodx + dvdx*drhody) at u point
+        # qyv = g/f0/rho0 * (dudy*drhodx + dvdy*drhody) at v point 
+        """
+
+        ### declare local vectors
+        local_U = qg.da.createLocalVec()
+        local_V = qg.da.createLocalVec()
+        local_RHO = qg.da.createLocalVec()
+        local_D = qg.da.createLocalVec()
+        ### declare global vectors
+        self._QXU = qg.da.createGlobalVec()
+        self._QYV = qg.da.createGlobalVec()
+        ###
+        qg.da.globalToLocal(qg.grid.D, local_D)
+        qg.da.globalToLocal(self._U, local_U)
+        qg.da.globalToLocal(self._V, local_V)
+        qg.da.globalToLocal(self._RHO, local_RHO)
+        #
+        u = qg.da.getVecArray(local_U)
+        v = qg.da.getVecArray(local_V)
+        rho = qg.da.getVecArray(local_RHO)
+        D = qg.da.getVecArray(local_D)
+        qxu = qg.da.getVecArray(self._QXU)
+        qyv = qg.da.getVecArray(self._QYV)
+
+
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kmask = qg.grid._k_mask
+        kdxu = qg.grid._k_dxu
+        kdyu = qg.grid._k_dyu
+        kdxv = qg.grid._k_dxv
+        kdyv = qg.grid._k_dyv
+        kdxt = qg.grid._k_dxt
+        kdyt = qg.grid._k_dyt
+
+        # qxu = g/f0/rho0 * (dudx*drhodx + dvdx*drhody) at u point
+        # qyv = g/f0/rho0 * (dudy*drhodx + dvdy*drhody) at v point 
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe): 
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1 ):
+                        # lateral boundaries
+                        qxu[i, j, k] = 0.
+                        qyv[i, j, k] = 0. 
+                    else:
+                        qxu[i,j,k] = qg.g/qg.f0/qg.rho0 * ( \
+                              (0.5*(u[i+1,j,k]+u[i,j,k])-0.5*(u[i,j,k]+u[i-1,j,k]))/D[i,j,kdxu] * \
+                              (rho[i+1,j,k]-rho[i,j,k])/D[i,j,kdxu] + \
+                              (0.5*(v[i+1,j,k]+v[i+1,j-1,k])-0.5*(v[i,j,k]+v[i,j-1,k]))/D[i,j,kdxu] * \
+                              (0.25*(rho[i+1,j,k]+rho[i+1,j+1,k]+rho[i,j+1,k]+rho[i,j,k]) - \
+                               0.25*(rho[i+1,j-1,k]+rho[i+1,j,k]+rho[i,j,k]+rho[i,j-1,k]) )/D[i,j,kdyu] \
+                                                          )
+                        qyv[i,j,k] = qg.g/qg.f0/qg.rho0 * ( \
+                              (0.5*(u[i,j+1,k]+u[i-1,j+1,k])-0.5*(u[i,j,k]+u[i-1,j,k]))/D[i,j,kdyv] * \
+                              (0.25*(rho[i+1,j,k]+rho[i+1,j+1,k]+rho[i,j+1,k]+rho[i,j,k]) - \
+                               0.25*(rho[i,j,k]+rho[i,j+1,k]+rho[i-1,j+1,k]+rho[i-1,j,k]))/D[i,j,kdxv] + \
+                              (0.5*(v[i,j,k]+v[i,j+1,k]) - 0.5*(v[i,j,k]+v[i,j-1,k]))/D[i,j,kdyv] * \
+                              (rho[i,j+1,k]-rho[i,j,k])/D[i,j,kdyv] \
+                                                      )
+
+    def set_rhs(self, qg):
+        """
+        Compute the RHS of the omega equation i.e: 2*f0*nabla.Q with Q=-J(nabla.psi,dpsidz)
+        """
+
+
+        # Initialize u=-dpsidy and v=dpsidx
+        self.set_uv_from_psi(qg)
+
+        # Initialize rho=-f0/g dpsidz
+        self.set_rho_from_psi(qg)
+
+        # Initialize jacobian
+        self.set_jacobian(qg)
+
+        ### declare local vectors
+
+        local_QXU = qg.da.createLocalVec()
+        local_QYV = qg.da.createLocalVec()
+        local_D = qg.da.createLocalVec()
+        ###
+        qg.da.globalToLocal(self._QXU, local_QXU)
+        qg.da.globalToLocal(self._QYV, local_QYV)
+        qg.da.globalToLocal(qg.grid.D, local_D)
+        #
+        qxu = qg.da.getVecArray(local_QXU)
+        qyv = qg.da.getVecArray(local_QYV)
+        D = qg.da.getVecArray(local_D)
+
+        rhs = qg.da.getVecArray(self._RHS)
+
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kmask = qg.grid._k_mask
+        kdxu = qg.grid._k_dxu
+        kdyu = qg.grid._k_dyu
+        kdxv = qg.grid._k_dxv
+        kdyv = qg.grid._k_dyv
+        kdxt = qg.grid._k_dxt
+        kdyt = qg.grid._k_dyt
+
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1 or
+                        k==0    or k==mz-1 ):
+                        # lateral boundaries
+                        rhs[i, j, k] = 0.
+                    else:
+
+                        # qx = qxu moyenné au niveau w, qy = qyv moyenné au niveau w,
+                        qxi = 0.5*(qxu[i,j,k+1]+qxu[i,j,k])
+                        qxim = 0.5*(qxu[i-1,j,k+1]+qxu[i-1,j,k])  
+                        qyj = 0.5*(qyv[i,j,k+1]+qyv[i,j,k])    
+                        qyjm = 0.5*(qyv[i,j-1,k+1]+qyv[i,j-1,k])
+
+
+                        # rhs = 2*f0* nabla.Q with 
+                        # nabla:curvilinear operator =1/dx/dy(di(dy.QX) + dj(dx*QY))
+                        # Q = vector(QX,QY)
+
+                        rhs[i,j,k] = 2.*qg.f0 / D[i,j,kdxt] / D[i,j,kdyt] * ( \
+                                     (D[i,j,kdyu]*qxi - D[i-1,j,kdyu]*qxim) + \
+                                     (D[i,j,kdxv]*qyj - D[i,j-1,kdxv]*qyjm) )
+
 
     def set_rhs_bdy(self, qg):
         """
@@ -162,22 +383,21 @@ class omega():
                 for k in range(zs,kdown):
                     for j in range(ys, ye):
                         for i in range(xs, xe):                    
-                            # rhs[i,j,k]=sys.float_info.epsilon
-                            rhs[i,j,k]=psi[i, j, k]
+                            rhs[i,j,k]=0.
             # bottom bdy
             k = kdown
             if qg.bdy_type['bottom']=='N' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(qg.rho0*qg.f0)
+                        rhs[i, j, k] = 0.  
             elif qg.bdy_type['bottom']=='NBG' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+                        rhs[i, j, k] = 0.  
             elif qg.bdy_type['bottom']=='D':
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i,j,k]
+                        rhs[i, j, k] = 0.  
 
                         
             else:
@@ -194,22 +414,21 @@ class omega():
                 for k in range(kup+1,ze):
                     for j in range(ys, ye):
                         for i in range(xs, xe):
-                            # rhs[i,j,k]=sys.float_info.epsilon   
-                            rhs[i,j,k]= psi[i,j,k]            
+                            rhs[i,j,k]= 0.      
             # upper bdy
             k = kup
             if qg.bdy_type['top']=='N' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.f0)
+                        rhs[i, j, k] = 0.
             elif qg.bdy_type['top']=='NBG' : 
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+                        rhs[i, j, k] = 0.
             elif qg.bdy_type['top']=='D' :
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = psi[i,j,k]
+                        rhs[i, j, k] = 0.
 
             else:
                 print qg.bdy_type['top']+" unknown top boundary condition"
@@ -221,28 +440,28 @@ class omega():
                 for k in range(zs, ze):
                     for j in range(ys,min(ye,jstart+1)):
                         for i in range(xs, xe):
-                            rhs[i, j, k] = psi[i, j, k]
+                            rhs[i, j, k] = 0.
             # north bdy
             if ye >= jend:
                 #j = my - 1
                 for k in range(zs, ze):
                     for j in range(max(ys,jend),ye):
                         for i in range(xs, xe):
-                            rhs[i, j, k] = psi[i, j, k]
+                            rhs[i, j, k] = 0.
             # west bdy
             if xs <= istart:
                 #i = 0
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         for i in range(xs,min(xe,istart+1)):
-                            rhs[i, j, k] = psi[i, j, k]
+                            rhs[i, j, k] = 0.
             # east bdy
             if xe >= iend:
                 #i = mx - 1
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         for i in range(max(xs,iend),xe):
-                            rhs[i, j, k] = psi[i, j, k]
+                            rhs[i, j, k] = 0.
 
             # debug: computes vertical bdy from psi    
             # for j in range(ys, ye):
@@ -300,7 +519,7 @@ class omega():
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         if mask[i,j,kmask]==0.:
-                            rhs[i, j, k] = psi[i,j,k]
+                            rhs[i, j, k] = 0.
 
         if self._verbose>0:
             print 'set RHS mask for inversion '
@@ -345,20 +564,14 @@ class omega():
                     # lateral points outside the domain: dirichlet, psi=...
                     if (i<=istart or j<=jstart or
                         i>=iend or j>=jend):
-                        L.setValueStencil(row, row, 1.0)
+                        L.setValueStencil(row, row, 0.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
                         if qg.bdy_type['bottom']=='N' :
-                            for index, value in [
-                                ((i,j,k), -idz),
-                                ((i,j,k+1),  idz)
-                                ]:
-                                col.index = index
-                                col.field = 0
-                                L.setValueStencil(row, col, value)
+                            L.setValueStencil(row, row, 0.0)
                         elif qg.bdy_type['bottom']=='D':
-                            L.setValueStencil(row, row, 1.0)
+                            L.setValueStencil(row, row, 0.0)
                         else:
                             print "unknown bottom boundary condition"
                             sys.exit()
@@ -366,15 +579,9 @@ class omega():
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif (k==kup):
                         if qg.bdy_type['top']=='N' :
-                            for index, value in [
-                                ((i,j,k-1), -idz),
-                                ((i,j,k),  idz),
-                                ]:
-                                col.index = index
-                                col.field = 0
-                                L.setValueStencil(row, col, value)
+                            L.setValueStencil(row, row, 0.0)
                         elif qg.bdy_type['top']=='D':
-                            L.setValueStencil(row, row, 1.0)
+                            L.setValueStencil(row, row, 0.0)
                         else:
                             print "unknown top boundary condition"
                             sys.exit()
@@ -386,13 +593,13 @@ class omega():
                     # interior points: pv is prescribed
                     else:
                         for index, value in [
-                            ((i,j,k-1), qg._sparam[k-1]*idz2),
-                            ((i,j-1,k), idy2),
-                            ((i-1,j,k), idx2),
-                            ((i, j, k), -2.*(idx2+idy2)-(qg._sparam[k]*idz2+qg._sparam[k-1]*idz2)),
-                            ((i+1,j,k), idx2),
-                            ((i,j+1,k), idy2),
-                            ((i,j,k+1), qg._sparam[k]*idz2)
+                            ((i,j,k-1), qg.f0**2*idz2),
+                            ((i,j-1,k), qg.N2[k]*idy2),
+                            ((i-1,j,k), qg.N2[k]*idx2),
+                            ((i, j, k), -2.*qg.N2[k]*(idx2+idy2)-2.*qg.f0**2*idz2),
+                            ((i+1,j,k), qg.N2[k]*idx2),
+                            ((i,j+1,k), qg.N2[k]*idy2),
+                            ((i,j,k+1), qg.f0**2*idz2)
                             ]:
                             col.index = index
                             col.field = 0
@@ -450,25 +657,20 @@ class omega():
     
                     # masked points (land=0), L=1
                     if D[i,j,kmask]==0.:
-                        L.setValueStencil(row, row, 1.)
+                        L.setValueStencil(row, row, 1.)                           
+
     
                     # lateral points outside the domain: dirichlet, psi=...
                     elif (i<=istart or j<=jstart or
                         i>=iend or j>=jend):
-                        L.setValueStencil(row, row, 1.0)
+                        L.setValueStencil(row, row, 1.0)              
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
                         if qg.bdy_type['bottom']=='N' : 
-                            for index, value in [
-                                ((i,j,k), -idzw[k]),
-                                ((i,j,k+1),  idzw[k])
-                                ]:
-                                col.index = index
-                                col.field = 0
-                                L.setValueStencil(row, col, value)
+                            L.setValueStencil(row, row, 1.0)         
                         elif qg.bdy_type['bottom']=='D' :
-                            L.setValueStencil(row, row, 1.0)
+                            L.setValueStencil(row, row, 1.0)        
                         else:
                             print "unknown bottom boundary condition"
                             sys.exit()
@@ -476,23 +678,16 @@ class omega():
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif (k==kup):
                         if qg.bdy_type['top']=='N' : 
-                            for index, value in [
-                                ((i,j,k-1), -idzw[k-1]),
-                                ((i,j,k),  idzw[k-1]),
-                                ]:
-                                col.index = index
-                                col.field = 0
-                                L.setValueStencil(row, col, value)
+                            L.setValueStencil(row, row, 1.0)        
                         elif qg.bdy_type['top']=='D':
-                            L.setValueStencil(row, row, 1.0)
+                            L.setValueStencil(row, row, 1.0)      
                         else:
                             print "unknown top boundary condition"
                             sys.exit()
     
                     # points below and above the domain
                     elif (k<kdown) or (k>kup):
-                        # L.setValueStencil(row, row, 0.0)
-                        L.setValueStencil(row, row, 1.0)
+                        L.setValueStencil(row, row, 1.0)       
     
                     # lateral points outside the domain: dirichlet, psi=...
                     # elif (i<=istart or j<=jstart or
@@ -503,19 +698,20 @@ class omega():
                     else:
                         
                         for index, value in [
-    
-                            ((i,j,k-1), qg._sparam[k-1]*idzt[k]*idzw[k-1]),
-                            ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
-                            ((i-1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
-                            ((i, j, k), -1./D[i,j,kdxt]/D[i,j,kdyt]*( \
+
+                            ((i,j,k-1), qg.f0**2*idzt[k]*idzw[k]),
+                            ((i,j-1,k), qg.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
+                            ((i-1,j,k), qg.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
+                            ((i, j, k), -qg.N2[k]/D[i,j,kdxt]/D[i,j,kdyt]*( \
                                              D[i,j,kdyu]/D[i,j,kdxu] \
                                             +D[i-1,j,kdyu]/D[i-1,j,kdxu] \
                                             +D[i,j,kdxv]/D[i,j,kdyv] \
                                             +D[i,j-1,kdxv]/D[i,j-1,kdyv])
-                             - (qg._sparam[k]*idzt[k]*idzw[k]+qg._sparam[k-1]*idzt[k]*idzw[k-1])),
-                            ((i+1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdyu]/D[i,j,kdxu]),
-                            ((i,j+1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdxv]/D[i,j,kdyv]),
-                            ((i,j,k+1), qg._sparam[k]*idzt[k]*idzw[k])
+                             - (qg.f0**2*idzt[k+1]*idzw[k]+qg.f0**2*idzt[k]*idzw[k])),
+                            ((i+1,j,k), qg.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdyu]/D[i,j,kdxu]),
+                            ((i,j+1,k), qg.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdxv]/D[i,j,kdyv]),
+                            ((i,j,k+1), qg.f0**2*idzt[k+1]*idzw[k])   
+                            
                             ]:
                             col.index = index
                             col.field = 0
