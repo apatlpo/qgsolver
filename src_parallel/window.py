@@ -27,6 +27,7 @@ class window():
                  vdom={}, hdom={},
                  ncores_x=None, ncores_y=None,
                  bdy_type_in={},
+                 mask3D=False,
                  verbose = 1,
                  ):
         """ Window model creation
@@ -68,6 +69,7 @@ class window():
             self._verbose=verbose
         else:
             self._verbose=0
+        self.grid._verbose=self._verbose
 
         #
         # finalize grid/metric loading
@@ -78,7 +80,8 @@ class window():
             self.grid.load_metric_terms(self.da, self.comm)
         
         # initialize mask
-        self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm)
+        self.mask3D=mask3D
+        self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm, mask3D=self.mask3D)
 
         #
         if self._verbose>0:
@@ -300,7 +303,13 @@ class wininversion():
         """
 
         rhs = win.da.getVecArray(self._RHS)
-        mask = win.da.getVecArray(win.grid.D)
+        #
+        if not win.mask3D:
+            mask = win.da.getVecArray(win.grid.D)
+            kmask = win.grid._k_mask
+        else:
+            mask = win.da.getVecArray(win.grid.mask3D)
+        #
         mx, my, mz = win.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
 
@@ -310,14 +319,19 @@ class wininversion():
         jend = win.grid.jend
         kdown = win.grid.kdown
         kup = win.grid.kup
-        kmask = win.grid._k_mask
 
         # interior
-        for k in range(zs,ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    if mask[i,j,kmask]==0.:
-                        rhs[i, j, k] = 0.
+        if not win.mask3D:
+            for k in range(zs,ze):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                        if mask[i,j,kmask]==0.:
+                            rhs[i, j, k] = 0.
+        else:
+            for k in range(zs,ze):
+                for j in range(ys, ye):
+                    for i in range(xs, xe):
+                            rhs[i, j, k] *= mask[i,j,k]           
 
         if self._verbose>0:
             print 'set RHS mask for inversion '
@@ -337,7 +351,11 @@ class wininversion():
         local_D  = win.da.createLocalVec()
         win.da.globalToLocal(win.grid.D, local_D)
         D = win.da.getVecArray(local_D)
-        kmask = win.grid._k_mask
+        if not win.mask3D:
+            #mask = win.da.getVecArray(win.grid.D)
+            kmask = win.grid._k_mask
+        else:
+            mask = win.da.getVecArray(win.grid.mask3D)
         kdxu = win.grid._k_dxu
         kdyu = win.grid._k_dyu
         kdxv = win.grid._k_dxv
@@ -366,7 +384,11 @@ class wininversion():
                     row.field = 0
     
                     # masked points (land=0), L=1
-                    if D[i,j,kmask]==0.:
+                    if not win.mask3D:
+                        lmask=D[i,j,kmask]
+                    else:
+                        lmask=mask[i,j,k]
+                    if lmask==0.:
                         L.setValueStencil(row, row, 1.)
     
                     # lateral points outside the domain: dirichlet, psi=...

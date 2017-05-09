@@ -53,6 +53,7 @@ if __name__ == "__main__":
     # doesn't keep levels under the depth mask_depth
     mask_depth = -3000.
     # mask_depth = -7000.
+    mask3D = True
 
 
     ### NEMO grid file
@@ -89,10 +90,14 @@ if __name__ == "__main__":
     dzt = vgrid.variables['e3t_0'][0,::-1]
     dzw = vgrid.variables['e3w_0'][0,::-1]
 
-    # find nearest index in zt for mask_depth
-    index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
-    print "mask reference at level:",index_mask_depth
 
+    if not mask3D:
+        # find nearest index in zt for mask_depth
+        index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
+        print "mask reference at level:",index_mask_depth
+    else:
+        print 'The mask will be depth dependent (3D)'
+        
         
     # store metric terms
     #zt = np.hstack((zt,zt[[-1]]))
@@ -126,16 +131,36 @@ if __name__ == "__main__":
     psiin = Dataset(psi_file, 'r')
     psi = psiin.variables['psi0_hydrostatic']   
   
-    #create 2D mask at reference level index_mask_depth (land=1, water=0)
-    print "store mask"
-    nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=psi._FillValue)
-    nc_mask[:] = psi[N-index_mask_depth-1,:,:]
-    nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
-    nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.) 
-
-    # enlarge the mask: if the i,j point has an adjacent land point then it becames land
-    dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
-    nc_mask[1:-1,1:-1] = np.where(dummy == 5, nc_mask[1:-1,1:-1], 0.)
+  
+    if not mask3D:
+        #create 2D mask at reference level index_mask_depth (land=1, water=0)
+        print "store mask"
+        nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=psi._FillValue)
+        nc_mask[:] = psi[N-index_mask_depth-1,:,:]
+        nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
+        nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.)
+        # enlarge the mask: if the i,j point has an adjacent land point then it becames land
+        dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
+        nc_mask[1:-1,1:-1] = np.where(dummy == 5, nc_mask[1:-1,1:-1], 0.)
+    else:
+        #create 3D mask at reference level index_mask_depth (land=1, water=0)
+        print "store mask"
+        nc_mask = metricsout.createVariable('mask',dtype,('zt','y','x'), fill_value=psi._FillValue)
+        for k in xrange(N):
+            print k
+            #print dir(nc_mask[:])
+            #nc_mask[k,:,:] = psi[N-k-1,:,:].filled(0.)
+            #nc_mask[k,:,:].filled()
+            nc_mask[k,:,:] = 1-np.ma.getmask(psi[N-k-1,:,:])
+            #nc_mask[k,:,:] = psi[N-k-1,:,:]
+            #nc_mask[k,:,:] = np.where(nc_mask[k,:,:] == nc_mask._FillValue, 1., 0.)
+            #nc_mask[k,...] = np.where(nc_mask[k,...] == nc_mask._FillValue, nc_mask[k,...], 1.) 
+            #nc_mask[k,...] = np.where(nc_mask[k,...] != nc_mask._FillValue, nc_mask[k,...], 0.) 
+            # enlarge the mask: if the i,j point has an adjacent land point then it becames land
+            dummy = nc_mask[[k],1:-1,1:-1]+nc_mask[[k],:-2,1:-1]+nc_mask[[k],2:,1:-1] \
+                    +nc_mask[[k],1:-1,:-2]+nc_mask[[k],1:-1,2:]
+            nc_mask[[k],1:-1,1:-1] = np.where(dummy == 5, nc_mask[[k],1:-1,1:-1], 0.)
+    #
     metricsout.close()
     psiin.close()
 
