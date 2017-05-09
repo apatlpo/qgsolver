@@ -59,24 +59,32 @@ class grid(object):
 
 
         # check that Nx, Ny, Nz can be derived or that they are provided
-        if not hasattr(self,'Nx'):
-            try:
-                self.Nx = hdom_in['iend']-hdom_in['istart']+1
-            except:
-                print '!!! you need to prescribe one of the two variables: Nx, iend'
-                sys.exit()
-        if not hasattr(self,'Ny'):
-            try:
-                self.Ny = hdom_in['jend']-hdom_in['jstart']+1
-            except:
-                print '!!! you need to prescribe one of the two variables: Ny, jend'
-                sys.exit()
-        if not hasattr(self,'Nz'):
-            try:
-                self.Nz = vdom_in['kup']-vdom_in['kdown']+1
-            except:
-                print '!!! you need to prescribe one of the two variables: Nz, kup'
-                sys.exit()
+        if 'Nx' in hdom_in.keys():
+            self.Nx=hdom_in['Nx']
+        else:
+            if not hasattr(self,'Nx'):
+                try:
+                    self.Nx = hdom_in['iend']-hdom_in['istart']+1
+                except:
+                    print '!!! you need to prescribe one of the two variables: Nx, iend'
+                    sys.exit()
+        if 'Ny' in hdom_in.keys():
+            self.Ny=hdom_in['Ny']            
+            if not hasattr(self,'Ny'):
+                try:
+                    self.Ny = hdom_in['jend']-hdom_in['jstart']+1
+                except:
+                    print '!!! you need to prescribe one of the two variables: Ny, jend'
+                    sys.exit()
+        if 'Nz' in vdom_in.keys():
+            self.Nz=vdom_in['Nz']
+        else:
+            if not hasattr(self,'Nz'):
+                try:
+                    self.Nz = vdom_in['kup']-vdom_in['kdown']+1
+                except:
+                    print '!!! you need to prescribe one of the two variables: Nz, kup'
+                    sys.exit()
 
 
         #
