@@ -44,6 +44,11 @@ class qg_model():
         # Build grid object
         #
         self.grid = grid(hgrid, vgrid, vdom, hdom, verbose=verbose)
+        if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):
+            #BoundaryType = PETSc.DM.
+            self.BoundaryType = 'periodic'
+        else:
+            self.BoundaryType = None
 
         #
         # init petsc
@@ -58,8 +63,9 @@ class qg_model():
         # setup tiling
         self.da = PETSc.DMDA().create(sizes = [self.grid.Nx, self.grid.Ny, self.grid.Nz],
                                       proc_sizes = [ncores_x,ncores_y,1],
-                                      stencil_width = 2)
+                                      stencil_width = 2, boundary_type=self.BoundaryType)
         # http://lists.mcs.anl.gov/pipermail/petsc-dev/2016-April/018889.html
+
         self.comm = self.da.getComm()
         self.rank = self.comm.getRank()
         # print tiling information
@@ -75,6 +81,9 @@ class qg_model():
             self._verbose=verbose
         else:
             self._verbose=0
+        
+        if self._verbose and self.BoundaryType is 'periodic':
+            print 'Boundaries are periodic'
 
         #
         # finalize grid/metric loading

@@ -168,7 +168,7 @@ class pvinversion():
         kdown = qg.grid.kdown
         kup = qg.grid.kup
 
-        # load right vector
+        # load vector used to compute boundary conditions
         if PSI is None:
             psi = qg.da.getVecArray(qg.PSI)
         else:
@@ -226,7 +226,7 @@ class pvinversion():
         kdown = qg.grid.kdown
         kup = qg.grid.kup
 
-        # load right vector
+        # load vector used to compute boundary conditions
         if PSI is None:
             psi = qg.da.getVecArray(qg.PSI)
         else:
@@ -280,8 +280,7 @@ class pvinversion():
         kdown = qg.grid.kdown
         kup = qg.grid.kup
 
-
-        # load right vector
+        # load vector used to compute boundary conditions
         if PSI is None:
             psi = qg.da.getVecArray(qg.PSI)
         else:
@@ -302,14 +301,14 @@ class pvinversion():
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i, j, k]
         # west bdy
-        if xs <= istart:
+        if xs <= istart and qg.BoundaryType is not 'periodic':
             #i = 0
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     for i in range(xs,min(xe,istart+1)):
                         rhs[i, j, k] = psi[i, j, k]
         # east bdy
-        if xe >= iend:
+        if xe >= iend and qg.BoundaryType is not 'periodic':
             #i = mx - 1
             for k in range(zs, ze):
                 for j in range(ys, ye):

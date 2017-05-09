@@ -47,7 +47,8 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         casename='roms'
         
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
-        bdy_type = {'top':'N', 'bottom':'N'}
+        #bdy_type = {'top':'N', 'bottom':'N'}
+        bdy_type = {'top':'N', 'bottom':'N', 'periodic':True}
 
         # vertical subdomain
         #vdom = {'kdown': 0, 'kup': 49, 'k0': 0 }
@@ -56,7 +57,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
         # horizontal subdomain
         # hdom = {'istart': 0, 'iend': 255, 'i0': 0, 'jstart':0, 'jend':721,  'j0': 0}
-        hdom = {'Nx': 100, 'Ny':200}
+        hdom = {'Nx': 256, 'j0':300, 'Ny':200}
         #hdom = {'istart': 0, 'Nx': 200, 'i0': 10, 'jstart':0, 'Ny':500,  'j0': 10}
         #hdom = {'istart': 1, 'iend': 200, 'i0': 10, 'jstart':1, 'jend':500,  'j0': 10}
 
