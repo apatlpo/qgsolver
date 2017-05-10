@@ -69,7 +69,8 @@ class grid(object):
                     print '!!! you need to prescribe one of the two variables: Nx, iend'
                     sys.exit()
         if 'Ny' in hdom_in.keys():
-            self.Ny=hdom_in['Ny']            
+            self.Ny=hdom_in['Ny']      
+        else:      
             if not hasattr(self,'Ny'):
                 try:
                     self.Ny = hdom_in['jend']-hdom_in['jstart']+1
