@@ -6,7 +6,7 @@ import sys
 import numpy as np
 
 #from .set_L import *
-from .ios import write_nc
+from .inout import write_nc
 
 
 #

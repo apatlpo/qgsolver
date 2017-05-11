@@ -11,8 +11,8 @@ petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 import numpy as np
-from .io import read_nc_petsc, read_nc_petsc_2D
-from .io import write_nc
+from .inout import read_nc_petsc, read_nc_petsc_2D
+from .inout import write_nc
 
 
 
