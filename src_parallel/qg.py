@@ -81,6 +81,7 @@ class qg_model():
             self._verbose=verbose
         else:
             self._verbose=0
+        self.grid._verbose=self._verbose
         
         if self._verbose and self.BoundaryType is 'periodic':
             print 'Boundaries are periodic'

@@ -49,6 +49,8 @@ class time_stepper():
     def go(self, qg, nt):
         """ Carry out the time stepping
         """
+        if self._verbose>0:
+            print '<--- Start time stepping '
         _tstep=0
         #for i in xrange(nt):
         while _tstep < nt:
@@ -59,10 +61,13 @@ class time_stepper():
             qg.Q.copy(self._RHS0) # copies Q into RHS0
             qg.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
+                qg.invert_pv()
+                #
                 if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
                     self._computeRHS(qg)
                 else:
                     self._computeRHS_curv(qg)
+                #
                 if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
             self._RHS1.copy(qg.Q) # copies RHS1 into Q
@@ -70,8 +75,11 @@ class time_stepper():
             self.set_rhs_bdy(qg)
             if self._verbose>0:
                 print 't = %f d' % (self.t/86400.)
-#         if self._verbose>0:
-#             print 'Time stepping done'
+        # need to invert PV one final time in order to get right PSI
+        qg.comm.barrier()
+        qg.invert_pv()
+        if self._verbose>0:
+            print 'Time stepping done --->'
 
 
     
@@ -83,7 +91,7 @@ class time_stepper():
         """
     
         ### compute PV inversion to streamfunction
-        qg.invert_pv()
+        #qg.invert_pv()
         
         ### declare local vectors
         local_RHS  = qg.da.createLocalVec()
@@ -157,7 +165,7 @@ class time_stepper():
         """
     
         ### compute PV inversion to streamfunction
-        qg.invert_pv()
+        #qg.invert_pv()
         
         ### declare local vectors
         local_RHS  = qg.da.createLocalVec()
@@ -180,8 +188,13 @@ class time_stepper():
         local_D  = qg.da.createLocalVec()
         qg.da.globalToLocal(qg.grid.D, local_D)
         D = qg.da.getVecArray(local_D)
-        kdx = qg.grid._k_dx
-        kdy = qg.grid._k_dy
+        #kmask = qg.grid._k_mask
+        kdxu = qg.grid._k_dxu
+        kdyu = qg.grid._k_dyu
+        kdxv = qg.grid._k_dxv
+        kdyv = qg.grid._k_dyv
+        kdxt = qg.grid._k_dxt
+        kdyt = qg.grid._k_dyt
         kf = qg.grid._k_f
         #
         (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
@@ -220,7 +233,7 @@ class time_stepper():
                                + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])
                         J_cp *= 0.25
                         #
-                        dq[i, j, k] = ( J_pp + J_pc + J_cp )/3. /D[i,j,kdx]/D[i,j,kdy]
+                        dq[i, j, k] = ( J_pp + J_pc + J_cp )/3. /D[i,j,kdxt]/D[i,j,kdyt]
                         #
                         ### Add advection of planetary vorticity, shouldn't f-f0 be part of q though !!!
                         Jp_pp =   ( D[i+1,j,kf] - D[i-1,j,kf] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) \
@@ -239,12 +252,17 @@ class time_stepper():
                                + D[i+1,j-1,kf] * (psi[i+1,j,k]-psi[i,j-1,k])
                         Jp_cp *= 0.25
                         #
-                        dq[i, j, k] += ( Jp_pp + Jp_pc + Jp_cp )/3. /D[i,j,kdx]/D[i,j,kdy]
+                        dq[i, j, k] += ( Jp_pp + Jp_pc + Jp_cp )/3. /D[i,j,kdxt]/D[i,j,kdyt]
                         ### Dissipation
-                        dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdx]/D[i,j,kdx] \
-                                       + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdy]/D[i,j,kdy]
-
-
+                        #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
+                        #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
+                        dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \
+                                                q[i+1,j,k] * D[i,j,kdyu]/D[i,j,kdxu] \
+                                               -q[i-1,j,k] * D[i-1,j,kdyu]/D[i-1,j,kdxu] \
+                                               +q[i,j+1,k] * D[i,j,kdxv]/D[i,j,kdyv] \
+                                               -q[i,j-1,k] * D[i,j-1,kdxv]/D[i,j-1,kdyv] \
+                                                ) 
+                            
     def set_rhs_bdy(self, qg):
         """ Reset rhs at boundaries such that drhs/dn=0 """
         #

@@ -18,7 +18,7 @@ __pycache__/
 
 # data files
 *.nc
-#users/aurelien/**/*.py
+users/aurelien/run*/*.py
 
 # fig and movies
 *.jpg

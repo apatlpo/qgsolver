@@ -83,32 +83,34 @@ class pvinversion():
         # qg.pvinv.L.mult(ONE,self._RHS)
         # write_nc([self._RHS], ['id'], 'data/identity.nc', qg)
         # compute L*PSI and store in self._RHS
-        qg.pvinv.L.mult(qg.PSI,self._RHS)
+        #qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['rhs'], 'output/lpsiin.nc', qg)
+        #write_nc([self._RHS], ['rhs'], 'output/lpsiin.nc', qg)
         # copy Q into RHS
         qg.Q.copy(self._RHS)
         if self._substract_fprime:
             # substract f-f0 from PV
             self.substract_fprime_from_rhs(qg)
-            if self._verbose>0:
+            if self._verbose>1:
                 print 'Substract fprime from pv prior to inversion'
         # fix boundaries
         self.set_rhs_bdy(qg)
         # mask rhs 
         self.set_rhs_mask(qg)
         # store RHS in netcdf file rhs.nc
-        write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
+        #write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, qg.PSI)
         # compute L*PSI and store in self._RHS
-        qg.pvinv.L.mult(qg.PSI,self._RHS)
+        #qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
-        write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
+        #write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
 
         if self._verbose>1:
             print 'Inversion done'
+            
+            
             
     def substract_fprime_from_rhs(self, qg):
         """
@@ -125,7 +127,7 @@ class pvinversion():
                 for i in range(xs, xe):                    
                     rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.f0
         
-        if self._verbose>0:
+        if self._verbose>1:
             print 'Substract f-f0 from pv prior to inversion'
 
         
@@ -140,7 +142,7 @@ class pvinversion():
         :return:
         """
         
-        if self._verbose>0:
+        if self._verbose>1:
             print 'set RHS along boudaries for inversion '
 
         self.set_rhs_bdy_bottom(qg)
@@ -345,7 +347,6 @@ class pvinversion():
         if qg.case == "roms" or 'nemo' or 'uniform':
 
             psi = qg.da.getVecArray(qg.PSI)
-
             
             # interior
             for k in range(zs,ze):
@@ -354,7 +355,7 @@ class pvinversion():
                         if mask[i,j,kmask]==0.:
                             rhs[i, j, k] = psi[i,j,k]
 
-        if self._verbose>0:
+        if self._verbose>1:
             print 'set RHS mask for inversion '
 
 
@@ -505,8 +506,9 @@ class pvinversion():
                         L.setValueStencil(row, row, 1.)
     
                     # lateral points outside the domain: dirichlet, psi=...
-                    elif (i<=istart or j<=jstart or
-                        i>=iend or j>=jend):
+                    elif (    (i<=istart and qg.BoundaryType is not 'periodic') \
+                           or (i>=iend and qg.BoundaryType is not 'periodic') \
+                           or j<=jstart or j>=jend):
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...

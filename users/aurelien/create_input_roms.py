@@ -312,12 +312,12 @@ if __name__ == "__main__":
     print "store mask"
     print 
     nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=-999.0)
-    nc_mask[:] = 0.
+    nc_mask[:] = 1.
     #nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
     #nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.) 
     #print nc_mask[:].shape
-    nc_mask[:5,:]=1.
-    nc_mask[-5:,:]=1.
+    nc_mask[:5,:]=0.
+    nc_mask[-5:,:]=0.
 
     # enlarge the mask: if the i,j point has an adjacent land point then it becames land
     #dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]

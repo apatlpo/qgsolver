@@ -53,13 +53,14 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # vertical subdomain
         #vdom = {'kdown': 0, 'kup': 49, 'k0': 0 }
         #vdom = {'kdown': 0, 'kup': 30, 'k0': 0 }
-        vdom = {'Nz': 30}
+        #vdom = {'Nz': 30}
+        vdom = {'Nz': 50}
 
         # horizontal subdomain
         # hdom = {'istart': 0, 'iend': 255, 'i0': 0, 'jstart':0, 'jend':721,  'j0': 0}
         hdom = {'Nx': 256, 'j0':300, 'Ny':200}
-        #hdom = {'istart': 0, 'Nx': 200, 'i0': 10, 'jstart':0, 'Ny':500,  'j0': 10}
-        #hdom = {'istart': 1, 'iend': 200, 'i0': 10, 'jstart':1, 'jend':500,  'j0': 10}
+        #hdom = {'Nx': 256, 'Ny': 720}
+
 
         datapath = 'input/'
         hgrid = datapath+'roms_metrics.nc'
@@ -69,7 +70,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         file_rho = datapath+'roms_rho.nc'
         qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.5 * 86400.e0,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True)        
+                      bdy_type_in=bdy_type, substract_fprime=True, verbose=1)        
         qg.case=casename
     
         if qg.rank == 0: print '----------------------------------------------------'
@@ -106,7 +107,26 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
         cur_time = time.time()
-    
+
+        #
+        test=0
+        if test==0:
+            # one time step and store
+            qg.tstep(1)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output/output.nc', qg, create=False)
+        elif test==1:
+            # write/read/write
+            qg.tstep(1)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output/output1.nc', qg, create=True)
+            qg.set_q(file_q='data/output.nc')
+            qg.tstep(1)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output/output1.nc', qg, create=False)
+        elif test==2:
+            while qg.tstepper.t/86400. < 200 :
+                qg.tstep(1)
+                write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'output/output.nc', qg, create=False)
+             
+
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time  ', str(cur_time - start_time)
     
