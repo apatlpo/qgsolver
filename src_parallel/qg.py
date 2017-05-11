@@ -5,6 +5,7 @@ import sys
 
 from .grid import *
 from .pvinv import *
+from .omegainv import *
 from .timestepper import *
 
 import petsc4py
@@ -13,8 +14,8 @@ petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
 import numpy as np
-from .io import read_nc_petsc, read_nc_petsc_2D
-from .io import write_nc
+from .inout import read_nc_petsc, read_nc_petsc_2D
+from .inout import write_nc
 
 
 
@@ -160,7 +161,8 @@ class qg_model():
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
-        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+        # self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+        self.omegainv = omegainv(self, substract_fprime=substract_fprime)
 
         # initiate time stepper
         #
@@ -254,6 +256,10 @@ class qg_model():
         """
         self.pvinv.solve(self)
 
+    def invert_omega(self):
+        """ wrapper around solver solve method
+        """
+        self.omegainv.solve(self)
 
     def tstep(self, nt=1):
         """ Time step wrapper
