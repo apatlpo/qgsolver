@@ -7,7 +7,7 @@ import numpy as np
 
 from petsc4py import PETSc
 
-from .io import write_nc
+from .inout import write_nc
 
 #
 #==================== Parallel solver ============================================

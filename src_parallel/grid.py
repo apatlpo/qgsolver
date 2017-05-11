@@ -3,7 +3,7 @@
 
 import sys
 import numpy as np
-from .io import read_nc, read_hgrid_dimensions
+from .inout import read_nc, read_hgrid_dimensions
 # for curvilinear grids
 from netCDF4 import Dataset
 

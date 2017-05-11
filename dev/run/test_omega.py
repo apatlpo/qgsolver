@@ -10,15 +10,8 @@ PV inversion of an analytical PV distribution
 import time
 import sys
 
-#try:
-#    from qgsolver.qg import qg_model
-#    from qgsolver.io import write_nc
-#except:
-#    print 'qgsolver not yet in path'
-#    sys.exit
-
 from qgsolver.qg import qg_model
-from qgsolver.io import write_nc
+from qgsolver.ios import write_nc
 
 #
 #==================== Uniform case ============================================
@@ -89,7 +82,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         qg.set_rho()
         qg.set_psi()    
         qg.invert_pv()
-        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg)
         
         if qg._verbose>0:
             print '----------------------------------------------------'
@@ -100,18 +93,18 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         if test==0:
             # one time step and store
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg, create=False)
         elif test==1:
             # write/read/write
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=True)
-            qg.set_q(file_q='data/output.nc')
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output1.nc', qg, create=True)
+            qg.set_q(file_q='../output/output.nc')
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output1.nc', qg, create=False)
         elif test==2:
             while qg.tstepper.t/86400. < 200 :
                 qg.tstep(1)
-                write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+                write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg, create=False)
         
         return qg
 
@@ -146,17 +139,17 @@ def curvilinear_runs(ncores_x=8, ncores_y=8, ping_mpi_cfg=False):
         #
         qg.set_q(file_q='curv_pv.nc')
         qg.invert_pv()
-        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg)
         
         test=1
         if test==0:
             # one time step and store
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg, create=False)
         elif test==1:
             while qg.tstepper.t/86400. < 200 :
                 qg.tstep(1)
-                write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+                write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg, create=False)
     
         return qg
 
@@ -201,8 +194,8 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # hgrid = {'Lx':(512-1)*2.e3, 'Ly':(1440-1)*2.e3, 'H':4.e3, \
         #          'Nx':512, 'Ny':1440, 'Nz':100}
         hgrid = {'Lx':(256-1)*4.e3, 'Ly':(720-1)*4.e3, 'Nx0':256, 'Ny0':722}
-        # vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
-        vgrid = 'data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
+        # vgrid = '../input/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
+        vgrid = '../input/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
         qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0, 
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y)
         qg.case=casename
@@ -232,7 +225,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         if qg.rank == 0: print 'Elapsed time for invert_pv ',str(time.time() - cur_time)
         cur_time = time.time()
     
-        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/output.nc', qg)
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ',str(time.time() - cur_time)
         cur_time = time.time()
@@ -291,7 +284,7 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
         bdy_type = {'top':'N', 'bottom':'N'}
     
-        datapath = 'data/'
+        datapath = '../input/'
         # datapath = '/home7/pharos/othr/NATL60/DIAG_DIMUP/qgsolver/mode2_fcTrue_fvertTrue/'
         # datapath = '/home7/pharos/othr/NATL60/DIAG_DIMUP/qgsolver/mode2_fcTrue_fvertTrue_new/'
         hgrid = datapath+'nemo_metrics.nc'
@@ -312,18 +305,18 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for set_psi ', str(time.time() - cur_time)
         cur_time = time.time()
-        write_nc([qg.PSI], ['psi'], 'data/input.nc', qg)
+        write_nc([qg.PSI], ['psi'], '../output/input.nc', qg)
 
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
         cur_time = time.time()
     
-        qg.invert_pv()
+        qg.invert_omega()
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for invert_pv ', str(time.time() - cur_time)
         cur_time = time.time()
 
-        write_nc([qg.PSI], ['w'], 'data/output.nc', qg)
+        write_nc([qg.PSI], ['w'], '../output/output.nc', qg)
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for write_nc ', str(time.time() - cur_time)
         cur_time = time.time()
@@ -353,8 +346,8 @@ def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         #          'Nx':512, 'Ny':1440, 'Nz':100}
         hgrid = {'Lx':(256-1)*4.e3, 'Ly':(720-1)*4.e3, 'H':4.e3,
                  'Nx':256, 'Ny':720, 'Nz':50}
-        # vgrid = 'data/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
-        vgrid = 'data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
+        # vgrid = '../input/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j_zlvl_pv.nc'
+        vgrid = '../input/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc'
         qg = qg_model(hgrid = hgrid, vgrid = vgrid, f0N2_file = vgrid, K = 1.e0, dt = 0.5*86400.e0)
         qg.case='roms'
         if qg.rank == 0: print '----------------------------------------------------'
@@ -371,7 +364,7 @@ def test_L(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         if qg.rank == 0: print '----------------------------------------------------'
         if qg.rank == 0: print 'Elapsed time for invert_pv ',str(time.time() - cur_time)
     
-        write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/Lpsi_invPV.nc', qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], '../output/Lpsi_invPV.nc', qg)
 
 
 

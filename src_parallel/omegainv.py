@@ -7,13 +7,13 @@ import numpy as np
 
 from petsc4py import PETSc
 
-from .io import write_nc
+from .inout import write_nc
 
 #
 #==================== Parallel solver ============================================
 #
 
-class pvinversion():
+class omegainv():
     """ Omega equation inversion, parallel
     """
     
@@ -105,23 +105,6 @@ class pvinversion():
         if self._verbose>1:
             print 'omega equation done'
             
-    def substract_fprime_from_rhs(self, qg):
-        """
-        Substract f'=f-f0 from the rhs used in PV inversion
-        """
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
-
-        D = qg.da.getVecArray(qg.grid.D)
-
-        for k in range(zs,ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):                    
-                    rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.f0
-        
-        if self._verbose>0:
-            print 'Substract f-f0 from pv prior to inversion'
 
     def set_uv_from_psi(self, qg, PSI=None):
         """
@@ -185,7 +168,7 @@ class pvinversion():
     def set_rho_from_psi(self, qg, PSI=None):
         """
         Compute RHO from Psi
-        rho=-f0/g dPSIdz
+        rho=-rho0*f0/g dPSIdz
         """
      
         ### declare local vectors
@@ -219,7 +202,7 @@ class pvinversion():
         kdyt = qg.grid._k_dyt
 
 
-        # Initialize rho=-f0/g dpsidz
+        # Initialize rho=-rho0*f0/g dpsidz
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe): 
@@ -227,11 +210,11 @@ class pvinversion():
                         # top and bottom boundaries
                         rho[i, j, k] = 0.
                     else:
-                        rho[i,j,k] = - qg.f0/qg.g/qg.grid.zt[k] * \
+                        rho[i,j,k] = - qg.rho0*qg.f0/qg.g/qg.grid.dzt[k] * \
                              ( 0.5*(psi[i,j,k+1]+psi[i,j,k]) - \
                                0.5*(psi[i,j,k]+psi[i,j,k-1]) )
    
-    def set_jacobian(self,qg, U=None, V=None, RHO=None):
+    def set_Q(self,qg, U=None, V=None, RHO=None):
         """
         # qxu = g/f0/rho0 * (dudx*drhodx + dvdx*drhody) at u point
         # qyv = g/f0/rho0 * (dudy*drhodx + dvdy*drhody) at v point 
@@ -312,13 +295,16 @@ class pvinversion():
 
 
         # Initialize u=-dpsidy and v=dpsidx
-        self.set_uv_from_psi(qg)
+        self.set_uv_from_psi(qg)        
+        write_nc([self._U,self._V], ['u','v'], '../output/uv.nc', qg)
+
 
         # Initialize rho=-f0/g dpsidz
         self.set_rho_from_psi(qg)
+        write_nc([self._RHO], ['rho'], '../output/rho.nc', qg)
 
         # Initialize jacobian
-        self.set_jacobian(qg)
+        self.set_Q(qg)
 
         ### declare local vectors
 

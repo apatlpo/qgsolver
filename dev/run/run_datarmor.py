@@ -36,12 +36,13 @@ def write_batchfile():
     
     # copy python files in workdir
     shutil.copytree(HOMEDIR+'/src_parallel/','./qgsolver')
-    os.mkdir(RPATH+'/dev')
-    os.mkdir(RPATH+'/dev/data')
-    shutil.copy(HOMEDIR+'/dev/test_basic.py','./dev')
+    os.mkdir(RPATH+'/input')
+    os.mkdir(RPATH+'/output')
+    # shutil.copy(HOMEDIR+'/dev/run/test_basic.py','./dev')
+    shutil.copy(HOMEDIR+'/dev/run/test_omega.py','./qgsolver')
 
     # make job.datarmor
-    os.chdir(RPATH+'/dev')
+    os.chdir(RPATH+'/qgsolver')
     fo = open('job_datarmor','w')
     fo.write('#!/bin/csh\n')
     fo.write('#PBS -q mpi\n')
@@ -57,7 +58,9 @@ def write_batchfile():
     fo.write('setenv PYTHONPATH $PBS_O_WORKDIR/..\n')
     fo.write('\n')
     # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py  >& output.mpi\n')
-    fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    fo.write('time mpirun -np '+str(nb_cores)+' python test_omega.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    fo.close()
     fo.close()
     
     return
@@ -67,14 +70,13 @@ def move_input_files():
     
     # copy data file in workdir
     if casename=='roms':
-        shutil.copy(HOMEDIR+'/dev/data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc',RPATH+'/dev/data')
+        shutil.copy(HOMEDIR+'/dev/data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc',RPATH+'/input')
     elif casename=='nemo':
         #shutil.copy(HOMEDIR+'/dev/data/nemo_metrics.nc',RPATH+'/dev/data')
         #shutil.copy(HOMEDIR+'/dev/data/nemo_psi.nc',RPATH+'/dev/data')
         #shutil.copy(HOMEDIR+'/dev/data/nemo_pv.nc',RPATH+'/dev/data')
         #shutil.copy(HOMEDIR+'/dev/data/nemo_rho.nc',RPATH+'/dev/data')
-	print "Copy data files"
-
+        os.system('ln -s /home1/datawork/slgentil/nemo_mask_data/*.nc '+RPATH+'/input')
     return
 
 
@@ -91,7 +93,7 @@ if __name__ == "__main__":
     
     # get useful dirs
     startdir=os.getcwd()
-    HOMEDIR = startdir+"/.."
+    HOMEDIR = startdir+"/../.."
     WORKDIR = os.getenv("DATAWORK")
     # WORKDIR = os.getenv("SCRATCH")
     # get args
@@ -119,9 +121,11 @@ if __name__ == "__main__":
         move_input_files()
         
         # submit job
-        os.system('cd '+RPATH+'/dev')
+        os.system('cd '+RPATH+'/qgsolver')
         # os.system('qsub job_datarmor')
-        print 'Log file:  output.mpi in '+RPATH+'/dev'    
+        print 'cd '+RPATH+'/qgsolver'
+        print 'qsub job_datarmor'
+        print 'Log file:  output.mpi'    
 
     except:
         print 'petsc4py is not available, install serial code'
