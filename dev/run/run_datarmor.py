@@ -13,7 +13,7 @@ import importlib
 def read_pyscript(pyscript='test_basic.py'):
         
     # append qgsolver directory to import package
-    sys.path.append(HOMEDIR)
+    sys.path.append(RPATH)
     # Search the number of cores in test_basic.py
     mod = importlib.import_module(pyscript.replace('.py',''))
     ncores_x, ncores_y = mod.main(ping_mpi_cfg=True)
@@ -22,12 +22,12 @@ def read_pyscript(pyscript='test_basic.py'):
     nb_cores = ncores_x*ncores_y
     nb_nodes = ((nb_cores-1)/28)+1
     memory = 120
-    
+    print ncores_x, ncores_y, nb_cores, nb_nodes
     return ncores_x, ncores_y, nb_cores, nb_nodes, memory
     
 
 
-def write_batchfile():
+def copy_scripts():
     
     if os.path.exists(RPATH) :
         os.system('rm -Rf '+RPATH)
@@ -41,6 +41,7 @@ def write_batchfile():
     # shutil.copy(HOMEDIR+'/dev/run/test_basic.py','./dev')
     shutil.copy(HOMEDIR+'/dev/run/test_omega.py','./qgsolver')
 
+def write_batchfile():
     # make job.datarmor
     os.chdir(RPATH+'/qgsolver')
     fo = open('job_datarmor','w')
@@ -106,8 +107,11 @@ if __name__ == "__main__":
     goodcase=False
     RPATH = WORKDIR+'/'+rundir
 
+    # copy python scripts in workdir
+    copy_scripts()
+
     # read py script
-    ncores_x, ncores_y, nb_cores, nb_nodes, memory = read_pyscript()
+    ncores_x, ncores_y, nb_cores, nb_nodes, memory = read_pyscript(pyscript='test_omega.py')
     
     try:
         import petsc4py
