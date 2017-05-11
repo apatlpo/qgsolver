@@ -722,8 +722,9 @@ class omegainv():
 
     
                     # lateral points outside the domain: dirichlet, psi=...
-                    elif (i<=istart or j<=jstart or
-                        i>=iend or j>=jend):
+                    elif (    (i<=istart and qg.BoundaryType is not 'periodic') \
+                           or (i>=iend and qg.BoundaryType is not 'periodic') \
+                           or j<=jstart or j>=jend):
                         L.setValueStencil(row, row, 1.0)              
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
