@@ -11,7 +11,7 @@ import time
 import sys
 
 from qgsolver.qg import qg_model
-from qgsolver.ios import write_nc
+from qgsolver.inout import write_nc
 
 #
 #==================== Uniform case ============================================
@@ -251,19 +251,22 @@ def nemo_input_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     # LMX domain: Nx=1032, Ny=756, Nz=300
 
     # vertical subdomain
-    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # linux
-    vdom = {'kdown': 0, 'kup': 50-1, 'k0': 98 }     # linux with mask
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 200 }    # small without mask
+    vdom = {'kdown': 0, 'kup': 160-1, 'k0': 140 }    # medium without mask
+    # vdom = {'kdown': 0, 'kup': 50-1, 'k0': 98 }     # linux with mask
     # vdom = {'kdown': 0, 'kup': 100-1, 'k0': 115 }     # Datarmor
     # horizontal subdomain
-    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # linux
-    hdom = {'istart': 0, 'iend': 100-1, 'i0': 410,'jstart': 0, 'jend': 100-1,  'j0': 590}   # linux with mask
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 450,'jstart': 0, 'jend': 100-1,  'j0': 300}   # small without mask
+    hdom = {'istart': 0, 'iend': 300-1, 'i0': 200,'jstart': 0, 'jend': 300-1,  'j0': 200}   # medium without mask
+    # hdom = {'istart': 0, 'iend': 100-1, 'i0': 410,'jstart': 0, 'jend': 100-1,  'j0': 590}   # linux with mask
     # hdom = {'istart': 0, 'iend': 270-1, 'i0': 135,'jstart': 0, 'jend': 384-1,  'j0': 165}     # medium datarmor
     # hdom = {'istart': 0, 'iend': 672-1, 'i0': 230,'jstart': 0, 'jend': 256-1,  'j0': 200}   # large datarmor
     # 448=8x56
     # 512=8x64
     
     # set tiling
-    ncores_x=2; ncores_y=4 #   linux
+    # ncores_x=2; ncores_y=4 #   small witout mask
+    ncores_x=5; ncores_y=5 #   medium without mask
     # ncores_x=2; ncores_y=8   #   medium datarmor
     # ncores_x=21; ncores_y=8  # large datarmor
 
