@@ -25,15 +25,17 @@ class qg_model():
     """
     
     def __init__(self,
-                 hgrid = None, vgrid=None,
-                 N2 = 1e-3, f0 = 7e-5, K = 1.e2,
-                 f0N2_file = None,
-                 dt = 86400.e-1,
-                 vdom={}, hdom={},
                  ncores_x=None, ncores_y=None,
+                 hgrid = None, vgrid=None,
+                 vdom={}, hdom={},
                  bdy_type_in={},
+                 N2 = 1e-3, f0 = 7e-5,
+                 f0N2_file = None,
+                 dt = None, K = 1.e2,
                  verbose = 1,
-                 substract_fprime=False
+                 substract_fprime=False,
+		 flag_pvinv=True,
+		 flag_omega=False
                  ):
         """ QG object creation
         Parameters:
@@ -161,13 +163,17 @@ class qg_model():
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
-        # self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
-        self.omegainv = omegainv(self, substract_fprime=substract_fprime)
+	if flag_pvinv:
+	        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+
+	# initiate omega inversion
+	if flag_omega:
+		self.omegainv = omegainv(self)
 
         # initiate time stepper
         #
-        self.tstepper = time_stepper(self, dt)
-        #print 'debug: time stepper object created'
+	if dt is not None:
+        	self.tstepper = time_stepper(self, dt)
 
 
     def set_psi(self, analytical_psi=True, file_psi=None):

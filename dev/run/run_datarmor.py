@@ -57,9 +57,8 @@ def write_batchfile():
     fo.write('setenv PATH ${HOME}/.miniconda2/envs/petsc/bin:${PATH}\n')
     fo.write('setenv PYTHONPATH $PBS_O_WORKDIR/..\n')
     fo.write('\n')
-    # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py  >& output.mpi\n')
-    # fo.write('time mpirun -np '+str(nb_cores)+' python test_basic.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
-    fo.write('time mpirun -np '+str(nb_cores)+' python run.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    #fo.write('time mpirun -np '+str(nb_cores)+' python run.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
+    fo.write('time mpirun -np '+str(nb_cores)+' python run.py >& output.mpi\n')
     fo.close()
     fo.close()
     
