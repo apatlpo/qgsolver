@@ -20,7 +20,7 @@ import sys
 from qgsolver.qg import qg_model
 from qgsolver.inout import write_nc
 
-
+import cProfile, pstats, StringIO
 
 #
 #==================== ROMS case ============================================
@@ -33,7 +33,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     '''
 
     #ncores_x=2; ncores_y=4; # desktop
-    ncores_x=8; ncores_y=8; # datarmor
+    #ncores_x=8; ncores_y=8; # datarmor
 
     if ping_mpi_cfg:
         # escape before computing
@@ -57,18 +57,18 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         #vdom = {'kdown': 0, 'kup': 49, 'k0': 0 }
         #vdom = {'kdown': 0, 'kup': 30, 'k0': 0 }
         #vdom = {'Nz': 30}
-        vdom = {'Nz': 50}
+        vdom = {'Nz': 10}
 
         # horizontal subdomain
         # hdom = {'istart': 0, 'iend': 255, 'i0': 0, 'jstart':0, 'jend':721,  'j0': 0}
-        #hdom = {'Nx': 256, 'j0':300, 'Ny':200}
-        hdom = {'Nx': 256, 'Ny': 720}
-	# 256 = 2^8
-	# 720 = 2^4 x 3^2 x 5
+        hdom = {'Nx': 256, 'j0':300, 'Ny':200}
+        #hdom = {'Nx': 256, 'Ny': 720}
+        # 256 = 2^8
+        # 720 = 2^4 x 3^2 x 5
 
 
         datapath = '../input/'
-	outdir = '../output/'
+        outdir = '../output/'
         hgrid = datapath+'roms_metrics.nc'
         vgrid = datapath+'roms_metrics.nc'
         file_q = datapath+'roms_pv.nc'
@@ -115,10 +115,20 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         cur_time = time.time()
 
         #
-        test=0
+        test=1
         if test==0:
             # one time step and store
+            #if qg._verbose>0:
+            #    pr = cProfile.Profile()
+            #    pr.enable()
             qg.tstep(1)
+            #if qg._verbose>0:
+            #    pr.disable()
+            #    s = StringIO.StringIO()
+            #    sortby = 'cumulative'
+            #    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            #    ps.print_stats()
+            #    print s.getvalue()
             write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output.nc', qg, create=False)
         elif test==1:
             # write/read/write
@@ -143,9 +153,28 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
 
 def main(ping_mpi_cfg=False):    
     
+    # turn profiling on
+    flagProfile=True
+    
+    flagProfile = flagProfile and not ping_mpi_cfg
+    if flagProfile:
+        pr = cProfile.Profile()
+        pr.enable()
+        stream = open('profile.log', 'w');
     #
     qg = roms_input_runs(ping_mpi_cfg=ping_mpi_cfg)
-    #
+    # 
+        
+    if flagProfile and qg._verbose>0:
+        pr.disable()
+        #s = StringIO.StringIO()
+        s = stream
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        #print s.getvalue()        
+        #ps.dump_stats('profile.log')
+
     
     if ping_mpi_cfg:
         return qg[0], qg[1]
