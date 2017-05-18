@@ -91,8 +91,6 @@ class pvinversion():
         if self._substract_fprime:
             # substract f-f0 from PV
             self.substract_fprime_from_rhs(qg)
-            if self._verbose>1:
-                print 'Substract fprime from pv prior to inversion'
         # fix boundaries
         self.set_rhs_bdy(qg)
         # mask rhs 
@@ -253,7 +251,7 @@ class pvinversion():
         elif qg.bdy_type['top']=='NBG' : 
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
         elif qg.bdy_type['top']=='D' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -402,7 +400,7 @@ class pvinversion():
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
-                        if qg.bdy_type['bottom']=='N' :
+                        if qg.bdy_type['bottom']=='N' or qg.bdy_type['bottom']=='NBG':
                             for index, value in [
                                 ((i,j,k), -idz),
                                 ((i,j,k+1),  idz)
@@ -418,7 +416,7 @@ class pvinversion():
     
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif (k==kup):
-                        if qg.bdy_type['top']=='N' :
+                        if qg.bdy_type['top']=='N' or qg.bdy_type['top']=='NBG':
                             for index, value in [
                                 ((i,j,k-1), -idz),
                                 ((i,j,k),  idz),
@@ -513,7 +511,7 @@ class pvinversion():
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
-                        if qg.bdy_type['bottom']=='N' : 
+                        if qg.bdy_type['bottom']=='N' or qg.bdy_type['bottom']=='NBG': 
                             for index, value in [
                                 ((i,j,k), -idzw[k]),
                                 ((i,j,k+1),  idzw[k])
@@ -529,7 +527,7 @@ class pvinversion():
     
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif (k==kup):
-                        if qg.bdy_type['top']=='N' : 
+                        if qg.bdy_type['top']=='N' or qg.bdy_type['top']=='NBG': 
                             for index, value in [
                                 ((i,j,k-1), -idzw[k-1]),
                                 ((i,j,k),  idzw[k-1]),

@@ -202,7 +202,7 @@ if __name__ == "__main__":
     
     # store stratification profile
     print "compute stratification"
-    N2 = -g*np.diff(rho_a)/d.rho0
+    N2 = -g*np.diff(rho_a)/d.rho0/np.diff(zt)
     N2 = np.hstack((N2[0],N2,N2[-1]))
     print N2.shape
     
@@ -211,7 +211,16 @@ if __name__ == "__main__":
     p[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho[-1,...])*ssh[None,:,:]
     for k in range(d.N-2,-1,-1):
         p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zr0[k+1,None,None]-zr0[k,None,None])
-    
+
+
+    ### store psi    
+    print "create psi file"
+    psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
+    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+    nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
+    # close file
+    #psiout.close()
+   
     # compute PV
     print "compute and store PV"
 
@@ -227,43 +236,55 @@ if __name__ == "__main__":
     nc_N2[:] = N2
     #
     nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
-    flag_stretching = True
+
+    print zr0
+    print zw0
+    print N2
+    #print f[:,0]
+    print f0
+    
+    flag_stretching = False
+    
     for k in np.arange(d.N):
     
         if flag_stretching :
+            
             # compute relative vorticity
             lu = u[k, :, :]
             lv = v[k, :, :]
             xi = psi2rho(vorticity(lu, lv, d.hgrid))
+            
             # compute vortex stretching
             if ( k==0 ):
                 # use bottom density
-                S = ( (rho[k+1,...]+rho[k,...])*0.5
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-                     - rho[k,...]
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
+                S = ( (rho[k+1,...]+rho[k,...])*0.5 \
+                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
+                     - rho[k,...] \
+                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
                      ) /(zw0[k+1]-zw0[k])
             elif ( k==d.N-1 ):
                 # use top density
-                S = ( rho[k,...]
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-                     -(rho[k,...]+rho[k-1,...])*0.5
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
+                S = ( rho[k,...] \
+                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
+                     -(rho[k,...]+rho[k-1,...])*0.5 \
+                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
                      ) /(zw0[k+1]-zw0[k])
             else:
-                S = ( (rho[k+1,...]+rho[k,...])*0.5
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-                     -(rho[k,...]+rho[k-1,...])*0.5
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
+                S = ( (rho[k+1,...]+rho[k,...])*0.5 \
+                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
+                     -(rho[k,...]+rho[k-1,...])*0.5 \
+                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
                      ) /(zw0[k+1]-zw0[k])
             #S = S * d.hgrid.f
             S = S * d.hgrid.f0
     
             # assemble q
-            pv=xi+S
+            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
             # store q
-            nc_q[k,:,:]=pv[1:-1,:-2]
+            nc_q[k,:,:] = pv
+            
         else:
+            
             # compute relative vorticity
             dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
             dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
@@ -286,22 +307,24 @@ if __name__ == "__main__":
 
             if (k == 0):
                 # bottom bdy condition not used in the solver
-                S = 0.
+                S = np.zeros_like(xi)[1:-1,:-2]
             elif (k == d.N - 1):
                 # top bdy condition not used in the solver
-                S = 0.
+                S = np.zeros_like(xi)[1:-1,:-2]
             else:
                 # interior pv
-                S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) -
-                       (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zr0[k ]-zr0[k-1])
+                S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) - \
+                       (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zr0[k ]-zr0[k-1]) \
                      )/(zw0[k+1]-zw0[k])
     
             # assemble q
-            pv=xi[:,:-2]+S
+            pv= f-f0 + xi[1:-1,:-2] + S[:]
             # store q
-            nc_q[k,:,:]=pv[1:-1,:]
+            nc_q[k,:,:] = pv
     
-
+    print nc_q[:,0,0]
+    psiout.close()
+    
     #datadir='/home7/pharos/othr/NATL60/'
     #pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc'
     #pvin = Dataset(pv_file, 'r')
@@ -328,12 +351,12 @@ if __name__ == "__main__":
 
   
     ### store psi    
-    print "create psi file"
-    psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
-    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
-    nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
-    # close file
-    psiout.close()    
+    #print "create psi file"
+    #psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
+    #nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+    #nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
+    ## close file
+    #psiout.close()    
 
 
     ### store rho - rho_background   

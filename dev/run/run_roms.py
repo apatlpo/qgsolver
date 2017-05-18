@@ -52,6 +52,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
         #bdy_type = {'top':'N', 'bottom':'N'}
         bdy_type = {'top':'N', 'bottom':'N', 'periodic':True}
+        bdy_type = {'top':'D', 'bottom':'D', 'periodic':True}
 
         # vertical subdomain
         #vdom = {'kdown': 0, 'kup': 49, 'k0': 0 }
@@ -118,17 +119,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         test=1
         if test==0:
             # one time step and store
-            #if qg._verbose>0:
-            #    pr = cProfile.Profile()
-            #    pr.enable()
             qg.tstep(1)
-            #if qg._verbose>0:
-            #    pr.disable()
-            #    s = StringIO.StringIO()
-            #    sortby = 'cumulative'
-            #    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-            #    ps.print_stats()
-            #    print s.getvalue()
             write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output.nc', qg, create=False)
         elif test==1:
             # write/read/write

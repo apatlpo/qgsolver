@@ -163,17 +163,16 @@ class qg_model():
         self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
-	if flag_pvinv:
-	        self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
+        if flag_pvinv:
+            self.pvinv = pvinversion(self, substract_fprime=substract_fprime)
 
-	# initiate omega inversion
-	if flag_omega:
-		self.omegainv = omegainv(self)
+        # initiate omega inversion
+        if flag_omega:
+            self.omegainv = omegainv(self)
 
         # initiate time stepper
-        #
-	if dt is not None:
-        	self.tstepper = time_stepper(self, dt)
+        if dt is not None:
+            self.tstepper = time_stepper(self, dt)
 
 
     def set_psi(self, analytical_psi=True, file_psi=None):
