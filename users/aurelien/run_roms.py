@@ -33,7 +33,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     '''
 
     #ncores_x=2; ncores_y=4; # desktop
-    #ncores_x=8; ncores_y=8; # datarmor
+    ncores_x=8; ncores_y=8; # datarmor
 
     if ping_mpi_cfg:
         # escape before computing
@@ -52,23 +52,24 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
         #bdy_type = {'top':'N', 'bottom':'N'}
         bdy_type = {'top':'N', 'bottom':'N', 'periodic':True}
+        bdy_type = {'top':'N', 'bottom':'D', 'periodic':True}
 
         # vertical subdomain
         #vdom = {'kdown': 0, 'kup': 49, 'k0': 0 }
         #vdom = {'kdown': 0, 'kup': 30, 'k0': 0 }
         #vdom = {'Nz': 30}
-        vdom = {'Nz': 10}
+        vdom = {'Nz': 50}
 
         # horizontal subdomain
         # hdom = {'istart': 0, 'iend': 255, 'i0': 0, 'jstart':0, 'jend':721,  'j0': 0}
-        hdom = {'Nx': 256, 'j0':300, 'Ny':200}
-        #hdom = {'Nx': 256, 'Ny': 720}
+        #hdom = {'Nx': 256, 'j0':300, 'Ny':200}
+        hdom = {'Nx': 256, 'Ny': 720}
         # 256 = 2^8
         # 720 = 2^4 x 3^2 x 5
 
 
-        datapath = 'input/'
-        outdir = 'output/'
+        datapath = '../input/'
+        outdir = '../output/'
         hgrid = datapath+'roms_metrics.nc'
         vgrid = datapath+'roms_metrics.nc'
         file_q = datapath+'roms_pv.nc'

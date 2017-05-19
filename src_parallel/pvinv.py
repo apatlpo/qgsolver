@@ -106,7 +106,7 @@ class pvinversion():
         #write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
 
         if self._verbose>1:
-            print 'Inversion done'
+            print 'Inversion done (%i iterations)' %(self.ksp.getIterationNumber())
             
             
             
