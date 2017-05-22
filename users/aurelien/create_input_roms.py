@@ -21,6 +21,7 @@ from lpolib.utils import *
 # import matplotlib as mpl
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 #from scipy.fftpack._fftpack import zfft
+import scipy.linalg as linalg
 
 d2r = np.pi/180.
 fillvalue = netCDF4.default_fillvals['f8']
@@ -243,11 +244,11 @@ if __name__ == "__main__":
     #print f[:,0]
     print f0
     
-    flag_stretching = False
+    flag_pv = 0
     
     for k in np.arange(d.N):
     
-        if flag_stretching :
+        if flag_pv == 0 :
             
             # compute relative vorticity
             lu = u[k, :, :]
@@ -283,7 +284,7 @@ if __name__ == "__main__":
             # store q
             nc_q[k,:,:] = pv
             
-        else:
+        elif flag_pv == 1:
             
             # compute relative vorticity
             dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
@@ -321,6 +322,30 @@ if __name__ == "__main__":
             pv= f-f0 + xi[1:-1,:-2] + S[:]
             # store q
             nc_q[k,:,:] = pv
+            
+        elif flag_pv ==2:
+            
+            # compute relative vorticity
+            lu = u[k, :, :]
+            lv = v[k, :, :]
+            xi = psi2rho(vorticity(lu, lv, d.hgrid))
+            
+            # compute vortex stretching
+            if ( k==0 ):
+                # use bottom density
+                S = 0.
+            elif ( k==d.N-1 ):
+                # use top density
+                S = 0.
+            else:
+                S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k+1] \
+                                   +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k] \
+                                   ) /(zw0[k+1]-zw0[k])
+    
+            # assemble q
+            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
+            # store q
+            nc_q[k,:,:] = pv            
     
     print nc_q[:,0,0]
     psiout.close()
@@ -378,3 +403,94 @@ if __name__ == "__main__":
     
     # plt.ion()
     # plt.show(); 
+
+
+
+    sys.exit()
+    
+    
+    ### debug solve 1D pb in the southern part
+    
+    # solve for the surface solution 
+    
+    f0 = d.hgrid.f0; g=9.81; rho0=d.rho0;
+    
+    def build_linpb(j):
+        i=0
+        Lop = sp.csr_matrix((d.N,d.N))
+        for k in np.arange(1,d.N-1):
+            Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
+                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+            Lop[k,k+1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+            Lop[k,k-1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #
+        # bottom bdy, dirichlet psi=0, get away of compatibility issues
+        k=0
+        Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
+                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #Lop[k,k] = f0**2 /g*rho0 * ( \
+        #            +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+        #             /(zw[k+1,j,i]-zw[k,j,i])
+        Lop[k,k+1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #Lop[k,k]=1;Lop[k,k+1]=0; # debugging test
+        # surface bdy
+        k=d.N-1
+        Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) )\
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        Lop[k,k-1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        # rhs
+        rhs=np.zeros((d.N))
+        # surface:
+        k=d.N-1
+        rhs[k]= -f0 * nc_rho_s[j,i] \
+             *(zr[k,j,i]-zr[k-1,j,i])/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
+                     /(zw[k+1,j,i]-zw[k,j,i])
+        k=0
+        #rhs[k]=nc_psi[k,j,i]
+        #rhs[k]=  f0 * nc_rho_b[j,i] \
+        #         *(zr[k+1,j,i]-zr[k,j,i])/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
+        #             /(zw[k+1,j,i]-zw[k,j,i])
+        #rhs[k]+=  f0**2 /g*rho0 * ( \
+        #         1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+        #         /(zw[k+1,j,i]-zw[k,j,i]) \
+        #         *nc_psi[k,j,i]
+        #
+        return Lop, rhs
+    
+    
+    # north profile
+    j=d.M
+    Lop, rhs = build_linpb(j)
+    psi_surf_north=spsolve(Lop,rhs)
+    
+    # south profile
+    j=0
+    Lop, rhs = build_linpb(j)
+    psi_surf_south=spsolve(Lop,rhs)
+    
+    # plot north and south surface solutions
+    plt.figure()
+    plt.plot(psi_surf_north,zr[:,-1,0],'b',label='psi_surf_north')
+    plt.plot(nc_psi_north[:],zr[:,-1,0],'b-+',label='psi_north')
+    plt.plot(psi_surf_south,zr[:,-1,0],'r',label='psi_surf_south')
+    plt.plot(nc_psi_south[:],zr[:,-1,0],'r-+',label='psi_south')
+    plt.grid(True)
+    plt.legend(loc=0)
+    
+    if prtfig:
+        plt.savefig("figs/psi_1D.pdf")
+
+

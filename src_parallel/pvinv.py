@@ -342,16 +342,14 @@ class pvinversion():
         kup = qg.grid.kup
         kmask = qg.grid._k_mask
 
-        if qg.case == "roms" or 'nemo' or 'uniform':
-
-            psi = qg.da.getVecArray(qg.PSI)
-            
-            # interior
-            for k in range(zs,ze):
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        if mask[i,j,kmask]==0.:
-                            rhs[i, j, k] = psi[i,j,k]
+        psi = qg.da.getVecArray(qg.PSI)
+        
+        # interior
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    if mask[i,j,kmask]==0.:
+                        rhs[i, j, k] = psi[i,j,k]
 
         if self._verbose>1:
             print 'set RHS mask for inversion '
