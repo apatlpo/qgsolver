@@ -7,8 +7,8 @@
 import os,sys
 import shutil
 import numpy as np
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
+# import matplotlib.pyplot as plt
+# import cartopy.crs as ccrs
 import netCDF4
 from netCDF4 import Dataset
 
@@ -21,6 +21,7 @@ from lpolib.utils import *
 # import matplotlib as mpl
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 #from scipy.fftpack._fftpack import zfft
+import scipy.linalg as linalg
 
 d2r = np.pi/180.
 fillvalue = netCDF4.default_fillvals['f8']
@@ -136,10 +137,13 @@ if __name__ == "__main__":
     #zw =d.getZ('w',ssh)    # Actual z grid at w points, 3D array
             
     zt = zr0
-    zw = zw0
+    # skip the first w point (the bottom) to keep the same convention as in nemo. T[0] is below w[0]
+    zw = zw0[1:]
     N = zt.shape[0]
-    dzt = np.diff(zw)
-    dzw = np.hstack(([zt[1]-zt[0]],np.diff(zt),zt[-1]-zt[-2]))
+    # dzt = np.diff(zw)
+    dzt = np.hstack((zw[0]-zt[0],np.diff(zw)))
+    # dzw = np.hstack(([zt[1]-zt[0]],np.diff(zt),zt[-1]-zt[-2]))
+    dzw = np.hstack((np.diff(zt),zw[-1]-zt[-1]))
 
 
     # find nearest index in zt for mask_depth
@@ -203,15 +207,24 @@ if __name__ == "__main__":
     # store stratification profile
     print "compute stratification"
     N2 = -g*np.diff(rho_a)/d.rho0/np.diff(zt)
-    N2 = np.hstack((N2[0],N2,N2[-1]))
-    print N2.shape
+    # N2 = np.hstack((N2[0],N2,N2[-1]))
+    N2 = np.hstack((N2,N2[-1]))
     
     # compute p from rho manually (does not agree with ROMS)
     p = np.zeros_like(rho)
     p[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho[-1,...])*ssh[None,:,:]
     for k in range(d.N-2,-1,-1):
         p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zr0[k+1,None,None]-zr0[k,None,None])
-    
+
+
+    ### store psi    
+    print "create psi file"
+    psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
+    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+    nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
+    # close file
+    #psiout.close()
+   
     # compute PV
     print "compute and store PV"
 
@@ -227,44 +240,49 @@ if __name__ == "__main__":
     nc_N2[:] = N2
     #
     nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
-    flag_stretching = True
+
+    print "zt from ",zt[0]," to ",zt[-1]
+    print "zw from ",zw[0]," to ",zw[-1]
+    # print zw
+    # print N2
+    # #print f[:,0]
+    # print f0
+    
+    flag_pv = 0
+    
     for k in np.arange(d.N):
     
-        if flag_stretching :
+        if flag_pv == 0 :
+            
             # compute relative vorticity
             lu = u[k, :, :]
             lv = v[k, :, :]
             xi = psi2rho(vorticity(lu, lv, d.hgrid))
+            
             # compute vortex stretching
             if ( k==0 ):
-                # use bottom density
-                S = ( (rho[k+1,...]+rho[k,...])*0.5
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-                     - rho[k,...]
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-                     ) /(zw0[k+1]-zw0[k])
+                # use bottom density                
+                # bottom bdy condition not used in the solver
+                S = np.zeros_like(rho[0,:,:])
             elif ( k==d.N-1 ):
-                # use top density
-                S = ( rho[k,...]
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-                     -(rho[k,...]+rho[k-1,...])*0.5
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-                     ) /(zw0[k+1]-zw0[k])
+                # use top density              
+                # bottom bdy condition not used in the solver
+                S = np.zeros_like(rho[0,:,:])
             else:
-                S = ( (rho[k+1,...]+rho[k,...])*0.5
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k])
-                     -(rho[k,...]+rho[k-1,...])*0.5
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1])
-                     ) /(zw0[k+1]-zw0[k])
+                S = ( (rho[k+1,...]+rho[k,...])*0.5 \
+                        *(zt[k+1]-zt[k])/(rho_a[k+1]-rho_a[k]) \
+                     -(rho[k,...]+rho[k-1,...])*0.5 \
+                        *(zt[k]-zt[k-1])/(rho_a[k]-rho_a[k-1]) \
+                     ) /(zw[k]-zw[k-1])
             #S = S * d.hgrid.f
             S = S * d.hgrid.f0
     
             # assemble q
             pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
             # store q
-            nc_q[k,:,:]=pv
+            nc_q[k,:,:] = pv
             
-        else:
+        elif flag_pv == 1:
             
             # compute relative vorticity
             dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
@@ -288,22 +306,51 @@ if __name__ == "__main__":
 
             if (k == 0):
                 # bottom bdy condition not used in the solver
-                S = 0.
+                S = np.zeros_like(xi)[1:-1,:-2]
             elif (k == d.N - 1):
                 # top bdy condition not used in the solver
-                S = 0.
+                S = np.zeros_like(xi)[1:-1,:-2]
             else:
                 # interior pv
-                S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) -
-                       (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zr0[k ]-zr0[k-1])
-                     )/(zw0[k+1]-zw0[k])
+                S =  ( (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zt[k+1]-zt[k]) - \
+                       (d.hgrid.f0**2/nc_N2[k-1])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
+                     )/(zw[k]-zw[k-1])
     
             # assemble q
-            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:]
-            # store q
-            nc_q[k,:,:]=pv
-    
+            pv= f-f0 + xi[1:-1,:-2] + S[:]
 
+            # store q
+            nc_q[k,:,:] = pv
+            
+        elif flag_pv ==2:
+            
+            # compute relative vorticity
+            lu = u[k, :, :]
+            lv = v[k, :, :]
+            xi = psi2rho(vorticity(lu, lv, d.hgrid))
+            
+            # compute vortex stretching
+            if ( k==0 ):
+                # use bottom density
+                S = np.zeros_like(xi)
+                # S = 0.
+            elif ( k==d.N-1 ):
+                # use top density
+                S = np.zeros_like(xi)
+                # S = 0.
+            else:
+                S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k] \
+                                   +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k-1] \
+                                   ) /(zw[k]-zw[k-1])
+    
+            # assemble q
+            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
+            # store q
+            nc_q[k,:,:] = pv            
+    
+    print nc_q[:,0,0]
+    psiout.close()
+    
     #datadir='/home7/pharos/othr/NATL60/'
     #pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc'
     #pvin = Dataset(pv_file, 'r')
@@ -330,12 +377,12 @@ if __name__ == "__main__":
 
   
     ### store psi    
-    print "create psi file"
-    psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
-    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
-    nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
-    # close file
-    psiout.close()    
+    #print "create psi file"
+    #psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
+    #nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+    #nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
+    ## close file
+    #psiout.close()    
 
 
     ### store rho - rho_background   
@@ -357,3 +404,94 @@ if __name__ == "__main__":
     
     # plt.ion()
     # plt.show(); 
+
+
+
+    sys.exit()
+    
+    
+    ### debug solve 1D pb in the southern part
+    
+    # solve for the surface solution 
+    
+    f0 = d.hgrid.f0; g=9.81; rho0=d.rho0;
+    
+    def build_linpb(j):
+        i=0
+        Lop = sp.csr_matrix((d.N,d.N))
+        for k in np.arange(1,d.N-1):
+            Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
+                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+            Lop[k,k+1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+            Lop[k,k-1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #
+        # bottom bdy, dirichlet psi=0, get away of compatibility issues
+        k=0
+        Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
+                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #Lop[k,k] = f0**2 /g*rho0 * ( \
+        #            +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+        #             /(zw[k+1,j,i]-zw[k,j,i])
+        Lop[k,k+1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        #Lop[k,k]=1;Lop[k,k+1]=0; # debugging test
+        # surface bdy
+        k=d.N-1
+        Lop[k,k] = f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) )\
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        Lop[k,k-1] = -f0**2 /g*rho0 * ( \
+                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
+                 /(zw[k+1,j,i]-zw[k,j,i])
+        # rhs
+        rhs=np.zeros((d.N))
+        # surface:
+        k=d.N-1
+        rhs[k]= -f0 * nc_rho_s[j,i] \
+             *(zr[k,j,i]-zr[k-1,j,i])/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
+                     /(zw[k+1,j,i]-zw[k,j,i])
+        k=0
+        #rhs[k]=nc_psi[k,j,i]
+        #rhs[k]=  f0 * nc_rho_b[j,i] \
+        #         *(zr[k+1,j,i]-zr[k,j,i])/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
+        #             /(zw[k+1,j,i]-zw[k,j,i])
+        #rhs[k]+=  f0**2 /g*rho0 * ( \
+        #         1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
+        #         /(zw[k+1,j,i]-zw[k,j,i]) \
+        #         *nc_psi[k,j,i]
+        #
+        return Lop, rhs
+    
+    
+    # north profile
+    j=d.M
+    Lop, rhs = build_linpb(j)
+    psi_surf_north=spsolve(Lop,rhs)
+    
+    # south profile
+    j=0
+    Lop, rhs = build_linpb(j)
+    psi_surf_south=spsolve(Lop,rhs)
+    
+    # plot north and south surface solutions
+    plt.figure()
+    plt.plot(psi_surf_north,zr[:,-1,0],'b',label='psi_surf_north')
+    plt.plot(nc_psi_north[:],zr[:,-1,0],'b-+',label='psi_north')
+    plt.plot(psi_surf_south,zr[:,-1,0],'r',label='psi_surf_south')
+    plt.plot(nc_psi_south[:],zr[:,-1,0],'r-+',label='psi_south')
+    plt.grid(True)
+    plt.legend(loc=0)
+    
+    if prtfig:
+        plt.savefig("figs/psi_1D.pdf")
+
+
