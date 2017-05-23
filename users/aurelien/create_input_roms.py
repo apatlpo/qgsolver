@@ -7,8 +7,8 @@
 import os,sys
 import shutil
 import numpy as np
-import matplotlib.pyplot as plt
-import cartopy.crs as ccrs
+# import matplotlib.pyplot as plt
+# import cartopy.crs as ccrs
 import netCDF4
 from netCDF4 import Dataset
 
@@ -137,10 +137,13 @@ if __name__ == "__main__":
     #zw =d.getZ('w',ssh)    # Actual z grid at w points, 3D array
             
     zt = zr0
-    zw = zw0
+    # skip the first w point (the bottom) to keep the same convention as in nemo. T[0] is below w[0]
+    zw = zw0[1:]
     N = zt.shape[0]
-    dzt = np.diff(zw)
-    dzw = np.hstack(([zt[1]-zt[0]],np.diff(zt),zt[-1]-zt[-2]))
+    # dzt = np.diff(zw)
+    dzt = np.hstack((zw[0]-zt[0],np.diff(zw)))
+    # dzw = np.hstack(([zt[1]-zt[0]],np.diff(zt),zt[-1]-zt[-2]))
+    dzw = np.hstack((np.diff(zt),zw[-1]-zt[-1]))
 
 
     # find nearest index in zt for mask_depth
@@ -204,8 +207,8 @@ if __name__ == "__main__":
     # store stratification profile
     print "compute stratification"
     N2 = -g*np.diff(rho_a)/d.rho0/np.diff(zt)
-    N2 = np.hstack((N2[0],N2,N2[-1]))
-    print N2.shape
+    # N2 = np.hstack((N2[0],N2,N2[-1]))
+    N2 = np.hstack((N2,N2[-1]))
     
     # compute p from rho manually (does not agree with ROMS)
     p = np.zeros_like(rho)
@@ -238,11 +241,12 @@ if __name__ == "__main__":
     #
     nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
 
-    print zr0
-    print zw0
-    print N2
-    #print f[:,0]
-    print f0
+    print "zt from ",zt[0]," to ",zt[-1]
+    print "zw from ",zw[0]," to ",zw[-1]
+    # print zw
+    # print N2
+    # #print f[:,0]
+    # print f0
     
     flag_pv = 0
     
@@ -257,25 +261,19 @@ if __name__ == "__main__":
             
             # compute vortex stretching
             if ( k==0 ):
-                # use bottom density
-                S = ( (rho[k+1,...]+rho[k,...])*0.5 \
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
-                     - rho[k,...] \
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
-                     ) /(zw0[k+1]-zw0[k])
+                # use bottom density                
+                # bottom bdy condition not used in the solver
+                S = np.zeros_like(rho[0,:,:])
             elif ( k==d.N-1 ):
-                # use top density
-                S = ( rho[k,...] \
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
-                     -(rho[k,...]+rho[k-1,...])*0.5 \
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
-                     ) /(zw0[k+1]-zw0[k])
+                # use top density              
+                # bottom bdy condition not used in the solver
+                S = np.zeros_like(rho[0,:,:])
             else:
                 S = ( (rho[k+1,...]+rho[k,...])*0.5 \
-                        *(zr0[k+1]-zr0[k])/(rho_a[k+1]-rho_a[k]) \
+                        *(zt[k+1]-zt[k])/(rho_a[k+1]-rho_a[k]) \
                      -(rho[k,...]+rho[k-1,...])*0.5 \
-                        *(zr0[k]-zr0[k-1])/(rho_a[k]-rho_a[k-1]) \
-                     ) /(zw0[k+1]-zw0[k])
+                        *(zt[k]-zt[k-1])/(rho_a[k]-rho_a[k-1]) \
+                     ) /(zw[k]-zw[k-1])
             #S = S * d.hgrid.f
             S = S * d.hgrid.f0
     
@@ -314,12 +312,13 @@ if __name__ == "__main__":
                 S = np.zeros_like(xi)[1:-1,:-2]
             else:
                 # interior pv
-                S =  ( (d.hgrid.f0**2/nc_N2[k+1])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zr0[k+1]-zr0[k]) - \
-                       (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zr0[k ]-zr0[k-1]) \
-                     )/(zw0[k+1]-zw0[k])
+                S =  ( (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zt[k+1]-zt[k]) - \
+                       (d.hgrid.f0**2/nc_N2[k-1])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
+                     )/(zw[k]-zw[k-1])
     
             # assemble q
             pv= f-f0 + xi[1:-1,:-2] + S[:]
+
             # store q
             nc_q[k,:,:] = pv
             
@@ -333,14 +332,16 @@ if __name__ == "__main__":
             # compute vortex stretching
             if ( k==0 ):
                 # use bottom density
-                S = 0.
+                S = np.zeros_like(xi)
+                # S = 0.
             elif ( k==d.N-1 ):
                 # use top density
-                S = 0.
+                S = np.zeros_like(xi)
+                # S = 0.
             else:
-                S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k+1] \
-                                   +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k] \
-                                   ) /(zw0[k+1]-zw0[k])
+                S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k] \
+                                   +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k-1] \
+                                   ) /(zw[k]-zw[k-1])
     
             # assemble q
             pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]

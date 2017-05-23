@@ -271,6 +271,45 @@ class qg_model():
         """
         self.tstepper.go(self, nt)
 
+    def update_rho(self, PSI=None):
+        """ update rho from psi
+        """
+        
+        if PSI is None:
+            PSI=self.PSI
+        psi = self.da.getVecArray(PSI)
+        rho = self.da.getVecArray(RHO)
+        psi = self.da.getVecArray(self.grid.D)
+        
+        #
+        idzt = 1./self.grid.dzt
+        idzw = 1./self.grid.dzw
+        #
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        istart = self.grid.istart
+        iend = self.grid.iend
+        jstart = self.grid.jstart
+        jend = self.grid.jend
+        kdown = self.grid.kdown
+        kup = self.grid.kup
+        
+        for k in range(kdown+1, kup):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    rho[i,j,k] = -self.rho0*self.f0/self.g * \
+                            0.5* ( (psi[i,j,k+1]-psi[i,j,k])*idzw[k] \
+                                  +(psi[i,j,k]-psi[i,j,k-1])*idzw[k-1] )
+        # extrapolate top and bottom
+        k=kdown
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                rho[i,j,k] = -self.rho0*self.f0/self.g * (psi[i,j,k+1]-psi[i,j,k])*idzw[k]     
+        k=kup
+        for j in range(ys, ye):
+            for i in range(xs, xe):
+                rho[i,j,k] = -self.rho0*self.f0/self.g * (psi[i,j,k]-psi[i,j,k-1])*idzw[k-1]
+        return          
+
     
     def get_uv(self):
         """ Compute horizontal velocities

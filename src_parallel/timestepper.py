@@ -52,6 +52,8 @@ class time_stepper():
         if self._verbose>0:
             print '<--- Start time stepping '
         _tstep=0
+        # copy upper and lower density into Q
+        self.copy_topdown_rho_to_q(qg)
         #for i in xrange(nt):
         while _tstep < nt:
             # update time parameters and indexes
@@ -61,7 +63,8 @@ class time_stepper():
             qg.Q.copy(self._RHS0) # copies Q into RHS0
             qg.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
-                qg.invert_pv()
+                #qg.invert_pv()
+                qg.pvinv.solve(RHO=qg.Q)
                 #
                 if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
                     self._computeRHS(qg)
@@ -78,6 +81,8 @@ class time_stepper():
         # need to invert PV one final time in order to get right PSI
         qg.comm.barrier()
         qg.invert_pv()
+        # reset q
+        self.reset_topdown_q(qg)
         if self._verbose>0:
             print 'Time stepping done --->'
 
@@ -296,4 +301,43 @@ class time_stepper():
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     rhs[i, j, k] = rhs[i - 1, j, k]
+        return
+
+
+    def copy_topdown_rho_to_q(self, qg):
+        """ Copy top and down rho into Q for easy implementation of rho time stepping
+        """
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+        
+        q = qg.da.getVecArray(qg.Q)
+        rho = qg.da.getVecArray(qg.RHO)
+           
+        for j in range(ys, ye):
+            for i in range(xs, xe):           
+                q[i, j, kdown] = rho[i, j, kdown]
+                q[i, j, kup] = rho[i, j, kup]
+                
+        return
+            
+
+    def reset_topdown_q(self, qg):
+        """ reset Q with simplest extrapolation
+        """
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+        
+        q = qg.da.getVecArray(qg.Q)
+
+        for j in range(ys, ye):
+            for i in range(xs, xe):           
+                q[i, j, kdown] = q[i, j, kdown+1]
+                q[i, j, kup] = q[i, j, kup-1]
+                
         return

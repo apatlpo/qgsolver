@@ -76,7 +76,7 @@ class pvinversion():
             
             
 
-    def solve(self, qg):
+    def solve(self, qg, PSI=None, RHO=None):
         """ Compute the PV inversion
         """
         # ONE = qg.set_identity()
@@ -92,7 +92,7 @@ class pvinversion():
             # substract f-f0 from PV
             self.substract_fprime_from_rhs(qg)
         # fix boundaries
-        self.set_rhs_bdy(qg)
+        self.set_rhs_bdy(qg, PSI=PSI, RHO=RHO)
         # mask rhs 
         self.set_rhs_mask(qg)
         # store RHS in netcdf file rhs.nc
@@ -130,7 +130,7 @@ class pvinversion():
 
         
 
-    def set_rhs_bdy(self, qg):
+    def set_rhs_bdy(self, qg, PSI=None, RHO=None):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
@@ -143,8 +143,8 @@ class pvinversion():
         if self._verbose>1:
             print 'set RHS along boudaries for inversion '
 
-        self.set_rhs_bdy_bottom(qg)
-        self.set_rhs_bdy_top(qg)
+        self.set_rhs_bdy_bottom(qg, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy_top(qg, PSI=PSI, RHO=RHO)
         self.set_rhs_bdy_lat(qg)
 
         return
