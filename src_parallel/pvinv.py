@@ -63,7 +63,7 @@ class pvinversion():
         # self.ksp.getPC().setType('none')
         # self.ksp.setNormType(2)
         # set tolerances
-        self.ksp.setTolerances(rtol=1e-7)
+        self.ksp.setTolerances(rtol=1e-6)
         self.ksp.setTolerances(max_it=1000)
         #
         #

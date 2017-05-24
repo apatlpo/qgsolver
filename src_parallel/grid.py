@@ -184,48 +184,45 @@ class grid(object):
         self._k_lon=zs+6
         self._k_lat=zs+7
 
+
         # Initialize xt,yt,dxt,dyt
         if self.hgrid_file is None:
             # roms input
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    v[i, j, self._k_dxt] = self.dx
-                    v[i, j, self._k_dyt] = self.dy                   
-                    v[i, j, self._k_lon] = i*self.dx
-                    v[i, j, self._k_lat] = j*self.dy        
+            v[:, :, self._k_dxt] = self.dx
+            v[:, :, self._k_dyt] = self.dy                   
+            v[:, :, self._k_lon] = i*self.dx
+            v[:, :, self._k_lat] = j*self.dy        
                     
         else:
             # open and read netcdf file
             rootgrp = Dataset(self.hgrid_file, 'r')
 
             # curvilinear metric
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    v[i, j, self._k_dxt] = rootgrp.variables['dxt'][j+self.j0,i+self.i0]
-                    v[i, j, self._k_dyt] = rootgrp.variables['dyt'][j+self.j0,i+self.i0]
-                    v[i, j, self._k_lon] = rootgrp.variables['lon'][j+self.j0,i+self.i0]
-                    v[i, j, self._k_lat] = rootgrp.variables['lat'][j+self.j0,i+self.i0]
-                    try:
-                        v[i, j, self._k_dxu] = rootgrp.variables['dxu'][j+self.j0,i+self.i0]
-                    except:
-                        print '!!! must init dxu'
-                        sys.exit()
-                    try:
-                        v[i, j, self._k_dyu] = rootgrp.variables['dyu'][j+self.j0,i+self.i0]
-                    except:                        
-                        print '!!! must init dyu' 
-                        sys.exit()    
-                    try:
-                        v[i, j, self._k_dxv] = rootgrp.variables['dxv'][j+self.j0,i+self.i0]
-                    except:
-                        print '!!! must init dxv ' 
-                        sys.exit()    
-                    try:
-                        v[i, j, self._k_dyv] = rootgrp.variables['dyv'][j+self.j0,i+self.i0]
-                    except:
-                        print '!!!  must init dyv' 
-                        sys.exit()    
-
+            v[:,:, self._k_dxt] = np.transpose(rootgrp.variables['dxt'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            v[:,:, self._k_dyt] = np.transpose(rootgrp.variables['dyt'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            v[:,:, self._k_lon] = np.transpose(rootgrp.variables['lon'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            v[:,:, self._k_lat] = np.transpose(rootgrp.variables['lat'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            try:
+                v[:, :, self._k_dxu] = np.transpose(rootgrp.variables['dxu'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            except:
+                print '!!! must init dxu'
+                sys.exit()
+            try:
+                v[:, :, self._k_dyu] = np.transpose(rootgrp.variables['dyu'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            except:                        
+                print '!!! must init dyu' 
+                sys.exit()    
+            try:
+                v[:, :, self._k_dxv] = np.transpose(rootgrp.variables['dxv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            except:
+                print '!!! must init dxv ' 
+                sys.exit()    
+            try:
+                v[:, :, self._k_dyv] = np.transpose(rootgrp.variables['dyv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
+            except:
+                print '!!!  must init dyv' 
+                sys.exit()
+ 
         rootgrp.close()
 
 
@@ -276,9 +273,7 @@ class grid(object):
         self._k_f=zs+9       
         # open and read netcdf file
         rootgrp = Dataset(coriolis_file, 'r')
-        for j in range(ys, ye):
-            for i in range(xs, xe):
-                v[i, j, self._k_f] = rootgrp.variables['f'][j+self.j0,i+self.i0]
+        v[:, :, self._k_f] = np.transpose(rootgrp.variables['f'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
         rootgrp.close()
         #
         comm.barrier()
@@ -309,9 +304,7 @@ class grid(object):
             try:
                 # open the netcdf file and read the mask
                 rootgrp = Dataset(mask_file, 'r')
-                for j in range(ys, ye):
-                    for i in range(xs, xe):
-                        v[i, j, self._k_mask] = rootgrp.variables['mask'][j+self.j0,i+self.i0]
+                v[:, :, self._k_mask] = np.transpose(rootgrp.variables['mask'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
                 rootgrp.close()
                 if self._verbose:
                     print 'The mask is 2D and loaded'
@@ -327,7 +320,7 @@ class grid(object):
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         for i in range(xs, xe):
-                            v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]                
+                            v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]               
                 rootgrp.close()
                 if self._verbose:
                     print 'The mask is 3D and loaded'
