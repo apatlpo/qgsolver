@@ -371,34 +371,39 @@ class qg_model():
                              ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
                                0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
 
-    # def compute_CFL(self, PSI=None):
-    #     """ 
-    #     Compute CFL = max (u*dt/dx)
-    #     """
+    def compute_CFL(self, PSI=None):
+        """ 
+        Compute CFL = max (u*dt/dx)
+        """
 
-    #     # load vector PSI used to compute U
-    #     if PSI is None:
-    #         PSI=self.PSI
+        # compute U from psi
+        self.get_uv(PSI=PSI)
 
-    #     # compute U from psi
-    #     self.get_uv()
-    #     u = self.da.getVecArray(self._U)
+        # compute abs(u*dt/dx)
+        self.compute_dudx(PSI=PSI)
 
-    #     # get dx
-    #     D = self.da.getVecArray(self.grid.D)
+        CFL=self._U.max()[1]
+        self._U.destroy()
+        return CFL
 
-    #     dt = self.tstepper.dt
-    #     kdxu = self.grid._k_dxu
-    #     (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+
+    def compute_dudx(self, PSI=None):
+        """
+        Compute abs(u*dt/dx)
+
+        """
+        # get u
+        u = self.da.getVecArray(self._U)
+        # get dx
+        D = self.da.getVecArray(self.grid.D)
+
+        dt = self.tstepper.dt
+        kdxu = self.grid._k_dxu
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
     
-    #     for k in range(zs,ze):
-    #         u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
-    #     cflVec = PETSc.Vec().createWithArray([u])
-    #     self.cfl = cflVec.max ()[1]
-    #     if self.rank==0: print self.cfl
-    #     sys.exit()
-    #     CFL = np.amax(u*dt/dx)
-    #     return CFL
+        for k in range(zs,ze):
+            u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
+
 
     def set_identity(self):
     	ONE = self.da.createGlobalVec()
