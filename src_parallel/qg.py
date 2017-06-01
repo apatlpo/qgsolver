@@ -271,15 +271,16 @@ class qg_model():
         """
         self.tstepper.go(self, nt)
 
-    def update_rho(self, PSI=None):
+    def update_rho(self, PSI=None, RHO=None):
         """ update rho from psi
         """
         
         if PSI is None:
             PSI=self.PSI
+        if RHO is None:
+            RHO=self.RHO
         psi = self.da.getVecArray(PSI)
         rho = self.da.getVecArray(RHO)
-        psi = self.da.getVecArray(self.grid.D)
         
         #
         idzt = 1./self.grid.dzt
@@ -308,12 +309,96 @@ class qg_model():
         for j in range(ys, ye):
             for i in range(xs, xe):
                 rho[i,j,k] = -self.rho0*self.f0/self.g * (psi[i,j,k]-psi[i,j,k-1])*idzw[k-1]
-        return          
+        return
 
     
-    def get_uv(self):
+    def get_uv(self, PSI=None):
         """ Compute horizontal velocities
+        Compute U & V from Psi
+        U = -dPSIdy
+        V =  dPSIdx
         """
+
+         ### create global vectors
+        self._U = self.da.createGlobalVec()
+        self._V = self.da.createGlobalVec()
+
+         ### create local vectors
+        local_PSI  = self.da.createLocalVec()
+        local_D = self.da.createLocalVec()
+
+        #### load vector PSI used to compute U and V
+        if PSI is None:
+            self.da.globalToLocal(self.PSI, local_PSI)
+        else:
+            self.da.globalToLocal(PSI, local_PSI)
+
+        self.da.globalToLocal(self.grid.D, local_D)
+
+        #
+        u = self.da.getVecArray(self._U)
+        v = self.da.getVecArray(self._V)
+        psi = self.da.getVecArray(local_PSI)
+        D = self.da.getVecArray(local_D)
+
+
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+
+        kmask = self.grid._k_mask
+        kdxu = self.grid._k_dxu
+        kdyu = self.grid._k_dyu
+        kdxv = self.grid._k_dxv
+        kdyv = self.grid._k_dyv
+        kdxt = self.grid._k_dxt
+        kdyt = self.grid._k_dyt
+
+        # Initialize u=-dpsidy and v=dpsidx
+
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe): 
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
+                        # lateral boundaries
+                        u[i, j, k] = 0.
+                        v[i, j, k] = 0.
+                    else:
+                        u[i,j,k] = - 1. /D[i,j,kdyu] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i+1,j-1,k]+psi[i+1,j,k]+psi[i,j,k]+psi[i,j-1,k]) )
+                        v[i,j,k] =   1. /D[i,j,kdxv] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
+
+    # def compute_CFL(self, PSI=None):
+    #     """ 
+    #     Compute CFL = max (u*dt/dx)
+    #     """
+
+    #     # load vector PSI used to compute U
+    #     if PSI is None:
+    #         PSI=self.PSI
+
+    #     # compute U from psi
+    #     self.get_uv()
+    #     u = self.da.getVecArray(self._U)
+
+    #     # get dx
+    #     D = self.da.getVecArray(self.grid.D)
+
+    #     dt = self.tstepper.dt
+    #     kdxu = self.grid._k_dxu
+    #     (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+    
+    #     for k in range(zs,ze):
+    #         u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
+    #     cflVec = PETSc.Vec().createWithArray([u])
+    #     self.cfl = cflVec.max ()[1]
+    #     if self.rank==0: print self.cfl
+    #     sys.exit()
+    #     CFL = np.amax(u*dt/dx)
+    #     return CFL
 
     def set_identity(self):
     	ONE = self.da.createGlobalVec()

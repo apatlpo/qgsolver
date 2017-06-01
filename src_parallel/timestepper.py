@@ -63,8 +63,8 @@ class time_stepper():
             qg.Q.copy(self._RHS0) # copies Q into RHS0
             qg.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
-                #qg.invert_pv()
-                qg.pvinv.solve(RHO=qg.Q)
+                self.update_topdown_rho(qg)
+                qg.pvinv.solve(qg)
                 #
                 if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
                     self._computeRHS(qg)
@@ -80,12 +80,12 @@ class time_stepper():
                 print 't = %f d' % (self.t/86400.)
         # need to invert PV one final time in order to get right PSI
         qg.comm.barrier()
+        self.update_topdown_rho(qg)
         qg.invert_pv()
         # reset q
         self.reset_topdown_q(qg)
         if self._verbose>0:
             print 'Time stepping done --->'
-
 
     
     def _computeRHS(self,qg):
@@ -304,6 +304,27 @@ class time_stepper():
         return
 
 
+    def update_topdown_rho(self,qg):
+        """ update top and down rho from time stepped Q for boundary conditions
+        """
+        mx, my, mz = qg.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+
+        kdown = qg.grid.kdown
+        kup = qg.grid.kup
+        
+        q = qg.da.getVecArray(qg.Q)
+        rho = qg.da.getVecArray(qg.RHO)
+           
+        for j in range(ys, ye):
+            for i in range(xs, xe):           
+                rho[i, j, kdown] = q[i, j, kdown]
+                rho[i, j, kdown+1] = q[i, j, kdown]
+                rho[i, j, kup] = q[i, j, kup]
+                rho[i, j, kup-1] = q[i, j, kup]
+                
+        return
+
     def copy_topdown_rho_to_q(self, qg):
         """ Copy top and down rho into Q for easy implementation of rho time stepping
         """
@@ -318,8 +339,8 @@ class time_stepper():
            
         for j in range(ys, ye):
             for i in range(xs, xe):           
-                q[i, j, kdown] = rho[i, j, kdown]
-                q[i, j, kup] = rho[i, j, kup]
+                q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
+                q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
                 
         return
             
