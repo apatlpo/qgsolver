@@ -49,7 +49,7 @@ def write_batchfile():
     fo.write('#PBS -l select='+str(nb_nodes)+':ncpus=28:mpiprocs=28:mem='+str(memory)+'G\n')
     fo.write('#PBS \n')
     fo.write('#PBS -N qgsolver\n')
-    fo.write('#PBS -l walltime=01:00:00\n')
+    fo.write('#PBS -l walltime=20:00:00\n')
     fo.write('# cd to the directory you submitted your job\n')
     fo.write('cd $PBS_O_WORKDIR\n')
     fo.write('\n')
