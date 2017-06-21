@@ -325,7 +325,7 @@ class time_stepper():
                 
         return
 
-    def copy_topdown_rho_to_q(self, qg):
+    def copy_topdown_rho_to_q(self, qg, flag_PSI=True):
         """ Copy top and down rho into Q for easy implementation of rho time stepping
         """
         mx, my, mz = qg.da.getSizes()
@@ -335,12 +335,20 @@ class time_stepper():
         kup = qg.grid.kup
         
         q = qg.da.getVecArray(qg.Q)
-        rho = qg.da.getVecArray(qg.RHO)
-           
-        for j in range(ys, ye):
-            for i in range(xs, xe):           
-                q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
-                q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
+                
+        if flag_PSI:
+            psi = qg.da.getVecArray(qg.PSI)        
+            psi2rho = -(qg.rho0*qg.f0)/qg.g
+            for j in range(ys, ye):
+                for i in range(xs, xe):           
+                    q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/qg.grid.dzw[kdown] *psi2rho
+                    q[i, j, kup] = (psi[i,j,kup]-psi[i,j,kup-1])/qg.grid.dzw[kup-1] *psi2rho
+        else:
+            rho = qg.da.getVecArray(qg.RHO)        
+            for j in range(ys, ye):
+                for i in range(xs, xe):           
+                    q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
+                    q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
                 
         return
             
