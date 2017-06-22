@@ -173,16 +173,16 @@ class time_stepper():
         #qg.invert_pv()
         
         ### declare local vectors
-        local_RHS  = qg.da.createLocalVec()
+        local_Q  = qg.da.createLocalVec()
         #local_dRHS  = qg.da.createLocalVec()
         local_PSI  = qg.da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.Q, local_RHS)
+        qg.da.globalToLocal(qg.Q, local_Q)
         qg.da.globalToLocal(qg.PSI, local_PSI)
         #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
-        q = qg.da.getVecArray(local_RHS)
+        q = qg.da.getVecArray(local_Q)
         psi = qg.da.getVecArray(local_PSI)
         dq = qg.da.getVecArray(self._dRHS)
         #dq = qg.da.getVecArray(local_dRHS)
