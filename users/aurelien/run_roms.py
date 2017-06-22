@@ -26,7 +26,7 @@ import cProfile, pstats, StringIO
 #==================== ROMS case ============================================
 #
 
-
+d2s = 86400.
 
 def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
     ''' Tests with roms configuration (spatially uniform, vertically stretched)
@@ -79,9 +79,9 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         file_q = datapath+'roms_pv.nc'
         file_psi = datapath+'roms_psi.nc'
         file_rho = datapath+'roms_rho.nc'
-        qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=1.e0, dt=0.01 * 86400.e0,
+        qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=20.e0, dt=0.02 * d2s,
                       vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True, verbose=2)        
+                      bdy_type_in=bdy_type, substract_fprime=True, verbose=1)        
         qg.case=casename
     
         qg.set_q(file_q=file_q)
@@ -95,13 +95,15 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         qg.invert_pv()
 
         qg.get_uv()
-        write_nc([qg._U, qg._V, qg.RHO, qg.PSI, qg.Q], ['u', 'v', 'rho', 'psi', 'q'], outdir+'output0.nc', qg)
+        idx=0
+        #write_nc([qg._U, qg._V, qg.RHO, qg.PSI, qg.Q], ['u', 'v', 'rho', 'psi', 'q'], outdir+'output%.3i.nc'%idx, qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output%.3i.nc'%idx, qg)
 
         # compute CFL
         CFL = qg.compute_CFL()
         if qg._verbose>0: print "CFL="+str(CFL)
 
-        test=0
+        test=1
         if test==0:
             #for it in range(100):
             for it in range(10):
@@ -109,21 +111,22 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
                 #qg.tstep(5)
                 qg.update_rho()
                 #qg.get_uv()
+                idx+=1
                 write_nc([qg.RHO, qg.PSI, qg.Q], ['rho', 'psi', 'q'], outdir+'output'+str(it+1)+'.nc',qg)
                 #write_nc([qg._U, qg._V, qg.RHO, qg.PSI, qg.Q], ['u', 'v', 'rho', 'psi', 'q'], outdir+'output'+str(it+1)+'.nc',qg)
         elif test==1:
-            # write/read/write
-            qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output1.nc', qg, create=True)
-            qg.set_q(file_q='data/output.nc')
-            qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output1.nc', qg, create=False)
-        elif test==2:
-            while qg.tstepper.t/86400. < 200 :
-                qg.tstep(1)
-                write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output.nc', qg, create=False)
+            # input
+            Ndays = 100.     # in days
+            dt_out = 1.    # in days
+            #
+            di = int(dt_out * d2s/qg.tstepper.dt)
+            while qg.tstepper.t/d2s < Ndays :
+                qg.tstep(di)
+                KE = qg.compute_KE()
+                if qg._verbose>0: print ' KE = %.6e' %KE
+                idx+=1
+                write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output_%.3i.nc'%idx, qg, create=True)
              
-
         # if qg.rank == 0: print '----------------------------------------------------'
         # if qg.rank == 0: print 'Elapsed time  ', str(cur_time - start_time)
     

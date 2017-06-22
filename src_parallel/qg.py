@@ -270,7 +270,10 @@ class qg_model():
         """ Time step wrapper
         """
         self.tstepper.go(self, nt)
-
+            
+            
+            
+            
     def update_rho(self, PSI=None, RHO=None):
         """ update rho from psi
         """
@@ -319,11 +322,11 @@ class qg_model():
         V =  dPSIdx
         """
 
-         ### create global vectors
+        ### create global vectors
         self._U = self.da.createGlobalVec()
         self._V = self.da.createGlobalVec()
 
-         ### create local vectors
+        ### create local vectors
         local_PSI  = self.da.createLocalVec()
         local_D = self.da.createLocalVec()
 
@@ -403,6 +406,79 @@ class qg_model():
     
         for k in range(zs,ze):
             u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
+
+
+    def compute_KE(self, PSI=None):
+        """ 
+        Compute kinetic energy = 0.5 * sum (u**2+v**2)
+        """
+        
+        # compute local kinetic energy
+        self.compute_local_KE(PSI=PSI)
+        
+        # average spatially
+        KE=self._lKE.sum()
+        Vol=self._Vol.sum()
+        self._lKE.destroy()
+        self._Vol.destroy()
+        
+        return KE/Vol
+        
+    def compute_local_KE(self, PSI=None):
+        
+        ### create global vectors
+        self._lKE = self.da.createGlobalVec()
+        self._Vol = self.da.createGlobalVec()
+
+        ### create local vectors
+        local_PSI  = self.da.createLocalVec()
+        local_D = self.da.createLocalVec()
+
+        #### load vector PSI used to compute U and V
+        if PSI is None:
+            self.da.globalToLocal(self.PSI, local_PSI)
+        else:
+            self.da.globalToLocal(PSI, local_PSI)
+
+        self.da.globalToLocal(self.grid.D, local_D)
+
+        #
+        lKE = self.da.getVecArray(self._lKE)
+        Vol = self.da.getVecArray(self._Vol)
+        psi = self.da.getVecArray(local_PSI)
+        D = self.da.getVecArray(local_D)
+
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+
+        kmask = self.grid._k_mask
+        kdxu = self.grid._k_dxu
+        kdyu = self.grid._k_dyu
+        kdxv = self.grid._k_dxv
+        kdyv = self.grid._k_dyv
+        kdxt = self.grid._k_dxt
+        kdyt = self.grid._k_dyt
+
+        # Loop around volume
+        for k in range(zs,ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe): 
+                    if (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
+                        # lateral boundaries
+                        lKE[i, j, k] = 0.
+                        Vol[i,j,k] = 0.
+                    else:
+                        u = - 1. /D[i,j,kdyu] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i+1,j-1,k]+psi[i+1,j,k]+psi[i,j,k]+psi[i,j-1,k]) )
+                        v =   1. /D[i,j,kdxv] * \
+                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
+                               0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
+                        Vol[i,j,k] = self.grid.dzt[k]*D[i,j,kdxt]*D[i,j,kdyt]
+                        lKE[i,j,k] = 0.5 * (u**2 + v**2) *Vol[i,j,k]
+
+        return    
 
 
     def set_identity(self):
