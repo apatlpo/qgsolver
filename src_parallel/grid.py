@@ -66,7 +66,7 @@ class grid(object):
                 try:
                     self.Nx = hdom_in['iend']-hdom_in['istart']+1
                 except:
-                    print '!!! you need to prescribe one of the two variables: Nx, iend'
+                    print '!Error: you need to prescribe one of the two variables: Nx, iend'
                     sys.exit()
         if 'Ny' in hdom_in.keys():
             self.Ny=hdom_in['Ny']      
@@ -75,7 +75,7 @@ class grid(object):
                 try:
                     self.Ny = hdom_in['jend']-hdom_in['jstart']+1
                 except:
-                    print '!!! you need to prescribe one of the two variables: Ny, jend'
+                    print '!Error: you need to prescribe one of the two variables: Ny, jend'
                     sys.exit()
         if 'Nz' in vdom_in.keys():
             self.Nz=vdom_in['Nz']
@@ -84,7 +84,7 @@ class grid(object):
                 try:
                     self.Nz = vdom_in['kup']-vdom_in['kdown']+1
                 except:
-                    print '!!! you need to prescribe one of the two variables: Nz, kup'
+                    print '!Error: you need to prescribe one of the two variables: Nz, kup'
                     sys.exit()
 
 
@@ -113,28 +113,28 @@ class grid(object):
             try:
                 self.iend=self.istart+self.Nx-1
             except:
-                print '!!! iend cannot be determined'
+                print '!Error: iend cannot be determined'
         if 'jend' not in hdom_in:
             try:
                 self.jend=self.jstart+self.Ny-1
             except:
-                print '!!! jend cannot be determined'
+                print '!Error: jend cannot be determined'
         if 'kup' not in vdom_in:
             try:
                 self.kup=self.kdown+self.Nz-1
             except:
-                print '!!! kup cannot be determined'                
+                print '!Error: kup cannot be determined'                
                  
 
         # check consistency between subdomain indices and Nx, Ny and Nz
         if self.iend-self.istart+1!=self.Nx:
-            print '!!! iend-istart+1 not equal to Nx'
+            print '!Error: iend-istart+1 not equal to Nx'
             sys.exit()
         elif self.jend-self.jstart+1!=self.Ny:
-            print '!!! jend-jstart+1 not equal to Ny'
-        #     sys.exit()
+            print '!Error: jend-jstart+1 not equal to Ny'
+            sys.exit()
         elif self.kup-self.kdown+1!=self.Nz:
-            print '!!! kup-kdown+1 not equal to Nz'
+            print '!Error: kup-kdown+1 not equal to Nz'
             sys.exit()
 
 
@@ -189,9 +189,10 @@ class grid(object):
         if self.hgrid_file is None:
             # roms input
             v[:, :, self._k_dxt] = self.dx
-            v[:, :, self._k_dyt] = self.dy                   
-            v[:, :, self._k_lon] = i*self.dx
-            v[:, :, self._k_lat] = j*self.dy        
+            v[:, :, self._k_dyt] = self.dy
+            lx, ly = np.meshgrid(self.dx*np.arange(xs,xe,1.),self.dy*np.arange(ys,ye,1.),indexing='ij')
+            v[:, :, self._k_lon] = lx
+            v[:, :, self._k_lat] = ly        
                     
         else:
             # open and read netcdf file
@@ -205,22 +206,22 @@ class grid(object):
             try:
                 v[:, :, self._k_dxu] = np.transpose(rootgrp.variables['dxu'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:
-                print '!!! must init dxu'
+                print '!Error: must init dxu'
                 sys.exit()
             try:
                 v[:, :, self._k_dyu] = np.transpose(rootgrp.variables['dyu'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:                        
-                print '!!! must init dyu' 
+                print '!Error: must init dyu' 
                 sys.exit()    
             try:
                 v[:, :, self._k_dxv] = np.transpose(rootgrp.variables['dxv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:
-                print '!!! must init dxv ' 
+                print '!Error: must init dxv ' 
                 sys.exit()    
             try:
                 v[:, :, self._k_dyv] = np.transpose(rootgrp.variables['dyv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:
-                print '!!!  must init dyv' 
+                print '!Error:  must init dyv' 
                 sys.exit()
  
         rootgrp.close()
@@ -250,12 +251,12 @@ class grid(object):
             try:
                 self.dzt = rootgrp.variables['dzt'][zs+self.k0:ze+self.k0] 
             except:
-                print '!!! must init dzt ' 
+                print '!Error: must init dzt ' 
                 sys.exit()   
             try:
                 self.dzw = rootgrp.variables['dzw'][zs+self.k0:ze+self.k0] 
             except:
-                print '!!! must init dzw ' 
+                print '!Error: must init dzw ' 
                 sys.exit()   
 
             rootgrp.close()
@@ -306,13 +307,13 @@ class grid(object):
                 rootgrp = Dataset(mask_file, 'r')
                 v[:, :, self._k_mask] = np.transpose(rootgrp.variables['mask'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
                 rootgrp.close()
-                if self._verbose:
-                    print 'The mask is 2D and loaded'
+                if self._verbose>0:
+                    print '    The mask is 2D and loaded'
             except:
                 # no mask found, only sea
                 v[:, :, self._k_mask] = 1.   
-                if self._verbose:
-                    print 'The mask is 2D but no data was found'
+                if self._verbose>0:
+                    print '    The mask is 2D but no data was found'
         else:
             try:
                 # open the netcdf file and read the mask
@@ -322,13 +323,13 @@ class grid(object):
                         for i in range(xs, xe):
                             v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]               
                 rootgrp.close()
-                if self._verbose:
-                    print 'The mask is 3D and loaded'
+                if self._verbose>0:
+                    print '    The mask is 3D and loaded'
             except:
                 # no mask found, only sea
                 v[:, :, :] = 1.
-                if self._verbose:
-                    print 'The mask is 3D but no data was found'
+                if self._verbose>0:
+                    print '    The mask is 3D but no data was found'
         #
         comm.barrier()
         pass   
@@ -353,37 +354,37 @@ class grid(object):
     def __str__(self):
         
         if self._flag_hgrid_uniform:
-            out = 'The horizontal grid is uniform with:\n' \
-                + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
-                + '  Lx = %e km , Ly = %e km \n' % (self.Lx/1e3, self.Ly/1e3) \
-                + '  dx = %e , dy = %e \n' % (self.dx, self.dy)
+            out = '    The horizontal grid is uniform with:\n' \
+                + '      Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
+                + '      Lx = %e km , Ly = %e km \n' % (self.Lx/1e3, self.Ly/1e3) \
+                + '      dx = %e , dy = %e' % (self.dx, self.dy)
         else:
             # get stats about metric terms
             # not trivial to implement as min/max needs to be taken across tiles ...
-            out = 'The horizontal grid is curvlinear with:\n' \
-                + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) 
+            out = '    The horizontal grid is curvlinear with:\n' \
+                + '      Nx = %i , Ny = %i\n' % (self.Nx, self.Ny) 
                 #+ '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
                 #+ '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
                 
         if self._flag_vgrid_uniform:
-            out += 'The vertical grid is uniform with:\n' \
-                + '  Nz = %i' % (self.Nz) \
-                + ' , H = %e m' % (self.H) \
-                + ' , dz = %e \n' % (self.dz)
+            out += '    The vertical grid is uniform with:\n' \
+                +  '      Nz = %i' % (self.Nz) \
+                +  ' , H = %e m' % (self.H) \
+                +  ' , dz = %e \n' % (self.dz)
         else:
-            out += 'The vertical grid is stretched with:\n' \
-                + '  Nz = %i' % (self.Nz) \
-                + '  min(dzw) = %e , mean(dzw) = %e, max(dzw) = %e \n' \
+            out += '    The vertical grid is stretched with:\n' \
+                +  '       Nz = %i \n' % (self.Nz) \
+                +  '       min(dzw) = %e , mean(dzw) = %e, max(dzw) = %e \n' \
                     % (np.min(self.dzw), np.mean(self.dzw), np.max(self.dzw)) \
-                + '  min(dzt) = %e , mean(dzt) = %e, max(dzt) = %e \n' \
+                +  '       min(dzt) = %e , mean(dzt) = %e, max(dzt) = %e' \
                     % (np.min(self.dzt), np.mean(self.dzt), np.max(self.dzt))
 
         if self._flag_hdom:
-            print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+            out += '\n    Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
                          %(self.istart, self.iend, self.jstart, self.jend)
                          
         if self._flag_vdom:
-            print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            out += '\n    Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
 
         return out
       
