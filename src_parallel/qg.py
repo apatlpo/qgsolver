@@ -237,10 +237,10 @@ class qg_model():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
-                                              + (j/float(my-1)-0.5)**2)/0.1**2)
-                    q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
-                    q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
+                    q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 + (j/float(my-1)-0.5)**2)/0.05**2)
+                    #q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 + (j/float(my-1)-0.5)**2)/0.1**2)
+                    #q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
+                    #q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
 
 
     def set_rho(self, analytical_rho=True, file_rho=None):

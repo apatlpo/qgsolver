@@ -60,8 +60,9 @@ if __name__ == "__main__":
     
     # data path
     # datadir='/home/caparmor-work/aponte/qg_nemo/dev/data/'
-    datadir='/home1/datawork/aponte/roms_qg0/'
-    pref = 'roms_qg0_'
+    datadir='/home1/datawork/aponte/roms_qg2/'
+    #pref = 'roms_qg3_'
+    pref = datadir.split('/')[-2]+'_'
 
     # read files
     d = qgrun(datadir)

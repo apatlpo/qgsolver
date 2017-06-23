@@ -84,11 +84,13 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
                       bdy_type_in=bdy_type, substract_fprime=True, verbose=1)        
         qg.case=casename
     
-        qg.set_q(file_q=file_q)
-    
-        qg.set_psi(file_psi=file_psi)
-    
+        #qg.set_q(file_q=file_q)    
+        #qg.set_psi(file_psi=file_psi)
         qg.set_rho(file_rho=file_rho)
+        
+        qg.set_q()    
+        qg.set_psi()            
+        qg.set_rho()
    
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'input.nc', qg)
     
@@ -97,7 +99,7 @@ def roms_input_runs(ncores_x=2, ncores_y=4, ping_mpi_cfg=False):
         qg.get_uv()
         idx=0
         #write_nc([qg._U, qg._V, qg.RHO, qg.PSI, qg.Q], ['u', 'v', 'rho', 'psi', 'q'], outdir+'output%.3i.nc'%idx, qg)
-        write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output%.3i.nc'%idx, qg)
+        write_nc([qg.PSI, qg.Q], ['psi', 'q'], outdir+'output_%.3i.nc'%idx, qg)
 
         # compute CFL
         CFL = qg.compute_CFL()
