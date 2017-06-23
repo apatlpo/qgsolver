@@ -24,6 +24,8 @@ users/aurelien/run*/*.py
 *.jpg
 *.pdf
 *.mp4
+dev/output/movies/
+dev/output/img/
 
 # openoffice
 *.odp#
