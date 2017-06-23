@@ -17,18 +17,18 @@ class omegainv():
     """ Omega equation inversion, parallel
     """
     
-    def __init__(self, qg, substract_fprime):
-        """ Setup the PV inversion solver
+    def __init__(self, qg):
+        """ Setup the Omega equation solver
         """
                 
         self._verbose = qg._verbose
-        self._substract_fprime = substract_fprime
         
         # create the operator
         self.L = qg.da.createMat()
         #
         if self._verbose>0:
-            print 'Operator L declared'
+            print 'An Omega equation inversion object is being created'
+            print '  Operator L declared'
 
         # Fill in operator values
         if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
@@ -38,9 +38,9 @@ class omegainv():
 
         #
         if self._verbose>0:
-            print 'Operator L filled'
+            print '  Operator L filled'
 
-        # global vector for PV inversion
+        # global vector for Omega equation inversion
         self._RHS = qg.da.createGlobalVec()
 
         # local vectors
@@ -72,12 +72,12 @@ class omegainv():
         self.ksp.setFromOptions()
         
         if self._verbose>0:
-            print 'PV inversion is set up'
+            print '  Omega equation inversion is set up'
             
             
 
     def solve(self, qg):
-        """ Compute the PV inversion
+        """ Inverse the Omega equation
         """
         # ONE = qg.set_identity()
         # self.L.mult(ONE,self._RHS)
@@ -96,14 +96,14 @@ class omegainv():
         # write_nc([self._RHS], ['rhs'], 'data/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
-        self.ksp.solve(self._RHS, qg.PSI)
+        self.ksp.solve(self._RHS, qg.W)
         # compute L*PSI and store in self._RHS
         # self.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
         # write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
 
         if self._verbose>1:
-            print 'omega equation done'
+            print 'Omega equation solved (%i iterations)' %(self.ksp.getIterationNumber())
             
 
     def set_uv_from_psi(self, qg, PSI=None):
@@ -370,7 +370,7 @@ class omegainv():
         """
         
         if self._verbose>0:
-            print 'set RHS along boudaries for inversion '
+            print '  set RHS along boudaries for inversion '
 
         self.set_rhs_bdy_bottom(qg)
         self.set_rhs_bdy_top(qg)
@@ -378,10 +378,10 @@ class omegainv():
 
         return
 
-    def set_rhs_bdy_bottom(self, qg, PSI=None, RHO=None):
+    def set_rhs_bdy_bottom(self, qg, W=None):
         """
         Set bottom boundary condition
-        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
+        :param W: Petsc vectors that will be used to compute the bdy condition
         :return:
         """
 
@@ -397,14 +397,10 @@ class omegainv():
         kup = qg.grid.kup
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = qg.da.getVecArray(qg.PSI)
+        if W is None:
+            w = qg.da.getVecArray(qg.W)
         else:
-            psi = qg.da.getVecArray(PSI)
-        if RHO is None:
-            rho = qg.da.getVecArray(qg.RHO)
-        else:
-            rho = qg.da.getVecArray(RHO)
+            w = qg.da.getVecArray(W)
            
         # lower ghost area
         if zs < kdown:
@@ -412,21 +408,21 @@ class omegainv():
                 for j in range(ys, ye):
                     for i in range(xs, xe):                    
                         # rhs[i,j,k]=sys.float_info.epsilon
-                        rhs[i,j,k]=0.
+                        rhs[i,j,k] = w[i, j, k]
         # bottom bdy
         k = kdown
         if qg.bdy_type['bottom']=='N' : 
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0.
+                    rhs[i, j, k] = w[i, j, k]
         elif qg.bdy_type['bottom']=='NBG' : 
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0. 
+                    rhs[i, j, k] = w[i, j, k]
         elif qg.bdy_type['bottom']=='D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0.
+                    rhs[i, j, k] = w[i, j, k]
 
                     
         else:
@@ -436,10 +432,10 @@ class omegainv():
         return
 
             
-    def set_rhs_bdy_top(self, qg, PSI=None, RHO=None):
+    def set_rhs_bdy_top(self, qg, W=None):
         """
         Set top boundary condition
-        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
+        :param W: Petsc vectors that will be used to compute the bdy condition
         :return:
         """
         
@@ -455,45 +451,41 @@ class omegainv():
         kup = qg.grid.kup
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = qg.da.getVecArray(qg.PSI)
+        if W is None:
+            w = qg.da.getVecArray(qg.W)
         else:
-            psi = qg.da.getVecArray(PSI)
-        if RHO is None:
-            rho = qg.da.getVecArray(qg.RHO)
-        else:
-            rho = qg.da.getVecArray(RHO)
+            w = qg.da.getVecArray(W)
 
         if ze > kup+1:
             for k in range(kup+1,ze):
                 for j in range(ys, ye):
                     for i in range(xs, xe):
                         # rhs[i,j,k]=sys.float_info.epsilon   
-                        rhs[i,j,k]= 0.          
+                        rhs[i,j,k] = w[i, j, k]       
         # upper bdy
         k = kup
         if qg.bdy_type['top']=='N' : 
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0.
+                    rhs[i, j, k] = w[i, j, k]
         elif qg.bdy_type['top']=='NBG' : 
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0. 
+                    rhs[i, j, k] = w[i, j, k]
         elif qg.bdy_type['top']=='D' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = 0.
+                    rhs[i, j, k] = w[i, j, k]
 
         else:
             print qg.bdy_type['top']+" unknown top boundary condition"
             sys.exit()
 
 
-    def set_rhs_bdy_lat(self, qg, PSI=None):
+    def set_rhs_bdy_lat(self, qg, W=None):
         """
         Set lateral boundary condition
-        :param PSI: Petsc vector that will be used to compute the bdy condition
+        :param W: Petsc vector that will be used to compute the bdy condition
         :return:
         """
         
@@ -509,10 +501,10 @@ class omegainv():
         kup = qg.grid.kup
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = qg.da.getVecArray(qg.PSI)
+        if W is None:
+            w = qg.da.getVecArray(qg.W)
         else:
-            psi = qg.da.getVecArray(PSI)
+            w = qg.da.getVecArray(W)
 
         # south bdy
         if ys <= jstart:
@@ -520,30 +512,30 @@ class omegainv():
             for k in range(zs, ze):
                 for j in range(ys,min(ye,jstart+1)):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = 0.
+                        rhs[i, j, k] = w[i, j, k]
         # north bdy
         if ye >= jend:
             #j = my - 1
             for k in range(zs, ze):
                 for j in range(max(ys,jend),ye):
                     for i in range(xs, xe):
-                        rhs[i, j, k] = 0.
+                        rhs[i, j, k] = w[i, j, k]
         # west bdy
-        if xs <= istart:
-        # if xs <= istart and qg.BoundaryType is not 'periodic':
+        #if xs <= istart:
+        if xs <= istart and qg.BoundaryType is not 'periodic':
             #i = 0
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     for i in range(xs,min(xe,istart+1)):
-                        rhs[i, j, k] = 0.
+                        rhs[i, j, k] = w[i, j, k]
         # east bdy
-        if xe >= iend:
-        # if xe >= iend and qg.BoundaryType is not 'periodic':
+        #if xe >= iend:
+        if xe >= iend and qg.BoundaryType is not 'periodic':
             #i = mx - 1
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     for i in range(max(xs,iend),xe):
-                        rhs[i, j, k] = 0.
+                        rhs[i, j, k] = w[i, j, k]
                         
         return
 
@@ -570,17 +562,17 @@ class omegainv():
         kup = qg.grid.kup
         kmask = qg.grid._k_mask
 
-        psi = qg.da.getVecArray(qg.PSI)
+        w = qg.da.getVecArray(qg.W)
 
         # interior
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     if mask[i,j,kmask]==0.:
-                        rhs[i, j, k] = 0.
+                        rhs[i, j, k] = w[i, j, k]
 
         if self._verbose>0:
-            print 'set RHS mask for inversion '
+            print '  set RHS mask for inversion '
 
 
     
@@ -648,7 +640,7 @@ class omegainv():
                     elif (k<kdown or k>kup):
                         L.setValueStencil(row, row, 0.0)
     
-                    # interior points: pv is prescribed
+                    # interior points: Q div is prescribed
                     else:
                         for index, value in [
                             ((i,j,k-1), qg.f0**2*idz2),
@@ -753,7 +745,7 @@ class omegainv():
                     #     i>=iend or j>=jend):
                     #     L.setValueStencil(row, row, 1.0)
     
-                    # interior points: pv is prescribed
+                    # interior points: Q div is prescribed
                     else:
                         
                         for index, value in [
