@@ -276,7 +276,7 @@ class qg_model():
         if file_w is not None:
             if self._verbose:
                 print 'Set w from file '+file_w+' ...'
-            read_nc_petsc(self.W, 'rho', file_w, self, fillmask=0.)
+            read_nc_petsc(self.W, 'w', file_w, self, fillmask=0.)
         elif analytical_w:
             self.set_w_analytically()
 
