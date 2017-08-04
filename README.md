@@ -2,8 +2,8 @@
 
 This library implements a 3D z-level QG solver in regular grid or in lon/lat 
 grid.
-It relies on petsc4py for parallelized PV inversions but can also work in serial
-(not at the moment)
+It relies on petsc4py for parallelized PV inversions but should also work in serial
+in the future
 
 
 # Install
@@ -12,41 +12,18 @@ It relies on petsc4py for parallelized PV inversions but can also work in serial
 
 Download and install with:
 ```csh
-git clone https://yourlogin@bitbucket.org/apatlpo/qgsolver.git
+git clone https://github.com/apatlpo/qgsolver.git
 cd qgsolver
 python setup.py
 ```
-where yourlogin is your login
 
 ## libraries required
 
 qgsolver requires petsc4py (and thus petsc) and netcdf4
 
-### with conda on standard linux platform
+### Install with conda 
 
-We use conda for the install of python libraries required by qgsolver:
-```csh
-bash
-source activate petsc_env
-export PYTHONPATH=$PYTHONPATH:/home/slyne/aponte/natl60/python/oocgcm/
-```
-
-Proper conda install on Linux:
-```csh
-wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
-bash Miniconda-latest-Linux-x86_64.sh
-(specify .miniconda2 and not miniconda2 as target dir for conda)
-bash
-conda update conda
-conda create --name petsc_env python
-source activate petsc_env
-conda install -c juanlu001 petsc4py=3.6.0
-conda install -y netcdf4
-```
-
-### with conda on caparmor 
-
-Proper conda install on Caparmor:
+Download Miniconda2 from the [conda website](https://conda.io/miniconda.html)
 ```csh
 bash Miniconda2-4.2.12-Linux-x86_64.sh
 (specify .miniconda2 and not miniconda2 as target dir for conda)
@@ -58,7 +35,8 @@ conda install -c conda-forge petsc=3.7.4
 conda install -c conda-forge petsc4py=3.7.0
 conda install -c conda-forge netcdf4=1.2.7
 ```
-Use of qgsolver on Caparmor
+
+Use of qgsolver on Datarmor
 ```csh
 bash
 source activate petsc
@@ -67,66 +45,4 @@ python run_caparmor.py workdir
 ```
 run\_caparmor.py creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
 
-The .bashrc file in the caparmor home directory could look like:
-```csh
-#alias
-# User specific aliases and functions
-alias qs="qstat|grep aponte"
 
-# added by Miniconda2 4.0.5 installer
-export PATH="/home1/caparmor/aponte/.miniconda2/bin:$PATH"
-
-# add path to launch batch
-export PATH="/usr/pbs/bin/:$PATH"
-
-# for qgsolver
-export WORKDIR="/work/aponte/"
-
-source activate petsc
-```
-
-### with pip on caparmor (pb size >= 512x252x100) doesn't work!!!
-
-When the problem is larger than 256x256x100 (approximately),
-petsc needs to have been compiled with the option --with-64-bit-indices.
-If not, petsc will crash systematically with errors (bus error or out of memory).
-
-```csh
-module load python/2.7.10_gnu-4.9.2
-# install pip:
-# https://pip.pypa.io/en/stable/installing/#id10
-wget https://bootstrap.pypa.io/get-pip.py
-python get-pip.py --user
-# edit .cshrc:
-set path = ($path $home/.local/bin)
-setenv  LD_LIBRARY_PATH /home1/caparmor/aponte/.local/lib:${LD_LIBRARY_PATH}
-
-# install target libraries
-setenv MPICC mpiicc
-# https://bitbucket.org/mpi4py/mpi4py/issues/53/building-with-intel-compiler-failed
-pip install --user --upgrade --ignore-installed --no-cache-dir mpi4py
-pip install --user --upgrade --ignore-installed --no-cache-dir numpy
-
-setenv PETSC_CONFIGURE_OPTIONS '--with-64-bit-indices --with-fc=0 --download-f2cblaslapack'
-pip install --user --upgrade --ignore-installed --no-cache-dir  petsc petsc4py
-
-# netcdf
-setenv USE_NCCONFIG 1
-pip install --user netcdf4
-```
-
-I should also be possible to compile petsc4py within a petsc compilation with
-something like (not tested): doesn't work!!!
-```csh
-module load python/2.7.10_gnu-4.9.2
-setenv MPICC mpiicc
-setenv PETSC_DIR /home1/caparmor/aponte/petsc/petsc-3.7.4
-setenv PETSC_ARCH linux-gnu-intel
-
-wget http://ftp.mcs.anl.gov/pub/petsc/release-snapshots/petsc-3.7.4.tar.gz
-tar -zxvf petsc-3.7.4.tar.gz
-cd petsc-3.7.4/
-
-./configure PETSC_ARCH=linux-gnu-intel --with-cc=mpiicc --with-fc=mpiifort --with-blas-lapack-dir=/appli/intel/Compiler/11.1/073/mkl  --with-64-bit-indices   --download-petsc4py
-make all test
-```

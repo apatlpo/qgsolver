@@ -1,27 +1,23 @@
+# Install useful libraries for this project:
 
 
-
-```
-bash /home/mulroy/slgentil/tarfiles/Miniconda2-latest-Linux-x86_64.sh
+Download Miniconda2 from the [conda website](https://conda.io/miniconda.html)
+```csh
+bash Miniconda2-4.2.12-Linux-x86_64.sh
+(specify .miniconda2 and not miniconda2 as target dir for conda)
 bash
 conda update conda
-conda create --name natl60 python
-source activate natl60
-conda install dask
-conda install xarray
-conda install -c juanlu001 petsc4py=3.6.0
-conda install libgfortran=1.0
-conda install -c scitools cartopy=0.13.1
-conda install basemap
-conda install netcdf4=1.1.1
-conda install -c asmeurer pango 
+conda create --name petsc python
+source activate petsc
+conda install -c conda-forge petsc=3.7.4
+conda install -c conda-forge petsc4py=3.7.0
+conda install -c conda-forge netcdf4=1.2.7
 ```
 
 
+# Miniconda in general:
 
-Miniconda in general:
-
-# Overview
+## Overview
 
 Miniconda installers contain the conda package manager and Python.
 Once Miniconda is installed, you can use the conda command to install any other packages and create environments.
@@ -45,22 +41,34 @@ alias source_activate 'setenv OLDPATH ${PATH};setenv PATH /home/mulroy/slgentil/
 alias source_deactivate 'setenv PATH $OLDPATH'
 ```
 
-#Main commands:
+## Main commands:
+What version, update conda
 ```
 conda --version
 conda update conda
-conda create --name natl60 python Create new environment natl60
-source activate natl60 Switch to another environment (activate/deactivate) (or source_activate in csh)
-source deactivate To change your path from the current environment back to the root (or source_deactivate in csh)
-conda info --envs List all environments
-conda remove --name natl60 --all Delete an environment
-conda list View a list of packages and versions installed in an environmentSearch for a package
-conda search packagename Check to see if a package is available for conda to install
-conda install packagename Install a new package
-rm -rf /home/mulroy/slgentil/miniconda2 Remove conda
+```
+Create new environment myenv
+```conda create --name myenv python```
+Switch to another environment (activate/deactivate) (or source_activate in csh)
+```source activate myenv ```
+To change your path from the current environment back to the root (or source_deactivate in csh)
+```source deactivate```
+List all environments
+```conda info --envs```
+Delete an environment
+```conda remove --name myenv --all```
+View a list of packages and versions installed in an environmentSearch for a package
+```conda list```
+Check to see if a package is available for conda to install
+```conda search packagename```
+Install a new package
+```conda install packagename```
+Remove conda
+```
+rm -rf /home/mulroy/slgentil/miniconda2 
 ```
 
-#Install a package from Anaconda.org
+## Install a package from Anaconda.org
 
 For packages that are not available using conda install, we can next look on Anaconda.org. Anaconda.org is a package management service for both public and private package repositories. Anaconda.org is a Continuum Analytics product, just like Anaconda and Miniconda.
 
@@ -74,7 +82,7 @@ Check to see that the package downloaded
 conda list
 ```
 
-#Install a package with pip
+## Install a package with pip
 
 For packages that are not available from conda or Anaconda.org, we can often install the package with pip (short for “pip installs packages”).
 Exporting environment
