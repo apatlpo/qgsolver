@@ -23,17 +23,19 @@ qgsolver requires petsc4py (and thus petsc) and netcdf4
 
 ### Install with conda 
 
-Download Miniconda2 from the [conda website](https://conda.io/miniconda.html)
+Download Miniconda3 from the [conda website](https://conda.io/miniconda.html)
 ```csh
-bash Miniconda2-4.2.12-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
 (specify .miniconda2 and not miniconda2 as target dir for conda)
 bash
 conda update conda
 conda create --name petsc python
 source activate petsc
-conda install -c conda-forge petsc=3.7.4 
-conda install -c conda-forge petsc4py=3.7.0
-conda install -c conda-forge netcdf4=1.2.7
+conda install -c conda-forge petsc
+conda install -c conda-forge petsc4py
+conda install -c conda-forge netcdf4
+conda install -c conda-forge matplotlib
+conda install -c conda-forge jupyter 
 ```
 
 Use of qgsolver on Datarmor
