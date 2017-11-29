@@ -20,18 +20,18 @@ from distutils.extension import Extension
 _qgdir='./qgsolver'
 # delete directory if existing
 if os.path.exists(_qgdir):
-    print 'Deletes existing '+_qgdir
+    print('Deletes existing '+_qgdir)
     shutil.rmtree(_qgdir)
 
 # test existence of petsc4
 try:
     import petsc4py
     #from petsc4py import version
-    print 'petsc4py is available'
+    print('petsc4py is available')
     shutil.copytree('./src_parallel/',_qgdir)
 
 except:
-    print 'petsc4py is not available, install serial code'
+    print('petsc4py is not available, install serial code')
     shutil.copytree('./src_serial/',_qgdir)
     
 # ext_modules = [Extension('qgsolver.set_L_fast', 
