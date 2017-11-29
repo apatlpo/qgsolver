@@ -45,8 +45,8 @@ class window():
         
         # test whether tiling is consistent with dimensions
         if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
-            print 'Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
-                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y) 
+            print('Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y))
             sys.exit()
             
         # setup tiling
@@ -58,10 +58,10 @@ class window():
         self.rank = self.comm.getRank()
         # print tiling information
         if self.rank is 0 and verbose>0:
-            print 'PETSc DMDA created'
-            print 'The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
-                    +str(self.da.proc_sizes) 
-            #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
+            print('PETSc DMDA created')
+            print('The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
+                    +str(self.da.proc_sizes))
+            #print('rank='+str(self.rank)+' ranges='+str(self.da.ranges))
 
 
         # print out grid information
@@ -86,15 +86,15 @@ class window():
         #
         if self._verbose>0:
             # general information
-            print 'A window model object is being created'
+            print('A window model object is being created')
             # print out grid parameters
-            print self.grid
+            print(self.grid)
             # # print if a subdomain is considered
             # if self.kdown==0 or self.kup<self.grid.Nz-1:
-            #     print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            #     print('Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
             # if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
-            #     print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
-            #              %(self.istart, self.iend, self.jstart, self.jend)
+            #     print('Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+            #              %(self.istart, self.iend, self.jstart, self.jend))
 
                 
         #
@@ -118,7 +118,7 @@ class window():
         #
         if file_q is not None:
             if self._verbose:
-                print 'Set q from file '+file_q+' ...'
+                print('Set q from file '+file_q+' ...')
             read_nc_petsc(self.Q, 'q', file_q, self, fillmask=0.)
         elif analytical_q:
             self.set_q_analytically()
@@ -131,7 +131,7 @@ class window():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set rhs analytically to k^⁻2'
+            print('Set rhs analytically to k^⁻2')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -165,14 +165,14 @@ class wininversion():
         self.L = win.da.createMat()
         #
         if self._verbose>0:
-            print 'Operator L declared'
+            print('Operator L declared')
 
         # Fill in operator values
         self._set_L_curv(self.L, win)
 
         #
         if self._verbose>0:
-            print 'Operator L filled'
+            print('Operator L filled')
 
         # global vector for PV inversion
         self._RHS = win.da.createGlobalVec()
@@ -202,7 +202,7 @@ class wininversion():
         self.ksp.setFromOptions()
         
         if self._verbose>0:
-            print 'PV inversion is set up'
+            print('PV inversion is set up')
             
             
 
@@ -219,7 +219,7 @@ class wininversion():
         self.ksp.solve(self._RHS, win.PSI)
 
         if self._verbose>1:
-            print 'Inversion done'
+            print('Inversion done')
 
         
 
@@ -289,7 +289,7 @@ class wininversion():
                         rhs[i, j, k] = 0.
 
         if self._verbose>0:
-            print 'set RHS along boudaries for inversion '
+            print('set RHS along boudaries for inversion ')
 
 
     def set_rhs_mask(self, win):
@@ -334,7 +334,7 @@ class wininversion():
                             rhs[i, j, k] *= mask[i,j,k]           
 
         if self._verbose>0:
-            print 'set RHS mask for inversion '
+            print('set RHS mask for inversion ')
 
 
     
@@ -344,7 +344,7 @@ class wininversion():
         """
         
         if win._verbose>0:
-            print '  ... assumes a curvilinear and/or vertically stretched grid'
+            print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
         mx, my, mz = win.da.getSizes()
         #

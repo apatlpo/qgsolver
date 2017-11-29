@@ -28,7 +28,7 @@ class pvinversion():
         self.L = qg.da.createMat()
         #
         if self._verbose>0:
-            print 'Operator L declared'
+            print('Operator L declared')
 
         # Fill in operator values
         if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
@@ -38,7 +38,7 @@ class pvinversion():
 
         #
         if self._verbose>0:
-            print 'Operator L filled'
+            print('Operator L filled')
 
         # global vector for PV inversion
         self._RHS = qg.da.createGlobalVec()
@@ -72,7 +72,7 @@ class pvinversion():
         self.ksp.setFromOptions()
         
         if self._verbose>0:
-            print 'PV inversion is set up'
+            print('PV inversion is set up')
             
             
 
@@ -106,7 +106,7 @@ class pvinversion():
         #write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
 
         if self._verbose>1:
-            print 'Inversion done (%i iterations)' %(self.ksp.getIterationNumber())
+            print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()))
             
             
             
@@ -126,7 +126,7 @@ class pvinversion():
                     rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.f0
         
         if self._verbose>1:
-            print 'Substract f-f0 from pv prior to inversion'
+            print('Substract f-f0 from pv prior to inversion')
 
         
 
@@ -141,7 +141,7 @@ class pvinversion():
         """
         
         if self._verbose>1:
-            print 'set RHS along boudaries for inversion '
+            print('set RHS along boudaries for inversion ')
 
         self.set_rhs_bdy_bottom(qg, PSI=PSI, RHO=RHO)
         self.set_rhs_bdy_top(qg, PSI=PSI, RHO=RHO)
@@ -202,7 +202,7 @@ class pvinversion():
 
                     
         else:
-            print qg.bdy_type['bottom']+" unknown bottom boundary condition"
+            print(qg.bdy_type['bottom']+" unknown bottom boundary condition")
             sys.exit()
                 
         return
@@ -258,7 +258,7 @@ class pvinversion():
                     rhs[i, j, k] = psi[i,j,k]
 
         else:
-            print qg.bdy_type['top']+" unknown top boundary condition"
+            print(qg.bdy_type['top']+" unknown top boundary condition")
             sys.exit()
 
 
@@ -352,7 +352,7 @@ class pvinversion():
                         rhs[i, j, k] = psi[i,j,k]
 
         if self._verbose>1:
-            print 'set RHS mask for inversion '
+            print('set RHS mask for inversion ')
 
 
     
@@ -363,7 +363,7 @@ class pvinversion():
         """
         
         if qg._verbose>0:
-            print '  ... assumes a uniform horizontal and vertical grid'
+            print('  ... assumes a uniform horizontal and vertical grid')
         
         #
         mx, my, mz = qg.da.getSizes()
@@ -409,7 +409,7 @@ class pvinversion():
                         elif qg.bdy_type['bottom']=='D':
                             L.setValueStencil(row, row, 1.0)
                         else:
-                            print "unknown bottom boundary condition"
+                            print('unknown bottom boundary condition')
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
@@ -425,7 +425,7 @@ class pvinversion():
                         elif qg.bdy_type['top']=='D':
                             L.setValueStencil(row, row, 1.0)
                         else:
-                            print "unknown top boundary condition"
+                            print('unknown top boundary condition')
                             sys.exit()
     
                     # points below and above the domain
@@ -459,7 +459,7 @@ class pvinversion():
         """
         
         if qg._verbose>0:
-            print '  ... assumes a curvilinear and/or vertically stretched grid'
+            print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
         mx, my, mz = qg.da.getSizes()
         #
@@ -520,7 +520,7 @@ class pvinversion():
                         elif qg.bdy_type['bottom']=='D' :
                             L.setValueStencil(row, row, 1.0)
                         else:
-                            print "unknown bottom boundary condition"
+                            print('unknown bottom boundary condition')
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
@@ -536,7 +536,7 @@ class pvinversion():
                         elif qg.bdy_type['top']=='D':
                             L.setValueStencil(row, row, 1.0)
                         else:
-                            print "unknown top boundary condition"
+                            print('unknown top boundary condition')
                             sys.exit()
     
                     # points below and above the domain

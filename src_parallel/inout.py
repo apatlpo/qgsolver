@@ -122,7 +122,7 @@ def read_nc_petsc(V, vname, filename, qg, fillmask=None):
     
         rootgrp.close()
     else:
-        print 'Error: read '+vname+': '+filename+' does not exist. Program will stop.'
+        print('Error: read '+vname+': '+filename+' does not exist. Program will stop.')
         sys.exit()    
     qg.comm.barrier()
 
@@ -149,14 +149,14 @@ def read_nc_petsc_2D(V, vname, filename, level, qg):
         if ndim==2:
             vread = rootgrp.variables[vname][jstart:jend,istart:iend]
         else:
-            print "error in read_nc_petsc_2D"
+            print('Error in read_nc_petsc_2D')
             sys.exit()
         for j in range(ys, ye):
             for i in range(xs, xe):
                 v[i, j, level] = vread[j-ys,i-xs]                  
         rootgrp.close()
     else:
-        print 'Error: read '+vname+': '+filename+' does not exist. Program will stop.'
+        print('Error: read '+vname+': '+filename+' does not exist. Program will stop.')
         sys.exit()         
                
 def read_nc(vnames, filename,qg):
@@ -184,7 +184,7 @@ def read_nc(vnames, filename,qg):
                 # elif name == 'zt' or name == 'zw':
                 #     V.append(rootgrp.variables[name][kstart:kend])
                 else:
-                    print 'error in read_nc: unknown variable '+name
+                    print('Error in read_nc: unknown variable '+name)
                     sys.exit()
         else:
             if vnames == 'N2':
@@ -194,7 +194,7 @@ def read_nc(vnames, filename,qg):
             # elif vnames == 'zt' or vnames == 'zw':
             #     V = rootgrp.variables[vnames][kstart:kend]
             else:
-                print 'error in read_nc: unknown variable '+vnames
+                print('error in read_nc: unknown variable '+vnames)
                 sys.exit()
     
         # close the netcdf file
@@ -202,7 +202,7 @@ def read_nc(vnames, filename,qg):
         
         return V
     else:
-        print 'Error: read '+vnames+': '+filename+' does not exist. Program will stop.'
+        print('Error: read '+vnames+': '+filename+' does not exist. Program will stop.')
         sys.exit()
 
 

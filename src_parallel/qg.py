@@ -59,8 +59,8 @@ class qg_model():
         
         # test whether tiling is consistent with dimensions
         if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
-            print 'Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
-                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y) 
+            print('Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y))
             sys.exit()
             
         # setup tiling
@@ -73,10 +73,10 @@ class qg_model():
         self.rank = self.comm.getRank()
         # print tiling information
         if self.rank is 0 and verbose>0:
-            print 'PETSc DMDA created'
-            print 'The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
-                    +str(self.da.proc_sizes) 
-            #print 'rank='+str(self.rank)+' ranges='+str(self.da.ranges)
+            print('PETSc DMDA created')
+            print('The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
+                    +str(self.da.proc_sizes))
+            #print('rank='+str(self.rank)+' ranges='+str(self.da.ranges))
 
 
         # print out grid information
@@ -87,7 +87,7 @@ class qg_model():
         self.grid._verbose=self._verbose
         
         if self._verbose and self.BoundaryType is 'periodic':
-            print 'Boundaries are periodic'
+            print('Boundaries are periodic')
 
         #
         # finalize grid/metric loading
@@ -103,15 +103,15 @@ class qg_model():
         #
         if self._verbose>0:
             # general information
-            print 'A QG model object is being created'
+            print('A QG model object is being created')
             # print out grid parameters
-            print self.grid
+            print(self.grid)
             # # print if a subdomain is considered
             # if self.kdown==0 or self.kup<self.grid.Nz-1:
-            #     print 'Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup)
+            #     print('Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
             # if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
-            #     print 'Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
-            #              %(self.istart, self.iend, self.jstart, self.jend)
+            #     print('Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+            #              %(self.istart, self.iend, self.jstart, self.jend))
 
 
         #
@@ -120,29 +120,29 @@ class qg_model():
         # N2 is at w points (cell faces), N2[k] is between q[k] and q[k+1]
         if f0N2_file is not None:
             if self._verbose:
-                print 'Reads N2 from '+f0N2_file
+                print('Reads N2 from '+f0N2_file)
             #
             self.N2 = read_nc('N2', f0N2_file, self)
         else:
             if self._verbose:
-                print 'Set N2 from user prescribed value = '+str(N2)+' 1/s^2'
+                print('Set N2 from user prescribed value = '+str(N2)+' 1/s^2')
             #
             self.N2 = N2*np.ones(self.grid.Nz)
 
         #
         if f0N2_file is not None:
             if self._verbose:
-                print 'Reads f0 from '+f0N2_file
+                print('Reads f0 from '+f0N2_file)
             #
             self.f0 = read_nc('f0', f0N2_file, self)
             #
             if self._verbose:
-                print 'Reads Coriolis parameter f from '+f0N2_file
+                print('Reads Coriolis parameter f from '+f0N2_file)
             self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
             self.f0 = f0
             if self._verbose:
-                print 'Sets f0 to %.3e' %f0
+                print('Sets f0 to %.3e' %f0)
                 
         #
         self._sparam = self.f0**2/self.N2
@@ -181,7 +181,7 @@ class qg_model():
         """
         if file_psi is not None:
             if self._verbose:
-                print 'Set psi from file '+file_psi+' ...'
+                print('Set psi from file '+file_psi+' ...')
             read_nc_petsc(self.PSI, 'psi', file_psi, self, fillmask=0.)
         elif analytical_psi:
             self.set_psi_analytically()
@@ -195,7 +195,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set psi analytically'
+            print('Set psi analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -207,7 +207,7 @@ class qg_model():
         #
         if file_q is not None:
             if self._verbose:
-                print 'Set q from file '+file_q+' ...'
+                print('Set q from file '+file_q+' ...')
             read_nc_petsc(self.Q, 'q', file_q, self, fillmask=0.)
         elif analytical_q:
             self.set_q_analytically()
@@ -221,7 +221,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set q analytically'
+            print('Set q analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -237,7 +237,7 @@ class qg_model():
         #
         if file_rho is not None:
             if self._verbose:
-                print 'Set rho from file '+file_rho+' ...'
+                print('Set rho from file '+file_rho+' ...')
             read_nc_petsc(self.RHO, 'rho', file_rho, self, fillmask=0.)
         elif analytical_rho:
             self.set_rho_analytically()
@@ -250,7 +250,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set rho analytically'
+            print('Set rho analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):

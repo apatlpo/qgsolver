@@ -28,7 +28,7 @@ class omegainv():
         self.L = qg.da.createMat()
         #
         if self._verbose>0:
-            print 'Operator L declared'
+            print('Operator L declared')
 
         # Fill in operator values
         if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
@@ -38,7 +38,7 @@ class omegainv():
 
         #
         if self._verbose>0:
-            print 'Operator L filled'
+            print('Operator L filled')
 
         # global vector for PV inversion
         self._RHS = qg.da.createGlobalVec()
@@ -72,7 +72,7 @@ class omegainv():
         self.ksp.setFromOptions()
         
         if self._verbose>0:
-            print 'PV inversion is set up'
+            print('PV inversion is set up')
             
             
 
@@ -103,7 +103,7 @@ class omegainv():
         # write_nc([self._RHS], ['Lpsi'], 'data/lpsiout.nc', qg)
 
         if self._verbose>1:
-            print 'omega equation done'
+            print('omega equation done')
             
 
     def set_uv_from_psi(self, qg, PSI=None):
@@ -370,7 +370,7 @@ class omegainv():
         """
         
         if self._verbose>0:
-            print 'set RHS along boudaries for inversion '
+            print('set RHS along boudaries for inversion ')
 
         self.set_rhs_bdy_bottom(qg)
         self.set_rhs_bdy_top(qg)
@@ -430,7 +430,7 @@ class omegainv():
 
                     
         else:
-            print qg.bdy_type['bottom']+" unknown bottom boundary condition"
+            print(qg.bdy_type['bottom']+' unknown bottom boundary condition')
             sys.exit()
                 
         return
@@ -486,7 +486,7 @@ class omegainv():
                     rhs[i, j, k] = 0.
 
         else:
-            print qg.bdy_type['top']+" unknown top boundary condition"
+            print(qg.bdy_type['top']+' unknown top boundary condition')
             sys.exit()
 
 
@@ -580,7 +580,7 @@ class omegainv():
                         rhs[i, j, k] = 0.
 
         if self._verbose>0:
-            print 'set RHS mask for inversion '
+            print('set RHS mask for inversion ')
 
 
     
@@ -591,7 +591,7 @@ class omegainv():
         """
         
         if qg._verbose>0:
-            print '  ... assumes a uniform horizontal and vertical grid'
+            print('  ... assumes a uniform horizontal and vertical grid')
         
         #
         mx, my, mz = qg.da.getSizes()
@@ -631,7 +631,7 @@ class omegainv():
                         elif qg.bdy_type['bottom']=='D':
                             L.setValueStencil(row, row, 0.0)
                         else:
-                            print "unknown bottom boundary condition"
+                            print('unknown bottom boundary condition')
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
@@ -641,7 +641,7 @@ class omegainv():
                         elif qg.bdy_type['top']=='D':
                             L.setValueStencil(row, row, 0.0)
                         else:
-                            print "unknown top boundary condition"
+                            print('unknown top boundary condition')
                             sys.exit()
     
                     # points below and above the domain
@@ -675,7 +675,7 @@ class omegainv():
         """
         
         if qg._verbose>0:
-            print '  ... assumes a curvilinear and/or vertically stretched grid'
+            print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
         mx, my, mz = qg.da.getSizes()
         #
@@ -731,7 +731,7 @@ class omegainv():
                         elif qg.bdy_type['bottom']=='D' :
                             L.setValueStencil(row, row, 1.0)        
                         else:
-                            print "unknown bottom boundary condition"
+                            print('unknown bottom boundary condition')
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
@@ -741,7 +741,7 @@ class omegainv():
                         elif qg.bdy_type['top']=='D':
                             L.setValueStencil(row, row, 1.0)      
                         else:
-                            print "unknown top boundary condition"
+                            print('unknown top boundary condition')
                             sys.exit()
     
                     # points below and above the domain

@@ -31,7 +31,7 @@ class time_stepper():
         self.dt = dt
         self._t0 = t0
         self.t = t0
-        #print 't = %e d' % (self.t/86400.)
+        #print('t = %e d' % (self.t/86400.))
         
         ### 4 steps explicit RungeKutta parameters
         self._a = [1./6., 1./3., 1./3., 1./6.]
@@ -43,14 +43,14 @@ class time_stepper():
         self._dRHS = qg.da.createGlobalVec()
         
         if self._verbose>0:
-            print 'PV time stepper is set up'
+            print('PV time stepper is set up')
 
 
     def go(self, qg, nt):
         """ Carry out the time stepping
         """
         if self._verbose>0:
-            print '<--- Start time stepping '
+            print('<--- Start time stepping ')
         _tstep=0
         # copy upper and lower density into Q
         self.copy_topdown_rho_to_q(qg)
@@ -77,7 +77,7 @@ class time_stepper():
             # reset q at boundaries
             self.set_rhs_bdy(qg)
             if self._verbose>0:
-                print 't = %f d' % (self.t/86400.)
+                print('t = %f d' % (self.t/86400.))
         # need to invert PV one final time in order to get right PSI
         qg.comm.barrier()
         self.update_topdown_rho(qg)
@@ -85,7 +85,7 @@ class time_stepper():
         # reset q
         self.reset_topdown_q(qg)
         if self._verbose>0:
-            print 'Time stepping done --->'
+            print('Time stepping done --->')
 
     
     def _computeRHS(self,qg):
