@@ -14,7 +14,7 @@ Download and install with:
 ```csh
 git clone https://github.com/apatlpo/qgsolver.git
 cd qgsolver
-python setup.py
+python setup.py build_ext --inplace
 ```
 
 ## libraries required
@@ -26,7 +26,7 @@ qgsolver requires petsc4py (and thus petsc) and netcdf4
 Download Miniconda3 from the [conda website](https://conda.io/miniconda.html)
 ```csh
 bash Miniconda3-latest-Linux-x86_64.sh
-(specify .miniconda2 and not miniconda2 as target dir for conda)
+(specify .miniconda3 and not miniconda3 as target dir for conda)
 bash
 conda update conda
 conda create --name petsc python

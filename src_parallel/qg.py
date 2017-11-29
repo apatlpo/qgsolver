@@ -478,11 +478,10 @@ class qg_model():
                         Vol[i,j,k] = self.grid.dzt[k]*D[i,j,kdxt]*D[i,j,kdyt]
                         lKE[i,j,k] = 0.5 * (u**2 + v**2) *Vol[i,j,k]
 
-        return    
-
-
+        return
+	
     def set_identity(self):
-    	ONE = self.da.createGlobalVec()
+        ONE = self.da.createGlobalVec()
         one = self.da.getVecArray(ONE)
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         one[:] = 1.

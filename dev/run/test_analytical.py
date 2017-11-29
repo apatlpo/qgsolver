@@ -11,7 +11,7 @@ import time
 import sys
 
 from qgsolver.qg import qg_model
-from qgsolver.io import write_nc
+from qgsolver.inout import write_nc
 
 #
 #==================== Uniform case ============================================
@@ -85,8 +85,8 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg)
         
         if qg._verbose>0:
-            print '----------------------------------------------------'
-            print 'Elapsed time for all ',str(time.time() - cur_time)
+            print('----------------------------------------------------')
+            print('Elapsed time for all ',str(time.time() - cur_time))
         
         #
         test=-1
@@ -116,7 +116,7 @@ def main(ping_mpi_cfg=False):
     if ping_mpi_cfg:
         return qg[0], qg[1]
     elif qg._verbose:
-        print 'Test done \n'
+        print('Test done \n')
 
 
 if __name__ == "__main__":
