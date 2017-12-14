@@ -20,7 +20,7 @@ class grid(object):
     #
     # object init
     #
-    def __init__(self, hgrid_in = None, vgrid_in = None, vdom_in={} , hdom_in={}, verbose=1):
+    def __init__(self, hgrid_in, vgrid_in, vdom_in, hdom_in, mask, verbose=1):
 
         self._verbose = verbose
         
@@ -40,6 +40,8 @@ class grid(object):
             # curvilinear grid
             #print('!!! need to determine Nx and Ny from files')
             self._build_hgrid_curvilinear(hgrid_in)
+        # mask
+        self.mask=mask
 
         #   
         # vertical grid
@@ -225,17 +227,6 @@ class grid(object):
  
         rootgrp.close()
 
-
-        # Initialize dxu,dyu,dyv,dyv
-        # v[xs:xe-1,:, self._k_dxu] = 0.5*(v[xs:xe-1,:, self._k_dxt]+v[xs+1:xe,:, self._k_dxt])
-        # v[xe-1,:, self._k_dxu] = v[xe-2,:, self._k_dxu]
-        # v[:,:, self._k_dyu] = v[:,:, self._k_dyt]
-
-        # v[:,:, self._k_dxv] = v[:,:, self._k_dxt]
-        # v[:,ys:ye-1, self._k_dyv] = 0.5*(v[:,ys:ye-1, self._k_dyt]+v[:,ys+1:ye, self._k_dyt])
-        # v[:,ye-1, self._k_dyv] = v[:,ye-2, self._k_dyv]
-        
-
         if self._flag_vgrid_uniform:
             self.zt = np.ones(self.Nz)
             self.zw = np.ones(self.Nz)
@@ -259,9 +250,6 @@ class grid(object):
                 sys.exit()   
 
             rootgrp.close()
-
-        # self.dzt = np.diff(self.zw)
-        # self.dzw = np.diff(self.zt)
 
         comm.barrier()
         pass

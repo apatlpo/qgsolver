@@ -27,15 +27,15 @@ class qg_model():
     def __init__(self,
                  ncores_x=None, ncores_y=None,
                  hgrid = None, vgrid=None,
-                 vdom={}, hdom={},
+                 vdom={}, hdom={}, mask=False,
                  bdy_type_in={},
                  N2 = 1e-3, f0 = 7e-5,
                  f0N2_file = None,
                  dt = None, K = 1.e2,
                  verbose = 1,
                  substract_fprime=False,
-		 flag_pvinv=True,
-		 flag_omega=False
+		         flag_pvinv=True,
+		         flag_omega=False
                  ):
         """ QG object creation
         Parameters:
@@ -46,7 +46,7 @@ class qg_model():
         #
         # Build grid object
         #
-        self.grid = grid(hgrid, vgrid, vdom, hdom, verbose=verbose)
+        self.grid = grid(hgrid, vgrid, vdom, hdom, mask, verbose=verbose)
         if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):
             #BoundaryType = PETSc.DM.
             self.BoundaryType = 'periodic'
@@ -96,9 +96,10 @@ class qg_model():
         # for lon/lat grids should load metric terms over tiles
         if not self.grid._flag_hgrid_uniform or not self.grid._flag_vgrid_uniform:
             self.grid.load_metric_terms(self.da, self.comm)
-        
-        # initialize mask
-        self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm)
+
+        if self.grid.mask:
+            # initialize mask
+            self.grid.load_mask(self.grid.hgrid_file, self.da, self.comm)
 
         #
         if self._verbose>0:
@@ -190,7 +191,6 @@ class qg_model():
         """ Set psi analytically
         """
         psi = self.da.getVecArray(self.PSI)
-        psi_surf = self.da.getVecArray(self.PSI_SURF)
         mx, my, mz = self.da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
@@ -270,10 +270,7 @@ class qg_model():
         """ Time step wrapper
         """
         self.tstepper.go(self, nt)
-            
-            
-            
-            
+
     def update_rho(self, PSI=None, RHO=None):
         """ update rho from psi
         """
@@ -314,7 +311,6 @@ class qg_model():
                 rho[i,j,k] = -self.rho0*self.f0/self.g * (psi[i,j,k]-psi[i,j,k-1])*idzw[k-1]
         return
 
-    
     def get_uv(self, PSI=None):
         """ Compute horizontal velocities
         Compute U & V from Psi
@@ -389,7 +385,6 @@ class qg_model():
         self._U.destroy()
         return CFL
 
-
     def compute_dudx(self, PSI=None):
         """
         Compute abs(u*dt/dx)
@@ -406,7 +401,6 @@ class qg_model():
     
         for k in range(zs,ze):
             u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
-
 
     def compute_KE(self, PSI=None):
         """ 

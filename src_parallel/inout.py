@@ -26,8 +26,9 @@ def write_nc(V, vname, filename, qg, create=True):
     Nv=len(vname)
     # process rank
     rank = qg.rank
-    # get global mask for rank 0 (None for other proc)
-    global_D = get_global(qg.grid.D, qg)
+    if qg.grid.mask:
+        # get global mask for rank 0 (None for other proc)
+        global_D = get_global(qg.grid.D, qg)
 
     if rank == 0 and create:
 
@@ -48,9 +49,10 @@ def write_nc(V, vname, filename, qg, create=True):
         nc_z = rootgrp.createVariable('z',dtype,('z'))
         #x,y,z=qg.grid.get_xyz()
         nc_x[:], nc_y[:], nc_z[:] = qg.grid.get_xyz()
-        # 2D mask
-        nc_mask = rootgrp.createVariable('mask',dtype,('y','x'))
-        nc_mask[:]= global_D[qg.grid._k_mask,:,:]
+        if qg.grid.mask:
+            # 2D mask
+            nc_mask = rootgrp.createVariable('mask',dtype,('y','x'))
+            nc_mask[:]= global_D[qg.grid._k_mask,:,:]
         # 3D variables
         nc_V=[]
         for name in vname:
@@ -66,7 +68,7 @@ def write_nc(V, vname, filename, qg, create=True):
             nc_V.append(rootgrp.variables[name])
         
     # loop around variables now and store them
-    for i in xrange(Nv):
+    for i in range(Nv):
         #  get global variable for rank 0 (None for other proc) 
         vglobal = get_global(V[i], qg)
         if rank == 0:

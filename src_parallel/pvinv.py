@@ -93,8 +93,10 @@ class pvinversion():
             self.substract_fprime_from_rhs(qg)
         # fix boundaries
         self.set_rhs_bdy(qg, PSI=PSI, RHO=RHO)
-        # mask rhs 
-        self.set_rhs_mask(qg)
+        # apply mask
+        if qg.grid.mask:
+            # mask rhs
+            self.set_rhs_mask(qg)
         # store RHS in netcdf file rhs.nc
         #write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
         # qg.PSI.set(0)

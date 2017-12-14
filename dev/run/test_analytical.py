@@ -10,8 +10,10 @@ PV inversion of an analytical PV distribution
 import time
 import sys
 
+sys.path.append('../../')
 from qgsolver.qg import qg_model
 from qgsolver.inout import write_nc
+
 
 #
 #==================== Uniform case ============================================
@@ -37,15 +39,15 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     #
     
     #
-    #ncores_x=8; ncores_y=2
-    #hgrid = {'Nx':256, 'Ny':256}
-    #vgrid = {'Nz':50}           
+    ncores_x=2; ncores_y=2
+    hgrid = {'Nx':256, 'Ny':256}
+    vgrid = {'Nz':5}
     
     # :
-    ncores_x=16; ncores_y=16
-    hgrid = {'Nx':512, 'Ny':512}
+    #ncores_x=16; ncores_y=16
+    #hgrid = {'Nx':512, 'Ny':512}
     #vgrid = {'Nz':100}       
-    vgrid = {'Nz':200}
+    #vgrid = {'Nz':200}
     
     # requires 16x8:
     #ncores_x=16; ncores_y=8
@@ -89,7 +91,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
             print('Elapsed time for all ',str(time.time() - cur_time))
         
         #
-        test=-1
+        test=1
         if test==0:
             # one time step and store
             qg.tstep(1)
@@ -97,10 +99,10 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         elif test==1:
             # write/read/write
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=True)
-            qg.set_q(file_q='data/output.nc')
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            #qg.set_q(file_q='data/output.nc')
             qg.tstep(1)
-            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output1.nc', qg, create=False)
+            write_nc([qg.PSI, qg.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
         elif test==2:
             while qg.tstepper.t/86400. < 200 :
                 qg.tstep(1)
