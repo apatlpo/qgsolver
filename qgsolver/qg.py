@@ -48,7 +48,6 @@ class qg_model():
         #
         self.grid = grid(hgrid, vgrid, vdom, hdom, mask, verbose=verbose)
         if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):
-            #BoundaryType = PETSc.DM.
             self.BoundaryType = 'periodic'
         else:
             self.BoundaryType = None
@@ -59,7 +58,7 @@ class qg_model():
         
         # test whether tiling is consistent with dimensions
         if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
-            print('Tiling does not match dimensionts: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+            print('MPI tiling does not match dimensions: Nx/ncores_x=%f, Ny/ncores_y=%f' \
                     %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y))
             sys.exit()
             
@@ -76,18 +75,17 @@ class qg_model():
             print('PETSc DMDA created')
             print('The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
                     +str(self.da.proc_sizes))
-            #print('rank='+str(self.rank)+' ranges='+str(self.da.ranges))
+            if verbose>1:
+                print('rank='+str(self.rank)+' ranges='+str(self.da.ranges))
 
 
-        # print out grid information
+        # set verbose variable for log and debug
         if self.rank is 0 and verbose>0:
             self._verbose=verbose
         else:
             self._verbose=0
         self.grid._verbose=self._verbose
         
-        if self._verbose and self.BoundaryType is 'periodic':
-            print('Boundaries are periodic')
 
         #
         # finalize grid/metric loading
@@ -107,6 +105,9 @@ class qg_model():
             print('A QG model object is being created')
             # print out grid parameters
             print(self.grid)
+            # periodicity
+            if self._verbose and self.BoundaryType is 'periodic':
+                print('Boundaries are periodic')
             # # print if a subdomain is considered
             # if self.kdown==0 or self.kup<self.grid.Nz-1:
             #     print('Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
@@ -121,30 +122,19 @@ class qg_model():
         # N2 is at w points (cell faces), N2[k] is between q[k] and q[k+1]
         if f0N2_file is not None:
             if self._verbose:
-                print('Reads N2 from '+f0N2_file)
+                print('Reads N2, f0 and f from '+f0N2_file)
             #
             self.N2 = read_nc('N2', f0N2_file, self)
+            self.f0 = read_nc('f0', f0N2_file, self)
+            self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
             if self._verbose:
                 print('Set N2 from user prescribed value = '+str(N2)+' 1/s^2')
+                print('Sets f0 to %.3e' % f0)
             #
             self.N2 = N2*np.ones(self.grid.Nz)
-
-        #
-        if f0N2_file is not None:
-            if self._verbose:
-                print('Reads f0 from '+f0N2_file)
-            #
-            self.f0 = read_nc('f0', f0N2_file, self)
-            #
-            if self._verbose:
-                print('Reads Coriolis parameter f from '+f0N2_file)
-            self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
-        else:
             self.f0 = f0
-            if self._verbose:
-                print('Sets f0 to %.3e' %f0)
-                
+
         #
         self._sparam = self.f0**2/self.N2
         self.K = K

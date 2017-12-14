@@ -329,7 +329,7 @@ class grid(object):
         # store metric file but metric terms are loaded later
         self.vgrid_file = vgrid_file
         # open netcdf file
-        rootgrp = Dataset(vgrid_file, 'r')
+        #rootgrp = Dataset(vgrid_file, 'r')
 
 
 
@@ -343,8 +343,8 @@ class grid(object):
         if self._flag_hgrid_uniform:
             out = 'The horizontal grid is uniform with:\n' \
                 + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
-                + '  Lx = %e km , Ly = %e km \n' % (self.Lx/1e3, self.Ly/1e3) \
-                + '  dx = %e , dy = %e \n' % (self.dx, self.dy)
+                + '  Lx = %.0f km , Ly = %.0f km \n' % (self.Lx/1e3, self.Ly/1e3) \
+                + '  dx = %.0f m, dy = %.0f m\n' % (self.dx, self.dy)
         else:
             # get stats about metric terms
             # not trivial to implement as min/max needs to be taken across tiles ...
@@ -356,14 +356,14 @@ class grid(object):
         if self._flag_vgrid_uniform:
             out += 'The vertical grid is uniform with:\n' \
                 + '  Nz = %i' % (self.Nz) \
-                + ' , H = %e m' % (self.H) \
-                + ' , dz = %e \n' % (self.dz)
+                + ' , H = %.0f m' % (self.H) \
+                + ' , dz = %.0f m \n' % (self.dz)
         else:
             out += 'The vertical grid is stretched with:\n' \
                 + '  Nz = %i' % (self.Nz) \
-                + '  min(dzw) = %e , mean(dzw) = %e, max(dzw) = %e \n' \
+                + '  min(dzw) = %.1f m, mean(dzw) = %.1f m, max(dzw) = %.1f m\n' \
                     % (np.min(self.dzw), np.mean(self.dzw), np.max(self.dzw)) \
-                + '  min(dzt) = %e , mean(dzt) = %e, max(dzt) = %e \n' \
+                + '  min(dzt) = %.1f m, mean(dzt) = %.1f m, max(dzt) = %.1f m\n' \
                     % (np.min(self.dzt), np.mean(self.dzt), np.max(self.dzt))
 
         if self._flag_hdom:
