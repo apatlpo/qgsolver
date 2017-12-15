@@ -169,7 +169,7 @@ class grid(object):
         #self.Nx0, self.Ny0 = read_hgrid_dimensions(self.hgrid_file)
     
     
-    def load_metric_terms(self, da, comm):
+    def load_metric_terms(self, da):
         
         # create a 3D vector containing metric terms
         self.D = da.createGlobalVec()
@@ -252,11 +252,12 @@ class grid(object):
                 sys.exit()   
 
             rootgrp.close()
-
+        #
+        comm = da.getComm()
         comm.barrier()
         pass
     
-    def load_coriolis_parameter(self, coriolis_file, da, comm):
+    def load_coriolis_parameter(self, coriolis_file, da):
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension 
@@ -266,16 +267,16 @@ class grid(object):
         v[:, :, self._k_f] = np.transpose(rootgrp.variables['f'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
         rootgrp.close()
         #
+        comm=da.getComm()
         comm.barrier()
         pass
      
-    def load_mask(self, mask_file, da, comm, mask3D=False):
+    def load_mask(self, mask_file, da, mask3D=False):
         """
         load reference mask from metrics file
         input:
         - mask_file : netcdf file containning the mask
         - da : instance of data management object
-        - comm : The communicator for the DMDA object da
         - mask3D: flag for 3D masks (default is False)
         output:
         - grid.D[grid._k_mask,:,:] : contains the mask
@@ -320,6 +321,7 @@ class grid(object):
                 if self._verbose>0:
                     print('    The mask is 3D but no data was found')
         #
+        comm=da.getComm()
         comm.barrier()
         pass   
 

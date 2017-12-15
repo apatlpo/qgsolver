@@ -190,7 +190,7 @@ def read_nc(vnames, filename,qg):
                 # elif name == 'zt' or name == 'zw':
                 #     V.append(rootgrp.variables[name][kstart:kend])
                 else:
-                    print('Error in read_nc: unknown variable '+name)
+                    print('!Error in read_nc: unknown variable '+name)
                     sys.exit()
         else:
             if vnames == 'N2':
@@ -208,7 +208,7 @@ def read_nc(vnames, filename,qg):
         
         return V
     else:
-        print('Error: read '+vnames+': '+filename+' does not exist. Program will stop.')
+        print('!Error: read '+vnames+': '+filename+' does not exist. Program will stop.')
         sys.exit()
 
 
