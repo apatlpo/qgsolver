@@ -21,7 +21,8 @@ from .inout import write_nc
 
 
 class qg_model():
-    """ QG object
+    """
+    QG model
     """
 
 
@@ -39,12 +40,24 @@ class qg_model():
                  dt = None, K = 1.e2,
                  verbose = 1,
                  substract_fprime=False,
-		         flag_pvinv=True,
-		         flag_omega=False
+                 flag_pvinv=True,
+                 flag_omega=False
                  ):
-        """ QG object creation
-        Parameters:
         """
+        QG model initializer
+
+        Parameters
+        ----------
+        ncores_x : int
+            number of MPI tilings in x direction
+        ncores_y : int
+            number of MPI tilings in y direction
+        hgrid : dict or str
+            provides horizontal grid inputs
+
+        """
+
+        # useful parameters
         self.g = 9.81
         self.rho0 = 1000.
 
