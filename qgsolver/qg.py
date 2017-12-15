@@ -180,6 +180,15 @@ class qg_model():
         self.comm = self.da.getComm()
         self.rank = self.comm.getRank()
 
+#
+# ==================== Wrappers to set values of critical variables ===================================
+#
+
+    def __getitem__(self,key):
+        if hasattr(self.state,key):
+            return getattr(self.state,key)
+        else:
+            print(key+' not in qg.state')
 
 #
 #==================== Wrappers to set values of critical variables ===================================

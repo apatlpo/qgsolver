@@ -345,37 +345,37 @@ class grid(object):
     def __str__(self):
         
         if self._flag_hgrid_uniform:
-            out = '    The horizontal grid is uniform with:\n' \
-                + '  Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
-                + '  Lx = %.0f km , Ly = %.0f km \n' % (self.Lx/1e3, self.Ly/1e3) \
-                + '  dx = %.0f m, dy = %.0f m\n' % (self.dx, self.dy)
+            out = '  The horizontal grid is uniform with:\n' \
+                + '    Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
+                + '    Lx = %.0f km , Ly = %.0f km \n' % (self.Lx/1e3, self.Ly/1e3) \
+                + '    dx = %.0f m, dy = %.0f m\n' % (self.dx, self.dy)
         else:
             # get stats about metric terms
             # not trivial to implement as min/max needs to be taken across tiles ...
-            out = '    The horizontal grid is curvlinear with:\n' \
-                + '      Nx = %i , Ny = %i\n' % (self.Nx, self.Ny) 
+            out = '  The horizontal grid is curvlinear with:\n' \
+                + '    Nx = %i , Ny = %i\n' % (self.Nx, self.Ny)
                 #+ '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
                 #+ '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
                 
         if self._flag_vgrid_uniform:
-            out += '    The vertical grid is uniform with:\n' \
-                + '  Nz = %i' % (self.Nz) \
-                + ' , H = %.0f m' % (self.H) \
-                + ' , dz = %.0f m \n' % (self.dz)
+            out += '  The vertical grid is uniform with:\n' \
+                +  '    Nz = %i' % (self.Nz) \
+                +  ' , H = %.0f m' % (self.H) \
+                +  ' , dz = %.0f m' % (self.dz)
         else:
-            out += '    The vertical grid is stretched with:\n' \
-                + '  Nz = %i \n' % (self.Nz) \
-                + '  min(dzw) = %.1f m, mean(dzw) = %.1f m, max(dzw) = %.1f m\n' \
+            out += '  The vertical grid is stretched with:\n' \
+                +  '    Nz = %i \n' % (self.Nz) \
+                +  '    min(dzw) = %.1f m, mean(dzw) = %.1f m, max(dzw) = %.1f m\n' \
                     % (np.min(self.dzw), np.mean(self.dzw), np.max(self.dzw)) \
-                + '  min(dzt) = %.1f m, mean(dzt) = %.1f m, max(dzt) = %.1f m\n' \
+                +  '    min(dzt) = %.1f m, mean(dzt) = %.1f m, max(dzt) = %.1f m' \
                     % (np.min(self.dzt), np.mean(self.dzt), np.max(self.dzt))
 
         if self._flag_hdom:
-            print('\n    Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
+            print('\n  Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
                          %(self.istart, self.iend, self.jstart, self.jend))
                          
         if self._flag_vdom:
-            print('\n    Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
+            print('\n  Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
 
         return out
       

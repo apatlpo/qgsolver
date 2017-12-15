@@ -66,7 +66,7 @@ def uniform_grid_runs():
     #
     qg.set_q()
     qg.invert_pv()
-    write_nc([qg.state.PSI, qg.state.Q], ['psi', 'q'], 'data/output.nc', qg)
+    write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg)
 
     # load background PV
 
@@ -75,14 +75,14 @@ def uniform_grid_runs():
     if test==0:
         # one time step and store
         qg.tstep(1)
-        write_nc([qg.state.PSI, qg.state.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
     elif test==1:
         # write/read/write
         qg.tstep(1)
-        write_nc([qg.state.PSI, qg.state.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
         #qg.set_q(file_q='data/output.nc')
         qg.tstep(1)
-        write_nc([qg.state.PSI, qg.state.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
     elif test==2:
         while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
