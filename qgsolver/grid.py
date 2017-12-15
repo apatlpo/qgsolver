@@ -301,7 +301,7 @@ class grid(object):
                 # no mask found, only sea
                 v[:, :, self._k_mask] = 1.   
                 if self._verbose>0:
-                    print '    The mask is 2D but no data was found'
+                    print('    The mask is 2D but no data was found')
         else:
             try:
                 # open the netcdf file and read the mask

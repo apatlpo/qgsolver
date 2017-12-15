@@ -262,7 +262,7 @@ class qg_model():
         #
         if file_w is not None:
             if self._verbose:
-                print 'Set w from file '+file_w+' ...'
+                print('Set w from file '+file_w+' ...')
             read_nc_petsc(self.W, 'w', file_w, self, fillmask=0.)
         elif analytical_w:
             self.set_w_analytically()
@@ -275,7 +275,7 @@ class qg_model():
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
         #
         if self._verbose:
-            print 'Set w analytically to zero'
+            print('Set w analytically to zero')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
