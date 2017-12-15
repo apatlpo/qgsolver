@@ -23,7 +23,12 @@ from .inout import write_nc
 class qg_model():
     """ QG object
     """
-    
+
+
+#
+#==================== Object init ============================================
+#
+
     def __init__(self,
                  ncores_x=None, ncores_y=None,
                  hgrid = None, vgrid=None,
@@ -58,7 +63,7 @@ class qg_model():
         
         # test whether tiling is consistent with dimensions
         if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
-            print('MPI tiling does not match dimensions: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+            print('!Error: MPI tiling does not match dimensions: Nx/ncores_x=%f, Ny/ncores_y=%f' \
                     %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y))
             sys.exit()
             
@@ -72,12 +77,12 @@ class qg_model():
         self.rank = self.comm.getRank()
         # print tiling information
         if self.rank is 0 and verbose>0:
-            print('PETSc DMDA created')
-            print('The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
+            print('A QG model object is being created')
+            print('  PETSc DMDA created')
+            print('  The 3D grid is tiled according to (nproc_x, nproc_y, nproc_z) : '\
                     +str(self.da.proc_sizes))
             if verbose>1:
                 print('rank='+str(self.rank)+' ranges='+str(self.da.ranges))
-
 
         # set verbose variable for log and debug
         if self.rank is 0 and verbose>0:
@@ -85,7 +90,6 @@ class qg_model():
         else:
             self._verbose=0
         self.grid._verbose=self._verbose
-        
 
         #
         # finalize grid/metric loading
@@ -101,8 +105,6 @@ class qg_model():
 
         #
         if self._verbose>0:
-            # general information
-            print('A QG model object is being created')
             # print out grid parameters
             print(self.grid)
             # periodicity
@@ -121,16 +123,16 @@ class qg_model():
         #
         # N2 is at w points (cell faces), N2[k] is between q[k] and q[k+1]
         if f0N2_file is not None:
-            if self._verbose:
-                print('Reads N2, f0 and f from '+f0N2_file)
+            if self._verbose>0:
+                print('  Reads N2, f0 and f from '+f0N2_file)
             #
             self.N2 = read_nc('N2', f0N2_file, self)
             self.f0 = read_nc('f0', f0N2_file, self)
             self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
         else:
-            if self._verbose:
-                print('Set N2 from user prescribed value = '+str(N2)+' 1/s^2')
-                print('Sets f0 to %.3e' % f0)
+            if self._verbose>0:
+                print('  Set N2 from user prescribed value = '+str(N2)+' 1/s^2')
+                print('  Sets f0 to %.3e' % f0)
             #
             self.N2 = N2*np.ones(self.grid.Nz)
             self.f0 = f0
@@ -159,12 +161,19 @@ class qg_model():
 
         # initiate omega inversion
         if flag_omega:
+            self.W = self.da.createGlobalVec()
             self.omegainv = omegainv(self)
 
         # initiate time stepper
         if dt is not None:
             self.tstepper = time_stepper(self, dt)
 
+
+
+
+#
+#==================== Set values of critical variables ============================================
+#
 
     def set_psi(self, analytical_psi=True, file_psi=None):
         """
@@ -245,7 +254,39 @@ class qg_model():
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rho[i, j, k] = 0.
+                    
 
+    def set_w(self, analytical_w=True, file_w=None):
+        """ Set w to a given value
+        """
+        #
+        if file_w is not None:
+            if self._verbose:
+                print 'Set w from file '+file_w+' ...'
+            read_nc_petsc(self.W, 'w', file_w, self, fillmask=0.)
+        elif analytical_w:
+            self.set_w_analytically()
+
+    def set_w_analytically(self):
+        """ Set w analytically
+        """
+        w = self.da.getVecArray(self.W)
+        mx, my, mz = self.da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
+        #
+        if self._verbose:
+            print 'Set w analytically to zero'
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    w[i, j, k] = 0.
+
+
+                
+#
+#==================== useful wrappers ============================================
+#
+                 
     def invert_pv(self):
         """ wrapper around solver solve method
         """
@@ -261,6 +302,10 @@ class qg_model():
         """
         self.tstepper.go(self, nt)
 
+#
+#==================== utils ============================================
+#
+            
     def update_rho(self, PSI=None, RHO=None):
         """ update rho from psi
         """

@@ -28,7 +28,8 @@ class pvinversion():
         self.L = qg.da.createMat()
         #
         if self._verbose>0:
-            print('Operator L declared')
+            print('A PV inversion object is being created')
+            print('  Operator L declared')
 
         # Fill in operator values
         if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
@@ -38,7 +39,7 @@ class pvinversion():
 
         #
         if self._verbose>0:
-            print('Operator L filled')
+            print('  Operator L filled')
 
         # global vector for PV inversion
         self._RHS = qg.da.createGlobalVec()
@@ -72,8 +73,8 @@ class pvinversion():
         self.ksp.setFromOptions()
         
         if self._verbose>0:
-            print('PV inversion is set up')
-            
+            print('  PV inversion is set up')
+
             
 
     def solve(self, qg, PSI=None, RHO=None):
@@ -128,7 +129,7 @@ class pvinversion():
                     rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.f0
         
         if self._verbose>1:
-            print('Substract f-f0 from pv prior to inversion')
+            print('  Substract f-f0 from pv prior to inversion')
 
         
 
@@ -143,7 +144,7 @@ class pvinversion():
         """
         
         if self._verbose>1:
-            print('set RHS along boudaries for inversion ')
+            print('  Set RHS along boudaries for inversion ')
 
         self.set_rhs_bdy_bottom(qg, PSI=PSI, RHO=RHO)
         self.set_rhs_bdy_top(qg, PSI=PSI, RHO=RHO)
@@ -258,7 +259,6 @@ class pvinversion():
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = psi[i,j,k]
-
         else:
             print(qg.bdy_type['top']+" unknown top boundary condition")
             sys.exit()
@@ -354,10 +354,9 @@ class pvinversion():
                         rhs[i, j, k] = psi[i,j,k]
 
         if self._verbose>1:
-            print('set RHS mask for inversion ')
+            print('  Set RHS mask for inversion ')
 
 
-    
     
     def _set_L(self,L, qg):
         """ Builds the laplacian operator along with boundary conditions
