@@ -4,6 +4,7 @@
 import sys
 
 from .grid import *
+from .state import *
 from .pvinv import *
 from .omegainv import *
 from .timestepper import *
@@ -53,7 +54,17 @@ class qg_model():
         ncores_y : int
             number of MPI tilings in y direction
         hgrid : dict or str
-            provides horizontal grid inputs
+            defines horizontal grid choice
+        vgrid : dict or str
+            defines vertical grid choice
+        bdy_type_in : dict
+            may be used to turn on periodic boundary conditions {'periodic'}
+        N2 : float
+            Brunt Vaisala frequency
+        f0 : float
+            Coriolis frequency
+        f0N2_file : str
+            netcdf file containing N2 and f0
 
         """
 
@@ -65,29 +76,23 @@ class qg_model():
         # Build grid object
         #
         self.grid = grid(hgrid, vgrid, vdom, hdom, mask, verbose=verbose)
+
+        # set boundary conditions
         if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):
             self.BoundaryType = 'periodic'
         else:
             self.BoundaryType = None
+        # default top and bottom boudary condition = 'N' pour Neumann.
+        # Other possibility 'D' for Direchlet
+        self.bdy_type = {'top':'N','bottom':'N'}
+        self.bdy_type.update(bdy_type_in)
+
 
         #
         # init petsc
         #
-        
-        # test whether tiling is consistent with dimensions
-        if self.grid.Nx%ncores_x!=0 or self.grid.Ny%ncores_y!=0:
-            print('!Error: MPI tiling does not match dimensions: Nx/ncores_x=%f, Ny/ncores_y=%f' \
-                    %(float(self.grid.Nx)/ncores_x, float(self.grid.Ny)/ncores_y))
-            sys.exit()
-            
-        # setup tiling
-        self.da = PETSc.DMDA().create(sizes = [self.grid.Nx, self.grid.Ny, self.grid.Nz],
-                                      proc_sizes = [ncores_x,ncores_y,1],
-                                      stencil_width = 2, boundary_type=self.BoundaryType)
-        # http://lists.mcs.anl.gov/pipermail/petsc-dev/2016-April/018889.html
+        self._init_petsc(ncores_x,ncores_y)
 
-        self.comm = self.da.getComm()
-        self.rank = self.comm.getRank()
         # print tiling information
         if self.rank is 0 and verbose>0:
             print('A QG model object is being created')
@@ -123,50 +128,12 @@ class qg_model():
             # periodicity
             if self._verbose and self.BoundaryType is 'periodic':
                 print('Boundaries are periodic')
-            # # print if a subdomain is considered
-            # if self.kdown==0 or self.kup<self.grid.Nz-1:
-            #     print('Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
-            # if self.istart==0 or self.iend<self.grid.Nx-1 or self.jstart==0 or self.jend<self.grid.Ny-1:
-            #     print('Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
-            #              %(self.istart, self.iend, self.jstart, self.jend))
-
 
         #
-        # vertical stratification and Coriolis
+        # create an ocean state
         #
-        # N2 is at w points (cell faces), N2[k] is between q[k] and q[k+1]
-        if f0N2_file is not None:
-            if self._verbose>0:
-                print('  Reads N2, f0 and f from '+f0N2_file)
-            #
-            self.N2 = read_nc('N2', f0N2_file, self)
-            self.f0 = read_nc('f0', f0N2_file, self)
-            self.grid.load_coriolis_parameter(f0N2_file, self.da, self.comm)
-        else:
-            if self._verbose>0:
-                print('  Set N2 from user prescribed value = '+str(N2)+' 1/s^2')
-                print('  Sets f0 to %.3e' % f0)
-            #
-            self.N2 = N2*np.ones(self.grid.Nz)
-            self.f0 = f0
+        self.state = state(self.da, N2=N2, f0=f0, f0N2_file=f0N2_file)
 
-        #
-        self._sparam = self.f0**2/self.N2
-        self.K = K
-        #
-        # declare petsc vectors
-        #
-        # PV
-        self.Q = self.da.createGlobalVec()
-        # streamfunction
-        self.PSI = self.da.createGlobalVec()
-        # density
-        self.RHO = self.da.createGlobalVec()
-
-        # default top and bottom boudary condition = 'N' pour Neumann. 
-        # Other possibility 'D' for Direchlet
-        self.bdy_type = {'top':'N','bottom':'N'}
-        self.bdy_type.update(bdy_type_in)
 
         # initiate pv inversion solver
         if flag_pvinv:
@@ -178,125 +145,65 @@ class qg_model():
             self.omegainv = omegainv(self)
 
         # initiate time stepper
+        #self.K = K
         if dt is not None:
-            self.tstepper = time_stepper(self, dt)
+            self.tstepper = time_stepper(self, dt, K)
 
 
+
+    def _init_petsc(self,ncores_x,ncores_y):
+        ''' Initate Petsc environement
+
+        Parameters
+        ----------
+        ncores_x: int
+            Number of MPI tiles in x direction
+        ncores_y: int
+            Number of MPI tiles in y direction
+
+        '''
+        # test whether tiling is consistent with dimensions
+        if self.grid.Nx % ncores_x != 0 or self.grid.Ny % ncores_y != 0:
+            print('!Error: MPI tiling does not match dimensions: Nx/ncores_x=%f, Ny/ncores_y=%f' \
+                  % (float(self.grid.Nx) / ncores_x, float(self.grid.Ny) / ncores_y))
+            sys.exit()
+
+        # setup tiling
+        self.da = PETSc.DMDA().create(sizes=[self.grid.Nx, self.grid.Ny, self.grid.Nz],
+                                      proc_sizes=[ncores_x, ncores_y, 1],
+                                      stencil_width=2, boundary_type=self.BoundaryType)
+        # http://lists.mcs.anl.gov/pipermail/petsc-dev/2016-April/018889.html
+
+        self.comm = self.da.getComm()
+        self.rank = self.comm.getRank()
 
 
 #
-#==================== Set values of critical variables ============================================
+#==================== Wrappers to set values of critical variables ===================================
 #
 
-    def set_psi(self, analytical_psi=True, file_psi=None):
+    def set_psi(self, **kwargs):
+        """ Set psi
         """
-        Set psi to a given value
+        self.state.set_psi(self, **kwargs)
+
+
+    def set_q(self, **kwargs):
+        """ Set q
         """
-        if file_psi is not None:
-            if self._verbose:
-                print('Set psi from file '+file_psi+' ...')
-            read_nc_petsc(self.PSI, 'psi', file_psi, self, fillmask=0.)
-        elif analytical_psi:
-            self.set_psi_analytically()
+        self.state.set_q(self, **kwargs)
 
-    def set_psi_analytically(self):
-        """ Set psi analytically
+    def set_rho(self, **kwargs):
+        """ Set rho
         """
-        psi = self.da.getVecArray(self.PSI)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        #
-        if self._verbose:
-            print('Set psi analytically')
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    psi[i, j, k] = 0.
+        self.state.set_rho(self, **kwargs)
 
-    def set_q(self, analytical_q=True, file_q=None):
-        """ Set q to a given value
+    def set_w(self, **kwargs):
+        """ Set w
         """
-        #
-        if file_q is not None:
-            if self._verbose:
-                print('Set q from file '+file_q+' ...')
-            read_nc_petsc(self.Q, 'q', file_q, self, fillmask=0.)
-        elif analytical_q:
-            self.set_q_analytically()
+        self.state.set_w(self, **kwargs)
 
-
-    def set_q_analytically(self):
-        """ Set q analytically
-        """
-        q = self.da.getVecArray(self.Q)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        #
-        if self._verbose:
-            print('Set q analytically')
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    q[i, j, k] = 1.e-5*np.exp(-((i/float(mx-1)-0.5)**2 
-                                              + (j/float(my-1)-0.5)**2)/0.1**2)
-                    q[i, j, k] *= np.sin(i/float(mx-1)*np.pi) 
-                    q[i, j, k] *= np.sin(2*j/float(my-1)*np.pi)
-
-
-    def set_rho(self, analytical_rho=True, file_rho=None):
-        """ Set rho to a given value
-        """
-        #
-        if file_rho is not None:
-            if self._verbose:
-                print('Set rho from file '+file_rho+' ...')
-            read_nc_petsc(self.RHO, 'rho', file_rho, self, fillmask=0.)
-        elif analytical_rho:
-            self.set_rho_analytically()
-
-    def set_rho_analytically(self):
-        """ Set rho analytically
-        """
-        rho = self.da.getVecArray(self.RHO)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        #
-        if self._verbose:
-            print('Set rho analytically')
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    rho[i, j, k] = 0.
-                    
-
-    def set_w(self, analytical_w=True, file_w=None):
-        """ Set w to a given value
-        """
-        #
-        if file_w is not None:
-            if self._verbose:
-                print('Set w from file '+file_w+' ...')
-            read_nc_petsc(self.W, 'w', file_w, self, fillmask=0.)
-        elif analytical_w:
-            self.set_w_analytically()
-
-    def set_w_analytically(self):
-        """ Set w analytically
-        """
-        w = self.da.getVecArray(self.W)
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        #
-        if self._verbose:
-            print('Set w analytically to zero')
-        for k in range(zs, ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):
-                    w[i, j, k] = 0.
-
-
-                
-#
+    #
 #==================== useful wrappers ============================================
 #
                  

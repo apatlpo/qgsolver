@@ -8,7 +8,8 @@ from .inout import read_nc, read_hgrid_dimensions
 from netCDF4 import Dataset
 
 class grid(object):
-    """ Grid object
+    """
+    Grid object
     """
 
 
