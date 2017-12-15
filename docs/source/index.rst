@@ -17,6 +17,7 @@ Guide
    :caption: Contents:
 
    help
+   api
 
 
 
