@@ -228,9 +228,9 @@ class wininversion():
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
+
         :param da: abstract distributed memory object of the domain
         :param win: win_model instance
-        :return:
         """
 
         rhs = win.da.getVecArray(self._RHS)
@@ -295,11 +295,9 @@ class wininversion():
     def set_rhs_mask(self, win):
         """
         Set mask on rhs: where mask=0 (land) rhs=psi
-        - param da: abstract distributed memory object of the domain
-        - param win: win_model instance
-             win.grid.D[win.grid._k_mask]: mask
-        - self.rhs : vorticity whith boundary conditions
-        return: masked rhs
+
+        :param da: abstract distributed memory object of the domain
+        :param win: win_model instance
         """
 
         rhs = win.da.getVecArray(self._RHS)

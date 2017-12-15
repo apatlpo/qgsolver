@@ -15,6 +15,7 @@ import time
 
 def write_nc(V, vname, filename, qg, create=True):    
     """ Write a variable to a netcdf file
+
     Parameters:
         V list of petsc vectors (may contain None)
         vname list of corresponding names
@@ -85,6 +86,7 @@ def write_nc(V, vname, filename, qg, create=True):
 def read_nc_petsc(V, vname, filename, qg, fillmask=None):    
     """
     Read a variable from a netcdf file and stores it in a petsc Vector
+
     Parameters:
         V one(!) petsc vector
         vname corresponding name in netcdf file
@@ -130,7 +132,8 @@ def read_nc_petsc(V, vname, filename, qg, fillmask=None):
 
 def read_nc_petsc_2D(V, vname, filename, level, qg):    
     """
-    Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level 
+    Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level
+
     Parameters:
         V one(!) petsc vector
         vname corresponding name in netcdf file
@@ -163,6 +166,7 @@ def read_nc_petsc_2D(V, vname, filename, level, qg):
                
 def read_nc(vnames, filename,qg):
     """ Read variables from a netcdf file
+
     Parameters:
         vnames list of variable names
         filename

@@ -1,0 +1,662 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>qgsolver package &#8212; qgsolver_doc 0.0.1 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="qgsolver_doc’s documentation" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="qgsolver-package">
+<h1>qgsolver package<a class="headerlink" href="#qgsolver-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-qgsolver.grid">
+<span id="qgsolver-grid-module"></span><h2>qgsolver.grid module<a class="headerlink" href="#module-qgsolver.grid" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.grid.grid">
+<em class="property">class </em><code class="descclassname">qgsolver.grid.</code><code class="descname">grid</code><span class="sig-paren">(</span><em>hgrid_in</em>, <em>vgrid_in</em>, <em>vdom_in</em>, <em>hdom_in</em>, <em>mask</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Grid object</p>
+<dl class="method">
+<dt id="qgsolver.grid.grid.get_xy">
+<code class="descname">get_xy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.get_xy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.grid.grid.get_xyz">
+<code class="descname">get_xyz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.get_xyz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.grid.grid.get_z">
+<code class="descname">get_z</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.get_z" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.grid.grid.load_coriolis_parameter">
+<code class="descname">load_coriolis_parameter</code><span class="sig-paren">(</span><em>coriolis_file</em>, <em>da</em>, <em>comm</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.load_coriolis_parameter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.grid.grid.load_mask">
+<code class="descname">load_mask</code><span class="sig-paren">(</span><em>mask_file</em>, <em>da</em>, <em>comm</em>, <em>mask3D=False</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.load_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>load reference mask from metrics file
+input:
+- mask_file : netcdf file containning the mask
+- da : instance of data management object
+- comm : The communicator for the DMDA object da
+- mask3D: flag for 3D masks (default is False)
+output:
+- grid.D[grid._k_mask,:,:] : contains the mask</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.grid.grid.load_metric_terms">
+<code class="descname">load_metric_terms</code><span class="sig-paren">(</span><em>da</em>, <em>comm</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.grid.grid.load_metric_terms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.inout">
+<span id="qgsolver-inout-module"></span><h2>qgsolver.inout module<a class="headerlink" href="#module-qgsolver.inout" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="qgsolver.inout.get_global">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">get_global</code><span class="sig-paren">(</span><em>V</em>, <em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.get_global" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a copy of the global V array on process 0, otherwise returns None</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="qgsolver.inout.input">
+<em class="property">class </em><code class="descclassname">qgsolver.inout.</code><code class="descname">input</code><span class="sig-paren">(</span><em>variable</em>, <em>files</em>, <em>da</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.input" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Hold data that will be used 
+Interpolate data in time</p>
+<dl class="method">
+<dt id="qgsolver.inout.input.update">
+<code class="descname">update</code><span class="sig-paren">(</span><em>time</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.input.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>interpolate input data at a given time</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="qgsolver.inout.read_hgrid_dimensions">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">read_hgrid_dimensions</code><span class="sig-paren">(</span><em>hgrid_file</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.read_hgrid_dimensions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads grid dimension from netcdf file
+Could put dimension names as optional inputs …</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="qgsolver.inout.read_nc">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">read_nc</code><span class="sig-paren">(</span><em>vnames</em>, <em>filename</em>, <em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.read_nc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read variables from a netcdf file</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>vnames list of variable names
+filename</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="qgsolver.inout.read_nc_petsc">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">read_nc_petsc</code><span class="sig-paren">(</span><em>V</em>, <em>vname</em>, <em>filename</em>, <em>qg</em>, <em>fillmask=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.read_nc_petsc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a variable from a netcdf file and stores it in a petsc Vector</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>V one(!) petsc vector
+vname corresponding name in netcdf file
+filename
+qg object
+fillmask : value to replace default netCDF fill value transformed in Nan</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="qgsolver.inout.read_nc_petsc_2D">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">read_nc_petsc_2D</code><span class="sig-paren">(</span><em>V</em>, <em>vname</em>, <em>filename</em>, <em>level</em>, <em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.read_nc_petsc_2D" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>V one(!) petsc vector
+vname corresponding name in netcdf file
+filename
+level vertical index to store 2D variable in 3D petsc vector
+qg object</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="qgsolver.inout.write_nc">
+<code class="descclassname">qgsolver.inout.</code><code class="descname">write_nc</code><span class="sig-paren">(</span><em>V</em>, <em>vname</em>, <em>filename</em>, <em>qg</em>, <em>create=True</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.inout.write_nc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a variable to a netcdf file</p>
+<dl class="docutils">
+<dt>Parameters:</dt>
+<dd>V list of petsc vectors (may contain None)
+vname list of corresponding names
+filename
+qg object</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.omegainv">
+<span id="qgsolver-omegainv-module"></span><h2>qgsolver.omegainv module<a class="headerlink" href="#module-qgsolver.omegainv" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.omegainv.omegainv">
+<em class="property">class </em><code class="descclassname">qgsolver.omegainv.</code><code class="descname">omegainv</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Omega equation inversion, parallel</p>
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_Q">
+<code class="descname">set_Q</code><span class="sig-paren">(</span><em>qg</em>, <em>U=None</em>, <em>V=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_Q" title="Permalink to this definition">¶</a></dt>
+<dd><p># qxu = g/f0/rho0 * (dudx*drhodx + dvdx*drhody) at u point
+# qyv = g/f0/rho0 * (dudy*drhodx + dvdy*drhody) at v point</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rho_from_psi">
+<code class="descname">set_rho_from_psi</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rho_from_psi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute RHO from Psi
+rho=-rho0*f0/g dPSIdz</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs">
+<code class="descname">set_rhs</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the RHS of the omega equation i.e: 2*f0*nabla.Q with Q=-J(nabla.psi,dpsidz)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs_bdy">
+<code class="descname">set_rhs_bdy</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs_bdy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set South/North, East/West, Bottom/Top boundary conditions
+Set RHS along boundaries for inversion, may be an issue
+for time stepping
+:param da: abstract distributed memory object of the domain
+:param qg: qg_model instance
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs_bdy_bottom">
+<code class="descname">set_rhs_bdy_bottom</code><span class="sig-paren">(</span><em>qg</em>, <em>W=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs_bdy_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set bottom boundary condition
+:param W: Petsc vectors that will be used to compute the bdy condition
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs_bdy_lat">
+<code class="descname">set_rhs_bdy_lat</code><span class="sig-paren">(</span><em>qg</em>, <em>W=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs_bdy_lat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set lateral boundary condition
+:param W: Petsc vector that will be used to compute the bdy condition
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs_bdy_top">
+<code class="descname">set_rhs_bdy_top</code><span class="sig-paren">(</span><em>qg</em>, <em>W=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs_bdy_top" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set top boundary condition
+:param W: Petsc vectors that will be used to compute the bdy condition
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_rhs_mask">
+<code class="descname">set_rhs_mask</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_rhs_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set mask on rhs: where mask=0 (land) rhs=psi</p>
+<p>param da: abstract distributed memory object of the domain
+param qg: qg_model instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.set_uv_from_psi">
+<code class="descname">set_uv_from_psi</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.set_uv_from_psi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute U &amp; V from Psi
+U = -dPSIdy
+V =  dPSIdx</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.omegainv.omegainv.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.omegainv.omegainv.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse the Omega equation</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.pvinv">
+<span id="qgsolver-pvinv-module"></span><h2>qgsolver.pvinv module<a class="headerlink" href="#module-qgsolver.pvinv" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.pvinv.pvinversion">
+<em class="property">class </em><code class="descclassname">qgsolver.pvinv.</code><code class="descname">pvinversion</code><span class="sig-paren">(</span><em>qg</em>, <em>substract_fprime</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>PV inversion, parallel</p>
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.set_rhs_bdy">
+<code class="descname">set_rhs_bdy</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.set_rhs_bdy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set South/North, East/West, Bottom/Top boundary conditions
+Set RHS along boundaries for inversion, may be an issue
+for time stepping</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>da</strong> – abstract distributed memory object of the domain</li>
+<li><strong>qg</strong> – qg_model instance</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.set_rhs_bdy_bottom">
+<code class="descname">set_rhs_bdy_bottom</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.set_rhs_bdy_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set bottom boundary condition</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>RHO</strong> (<em>PSI</em><em>,</em>) – Petsc vectors that will be used to compute the bdy condition</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.set_rhs_bdy_lat">
+<code class="descname">set_rhs_bdy_lat</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.set_rhs_bdy_lat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set lateral boundary condition</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>PSI</strong> – Petsc vector that will be used to compute the bdy condition</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.set_rhs_bdy_top">
+<code class="descname">set_rhs_bdy_top</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.set_rhs_bdy_top" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set top boundary condition</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>RHO</strong> (<em>PSI</em><em>,</em>) – Petsc vectors that will be used to compute the bdy condition</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.set_rhs_mask">
+<code class="descname">set_rhs_mask</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.set_rhs_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set mask on rhs: where mask=0 (land) rhs=psi</p>
+<p>param: da abstract distributed memory object of the domain
+param: qg qg_model instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><em>qg</em>, <em>PSI=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the PV inversion</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.pvinv.pvinversion.substract_fprime_from_rhs">
+<code class="descname">substract_fprime_from_rhs</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.pvinv.pvinversion.substract_fprime_from_rhs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Substract f’=f-f0 from the rhs used in PV inversion</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.qg">
+<span id="qgsolver-qg-module"></span><h2>qgsolver.qg module<a class="headerlink" href="#module-qgsolver.qg" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.qg.qg_model">
+<em class="property">class </em><code class="descclassname">qgsolver.qg.</code><code class="descname">qg_model</code><span class="sig-paren">(</span><em>ncores_x=None</em>, <em>ncores_y=None</em>, <em>hgrid=None</em>, <em>vgrid=None</em>, <em>vdom={}</em>, <em>hdom={}</em>, <em>mask=False</em>, <em>bdy_type_in={}</em>, <em>N2=0.001</em>, <em>f0=7e-05</em>, <em>f0N2_file=None</em>, <em>dt=None</em>, <em>K=100.0</em>, <em>verbose=1</em>, <em>substract_fprime=False</em>, <em>flag_pvinv=True</em>, <em>flag_omega=False</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>QG object</p>
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.compute_CFL">
+<code class="descname">compute_CFL</code><span class="sig-paren">(</span><em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.compute_CFL" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute CFL = max (u*dt/dx)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.compute_KE">
+<code class="descname">compute_KE</code><span class="sig-paren">(</span><em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.compute_KE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute kinetic energy = 0.5 * sum (u**2+v**2)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.compute_dudx">
+<code class="descname">compute_dudx</code><span class="sig-paren">(</span><em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.compute_dudx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute abs(u*dt/dx)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.compute_local_KE">
+<code class="descname">compute_local_KE</code><span class="sig-paren">(</span><em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.compute_local_KE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.get_uv">
+<code class="descname">get_uv</code><span class="sig-paren">(</span><em>PSI=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.get_uv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute horizontal velocities
+Compute U &amp; V from Psi
+U = -dPSIdy
+V =  dPSIdx</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.invert_omega">
+<code class="descname">invert_omega</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.invert_omega" title="Permalink to this definition">¶</a></dt>
+<dd><p>wrapper around solver solve method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.invert_pv">
+<code class="descname">invert_pv</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.invert_pv" title="Permalink to this definition">¶</a></dt>
+<dd><p>wrapper around solver solve method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_identity">
+<code class="descname">set_identity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_identity" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_psi">
+<code class="descname">set_psi</code><span class="sig-paren">(</span><em>analytical_psi=True</em>, <em>file_psi=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_psi" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set psi to a given value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_psi_analytically">
+<code class="descname">set_psi_analytically</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_psi_analytically" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set psi analytically</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_q">
+<code class="descname">set_q</code><span class="sig-paren">(</span><em>analytical_q=True</em>, <em>file_q=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set q to a given value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_q_analytically">
+<code class="descname">set_q_analytically</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_q_analytically" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set q analytically</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_rho">
+<code class="descname">set_rho</code><span class="sig-paren">(</span><em>analytical_rho=True</em>, <em>file_rho=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set rho to a given value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_rho_analytically">
+<code class="descname">set_rho_analytically</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_rho_analytically" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set rho analytically</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_w">
+<code class="descname">set_w</code><span class="sig-paren">(</span><em>analytical_w=True</em>, <em>file_w=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set w to a given value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.set_w_analytically">
+<code class="descname">set_w_analytically</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.set_w_analytically" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set w analytically</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.tstep">
+<code class="descname">tstep</code><span class="sig-paren">(</span><em>nt=1</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.tstep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Time step wrapper</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.qg.qg_model.update_rho">
+<code class="descname">update_rho</code><span class="sig-paren">(</span><em>PSI=None</em>, <em>RHO=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.qg.qg_model.update_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>update rho from psi</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.timestepper">
+<span id="qgsolver-timestepper-module"></span><h2>qgsolver.timestepper module<a class="headerlink" href="#module-qgsolver.timestepper" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.timestepper.time_stepper">
+<em class="property">class </em><code class="descclassname">qgsolver.timestepper.</code><code class="descname">time_stepper</code><span class="sig-paren">(</span><em>qg</em>, <em>dt</em>, <em>t0=0.0</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Time stepper, parallel with petsc4py
+4 steps explicit RungeKutta</p>
+<dl class="method">
+<dt id="qgsolver.timestepper.time_stepper.copy_topdown_rho_to_q">
+<code class="descname">copy_topdown_rho_to_q</code><span class="sig-paren">(</span><em>qg</em>, <em>flag_PSI=True</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper.copy_topdown_rho_to_q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy top and down rho into Q for easy implementation of rho time stepping</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.timestepper.time_stepper.go">
+<code class="descname">go</code><span class="sig-paren">(</span><em>qg</em>, <em>nt</em>, <em>rhosb=False</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper.go" title="Permalink to this definition">¶</a></dt>
+<dd><p>Carry out the time stepping</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.timestepper.time_stepper.reset_topdown_q">
+<code class="descname">reset_topdown_q</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper.reset_topdown_q" title="Permalink to this definition">¶</a></dt>
+<dd><p>reset Q with simplest extrapolation</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.timestepper.time_stepper.set_rhs_bdy">
+<code class="descname">set_rhs_bdy</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper.set_rhs_bdy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reset rhs at boundaries such that drhs/dn=0</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.timestepper.time_stepper.update_topdown_rho">
+<code class="descname">update_topdown_rho</code><span class="sig-paren">(</span><em>qg</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.timestepper.time_stepper.update_topdown_rho" title="Permalink to this definition">¶</a></dt>
+<dd><p>update top and down rho from time stepped Q for boundary conditions</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.utils">
+<span id="qgsolver-utils-module"></span><h2>qgsolver.utils module<a class="headerlink" href="#module-qgsolver.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.utils.plt">
+<em class="property">class </em><code class="descclassname">qgsolver.utils.</code><code class="descname">plt</code><a class="headerlink" href="#qgsolver.utils.plt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>perform online basic plots</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver.window">
+<span id="qgsolver-window-module"></span><h2>qgsolver.window module<a class="headerlink" href="#module-qgsolver.window" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="qgsolver.window.window">
+<em class="property">class </em><code class="descclassname">qgsolver.window.</code><code class="descname">window</code><span class="sig-paren">(</span><em>hgrid=None</em>, <em>vgrid=None</em>, <em>K=1e-06</em>, <em>vdom={}</em>, <em>hdom={}</em>, <em>ncores_x=None</em>, <em>ncores_y=None</em>, <em>bdy_type_in={}</em>, <em>mask3D=False</em>, <em>verbose=1</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.window" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Computes a window for spectral computations</p>
+<dl class="method">
+<dt id="qgsolver.window.window.invert_win">
+<code class="descname">invert_win</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.window.invert_win" title="Permalink to this definition">¶</a></dt>
+<dd><p>wrapper around solver solve method</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.window.window.set_q">
+<code class="descname">set_q</code><span class="sig-paren">(</span><em>analytical_q=True</em>, <em>file_q=None</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.window.set_q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set q to a given value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.window.window.set_q_analytically">
+<code class="descname">set_q_analytically</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.window.set_q_analytically" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set q analytically</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="qgsolver.window.wininversion">
+<em class="property">class </em><code class="descclassname">qgsolver.window.</code><code class="descname">wininversion</code><span class="sig-paren">(</span><em>win</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.wininversion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Window inversion, parallel</p>
+<dl class="method">
+<dt id="qgsolver.window.wininversion.set_rhs_bdy">
+<code class="descname">set_rhs_bdy</code><span class="sig-paren">(</span><em>win</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.wininversion.set_rhs_bdy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set South/North, East/West, Bottom/Top boundary conditions
+Set RHS along boundaries for inversion, may be an issue
+for time stepping</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>da</strong> – abstract distributed memory object of the domain</li>
+<li><strong>win</strong> – win_model instance</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.window.wininversion.set_rhs_mask">
+<code class="descname">set_rhs_mask</code><span class="sig-paren">(</span><em>win</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.wininversion.set_rhs_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set mask on rhs: where mask=0 (land) rhs=psi</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>da</strong> – abstract distributed memory object of the domain</li>
+<li><strong>win</strong> – win_model instance</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="qgsolver.window.wininversion.solve">
+<code class="descname">solve</code><span class="sig-paren">(</span><em>win</em><span class="sig-paren">)</span><a class="headerlink" href="#qgsolver.window.wininversion.solve" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute the PV inversion</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-qgsolver">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-qgsolver" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">qgsolver_doc’s documentation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Aurelien Ponte.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/qgsolver.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

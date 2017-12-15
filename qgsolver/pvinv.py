@@ -138,6 +138,7 @@ class pvinversion():
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
+
         :param da: abstract distributed memory object of the domain
         :param qg: qg_model instance
         :return:
@@ -156,6 +157,7 @@ class pvinversion():
     def set_rhs_bdy_bottom(self, qg, PSI=None, RHO=None):
         """
         Set bottom boundary condition
+
         :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
         :return:
         """
@@ -214,6 +216,7 @@ class pvinversion():
     def set_rhs_bdy_top(self, qg, PSI=None, RHO=None):
         """
         Set top boundary condition
+
         :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
         :return:
         """
@@ -267,6 +270,7 @@ class pvinversion():
     def set_rhs_bdy_lat(self, qg, PSI=None):
         """
         Set lateral boundary condition
+
         :param PSI: Petsc vector that will be used to compute the bdy condition
         :return:
         """
@@ -324,11 +328,9 @@ class pvinversion():
     def set_rhs_mask(self, qg):
         """
         Set mask on rhs: where mask=0 (land) rhs=psi
-        - param da: abstract distributed memory object of the domain
-        - param qg: qg_model instance
-             qg.grid.D[qg.grid._k_mask]: mask
-        - self.rhs : vorticity whith boundary conditions
-        return: masked rhs
+
+        param: da abstract distributed memory object of the domain
+        param: qg qg_model instance
         """
 
         rhs = qg.da.getVecArray(self._RHS)

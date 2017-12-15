@@ -541,11 +541,9 @@ class omegainv():
     def set_rhs_mask(self, qg):
         """
         Set mask on rhs: where mask=0 (land) rhs=psi
-        - param da: abstract distributed memory object of the domain
-        - param qg: qg_model instance
-             qg.grid.D[qg.grid._k_mask]: mask
-        - self.rhs : vorticity whith boundary conditions
-        return: masked rhs
+
+        param da: abstract distributed memory object of the domain
+        param qg: qg_model instance
         """
 
         rhs = qg.da.getVecArray(self._RHS)
