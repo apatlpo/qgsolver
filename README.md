@@ -14,7 +14,6 @@ Download and install with:
 ```csh
 git clone https://github.com/apatlpo/qgsolver.git
 cd qgsolver
-python setup.py build_ext --inplace
 ```
 
 ## libraries required
