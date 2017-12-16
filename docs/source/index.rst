@@ -19,7 +19,7 @@ API
 .. toctree::
    :maxdepth: 2
 
-   qgsolver
+   api/qgsolver
 ..   modules
 
 

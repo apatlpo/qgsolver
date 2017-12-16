@@ -31,7 +31,9 @@ sys.path.insert(0, os.path.abspath('../..'))
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+#extensions = ['sphinx.ext.autodoc']
 extensions = ['sphinx.ext.autodoc','sphinx.ext.napoleon']
+#extensions = ['sphinx.ext.napoleon']
 
 # Napoleon settings
 #napoleon_google_docstring = True
@@ -175,13 +177,13 @@ texinfo_documents = [
 
 # -- Options for automatic api generation -------------------------------------------
 
-def run_apidoc(_):
-    from sphinx.apidoc import main
-    #sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    cur_dir = os.path.abspath(os.path.dirname(__file__))
-    module = os.path.join(cur_dir,'../../',"qgsolver")
-    main(['-e', '-o', cur_dir, module, '--force'])
+#def run_apidoc(_):
+#    from sphinx.apidoc import main
+#    #sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+#    cur_dir = os.path.abspath(os.path.dirname(__file__))
+#    module = os.path.join(cur_dir,'../../',"qgsolver")
+#    main(['-e', '-o', cur_dir, module, '--force'])
 
-def setup(app):
-    app.connect('builder-inited', run_apidoc)
+#def setup(app):
+#    app.connect('builder-inited', run_apidoc)
 
