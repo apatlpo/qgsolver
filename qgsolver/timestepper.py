@@ -19,14 +19,21 @@ class time_stepper():
     4 steps explicit RungeKutta
     """
     
-    def __init__(self, qg, dt, t0 = 0.):
+    def __init__(self, da, grid, dt, K, verbose=0, t0 = 0.):
         
-        self._verbose = qg._verbose
+        self._verbose = verbose
         
         ### physical parameters
         # laplacian parameter, should move outside of here
-        self.K = qg.K
-        
+        self.K = K
+
+        # grid parameters
+        self._flag_hgrid_uniform = grid._flag_hgrid_uniform
+        self._flag_vgrid_uniform = grid._flag_vgrid_uniform
+        self._kdown = grid.kdown
+        self._kup = grid.kup
+
+
         ### time variables
         self.dt = dt
         self._t0 = t0
@@ -38,15 +45,18 @@ class time_stepper():
         self._b = [0.5, 0.5, 1.]
 
         ### additional global vectors
-        self._RHS0 = qg.da.createGlobalVec()
-        self._RHS1 = qg.da.createGlobalVec()
-        self._dRHS = qg.da.createGlobalVec()
+        self._RHS0 = da.createGlobalVec()
+        self._RHS1 = da.createGlobalVec()
+        self._dRHS = da.createGlobalVec()
         
         if self._verbose>0:
             print('PV time stepper is set up')
 
+#
+# ==================== time stepping method ============================================
+#
 
-    def go(self, qg, nt,rhosb=False):
+    def go(self, nt, da, state, grid, pvinv, rhosb=False):
         """ Carry out the time stepping
         """
         if self._verbose>0:
@@ -55,44 +65,47 @@ class time_stepper():
 
         if rhosb:
             # copy upper and lower density into Q
-            self.copy_topdown_rho_to_q(qg)
-        #for i in xrange(nt):
+            self.copy_topdown_rho_to_q()
+
         while _tstep < nt:
             # update time parameters and indexes
             self.t += self.dt
             _tstep += 1
             #
-            qg.Q.copy(self._RHS0) # copies Q into RHS0
-            qg.Q.copy(self._RHS1) # copies Q into RHS1
+            state.Q.copy(self._RHS0) # copies Q into RHS0
+            state.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
                 if rhosb:
-                    self.update_topdown_rho(qg)
-                qg.pvinv.solve(qg)
+                    self.update_topdown_rho(da, grid, state)
+                pvinv.solve(da, grid, state)
                 #
-                if qg.grid._flag_hgrid_uniform and qg.grid._flag_vgrid_uniform:
-                    self._computeRHS(qg)
+                if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
+                    self._computeRHS(da, grid, state)
                 else:
-                    self._computeRHS_curv(qg)
+                    self._computeRHS_curv(da, grid, state)
                 #
-                if rk < 3: qg.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
+                if rk < 3: state.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
-            self._RHS1.copy(qg.Q) # copies RHS1 into Q
+            self._RHS1.copy(state.Q) # copies RHS1 into Q
             # reset q at boundaries
-            self.set_rhs_bdy(qg)
+            self.set_rhs_bdy(da, state)
             if self._verbose>0:
                 print('t = %f d' % (self.t/86400.))
         # need to invert PV one final time in order to get right PSI
-        qg.comm.barrier()
+        da.getComm().barrier()
         if rhosb:
-            self.update_topdown_rho(qg)
-        qg.invert_pv()
+            self.update_topdown_rho(da, grid, state)
+        pvinv.solve(da, grid, state)
         # reset q
-        self.reset_topdown_q(qg)
+        self.reset_topdown_q(da, grid, state)
         if self._verbose>0:
             print('Time stepping done --->')
 
-    
-    def _computeRHS(self,qg):
+#
+# ==================== Compute RHS ============================================
+#
+
+    def _computeRHS(self,da, grid, state):
         """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
@@ -103,25 +116,25 @@ class time_stepper():
         #qg.invert_pv()
         
         ### declare local vectors
-        local_RHS  = qg.da.createLocalVec()
+        local_RHS  = da.createLocalVec()
         #local_dRHS  = qg.da.createLocalVec()
-        local_PSI  = qg.da.createLocalVec()
+        local_PSI  = da.createLocalVec()
 
         ###
-        qg.da.globalToLocal(qg.Q, local_RHS)
-        qg.da.globalToLocal(qg.PSI, local_PSI)
+        da.globalToLocal(state.Q, local_RHS)
+        da.globalToLocal(state.PSI, local_PSI)
         #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
-        q = qg.da.getVecArray(local_RHS)
-        psi = qg.da.getVecArray(local_PSI)
-        dq = qg.da.getVecArray(self._dRHS)
+        q = da.getVecArray(local_RHS)
+        psi = da.getVecArray(local_PSI)
+        dq = da.getVecArray(self._dRHS)
         #dq = qg.da.getVecArray(local_dRHS)
         #
-        mx, my, mz = qg.da.getSizes()
-        dx, dy, dz = qg.grid.dx, qg.grid.dy, qg.grid.dz
+        mx, my, mz = da.getSizes()
+        dx, dy, dz = grid.dx, grid.dy, grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         ### advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
@@ -166,47 +179,36 @@ class time_stepper():
 
 
    
-    def _computeRHS_curv(self,qg):
+    def _computeRHS_curv(self,da, grid, state):
         """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
         """
-    
-        ### compute PV inversion to streamfunction
-        #qg.invert_pv()
-        
+
         ### declare local vectors
-        local_Q  = qg.da.createLocalVec()
-        #local_dRHS  = qg.da.createLocalVec()
-        local_PSI  = qg.da.createLocalVec()
+        local_Q  = da.createLocalVec()
+        local_PSI  = da.createLocalVec()
         
         ###
-        qg.da.globalToLocal(qg.Q, local_Q)
-        qg.da.globalToLocal(qg.PSI, local_PSI)
-        #qg.da.globalToLocal(self._dRHS, local_dRHS)
+        da.globalToLocal(state.Q, local_Q)
+        da.globalToLocal(state.PSI, local_PSI)
         #
-        q = qg.da.getVecArray(local_Q)
-        psi = qg.da.getVecArray(local_PSI)
-        dq = qg.da.getVecArray(self._dRHS)
-        #dq = qg.da.getVecArray(local_dRHS)
+        q = da.getVecArray(local_Q)
+        psi = da.getVecArray(local_PSI)
+        dq = da.getVecArray(self._dRHS)
         #
-        mx, my, mz = qg.da.getSizes()
+        mx, my, mz = da.getSizes()
         #
-        #D = qg.da.getVecArray(qg.grid.D)
-        local_D  = qg.da.createLocalVec()
-        qg.da.globalToLocal(qg.grid.D, local_D)
-        D = qg.da.getVecArray(local_D)
-        #kmask = qg.grid._k_mask
-        kdxu = qg.grid._k_dxu
-        kdyu = qg.grid._k_dyu
-        kdxv = qg.grid._k_dxv
-        kdyv = qg.grid._k_dyv
-        kdxt = qg.grid._k_dxt
-        kdyt = qg.grid._k_dyt
-        kf = qg.grid._k_f
+        local_D  = da.createLocalVec()
+        da.globalToLocal(grid.D, local_D)
+        D = da.getVecArray(local_D)
+        kdxu, kdyu = grid._k_dxu, grid._k_dyu
+        kdxv, kdyv = grid._k_dxv, grid._k_dyv
+        kdxt, kdyt = grid._k_dxt, grid._k_dyt
+        kf = grid._k_f
         #
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         # advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
@@ -270,16 +272,20 @@ class time_stepper():
                                                -q[i-1,j,k] * D[i-1,j,kdyu]/D[i-1,j,kdxu] \
                                                +q[i,j+1,k] * D[i,j,kdxv]/D[i,j,kdyv] \
                                                -q[i,j-1,k] * D[i,j-1,kdxv]/D[i,j-1,kdyv] \
-                                                ) 
-                            
-    def set_rhs_bdy(self, qg):
+                                                )
+
+#
+# ==================== timestepper utils ============================================
+#
+
+    def set_rhs_bdy(self, da, state):
         """ Reset rhs at boundaries such that drhs/dn=0 """
         #
-        rhs = qg.da.getVecArray(qg.Q)
+        rhs = da.getVecArray(state.Q)
 
         #
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
         # south bdy
         if (ys == 0):
@@ -305,20 +311,18 @@ class time_stepper():
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     rhs[i, j, k] = rhs[i - 1, j, k]
-        return
 
 
-    def update_topdown_rho(self,qg):
+    def update_topdown_rho(self,da,grid, state):
         """ update top and down rho from time stepped Q for boundary conditions
         """
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        kdown = grid.kdown
+        kup = grid.kup
         
-        q = qg.da.getVecArray(qg.Q)
-        rho = qg.da.getVecArray(qg.RHO)
+        q = da.getVecArray(state.Q)
+        rho = da.getVecArray(state.RHO)
            
         for j in range(ys, ye):
             for i in range(xs, xe):           
@@ -326,51 +330,57 @@ class time_stepper():
                 rho[i, j, kdown+1] = q[i, j, kdown]
                 rho[i, j, kup] = q[i, j, kup]
                 rho[i, j, kup-1] = q[i, j, kup]
-                
-        return
 
-    def copy_topdown_rho_to_q(self, qg, flag_PSI=True):
+
+    def copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
         """ Copy top and down rho into Q for easy implementation of rho time stepping
-        """
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        state: state object
+            qgsolver state object, must contain Q and RHO or PSI
+        flag_PSI: boolean
+            if True uses PSI to compute the upper/lower density
+            if False uses RHO
+        """
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+
+        kdown = grid.kdown
+        kup = grid.kup
         
-        q = qg.da.getVecArray(qg.Q)
+        q = da.getVecArray(state.Q)
                 
         if flag_PSI:
-            psi = qg.da.getVecArray(qg.PSI)        
-            psi2rho = -(qg.rho0*qg.f0)/qg.g
+            psi = da.getVecArray(state.PSI)
+            psi2rho = -(state.rho0*state.f0)/state.g
             for j in range(ys, ye):
                 for i in range(xs, xe):           
-                    q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/qg.grid.dzw[kdown] *psi2rho
-                    q[i, j, kup] = (psi[i,j,kup]-psi[i,j,kup-1])/qg.grid.dzw[kup-1] *psi2rho
+                    q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/grid.dzw[kdown] *psi2rho
+                    q[i, j, kup] = (psi[i,j,kup]-psi[i,j,kup-1])/grid.dzw[kup-1] *psi2rho
         else:
-            rho = qg.da.getVecArray(qg.RHO)        
+            rho = da.getVecArray(state.RHO)
             for j in range(ys, ye):
                 for i in range(xs, xe):           
                     q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
                     q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
                 
-        return
-            
 
-    def reset_topdown_q(self, qg):
-        """ reset Q with simplest extrapolation
+    def reset_topdown_q(self, da, grid, state):
+        """ reset topdown Q with inner closest values
         """
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        kdown = grid.kdown
+        kup = grid.kup
         
-        q = qg.da.getVecArray(qg.Q)
+        q = da.getVecArray(state.Q)
 
         for j in range(ys, ye):
             for i in range(xs, xe):           
                 q[i, j, kdown] = q[i, j, kdown+1]
                 q[i, j, kup] = q[i, j, kup-1]
-                
-        return
+

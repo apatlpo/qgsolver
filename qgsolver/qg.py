@@ -69,8 +69,8 @@ class qg_model():
         """
 
         # useful parameters
-        self.g = 9.81
-        self.rho0 = 1000.
+        #self.g = 9.81
+        #self.rho0 = 1000.
 
         #
         # Build grid object
@@ -150,7 +150,7 @@ class qg_model():
 
         # initiate time stepper
         if dt is not None:
-            self.tstepper = time_stepper(self, dt, K)
+            self.tstepper = time_stepper(self.da, self.grid, dt, K)
 
 
 
@@ -223,7 +223,8 @@ class qg_model():
         """ wrapper around solver pv inversion method
         """
         if hasattr(self,'state'):
-            self.pvinv.solve(self,Q=self.state.Q,PSI=self.state.PSI,RHO=self.state.RHO)
+            self.pvinv.solve(self.da, self.grid, self.state, \
+                             Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO)
         else:
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
 
@@ -232,10 +233,10 @@ class qg_model():
         """
         self.omegainv.solve(self)
 
-    def tstep(self, nt=1):
+    def tstep(self, nt=1, rhosb=False):
         """ Time step wrapper
         """
-        self.tstepper.go(self, nt)
+        self.tstepper.go(nt, self.da, self.state, self.grid, self.pvinv, rhosb=rhosb)
 
 #
 #==================== utils ============================================

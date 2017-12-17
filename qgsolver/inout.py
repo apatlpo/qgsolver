@@ -83,6 +83,11 @@ def write_nc(V, vname, filename, qg, create=True):
         # close the netcdf file
         rootgrp.close()
 
+
+#
+#==================== read data ============================================
+#
+
 def read_nc_petsc(V, vname, filename, qg, fillmask=None):    
     """
     Read a variable from a netcdf file and stores it in a petsc Vector
@@ -257,7 +262,7 @@ class input(object):
         should test if variables are 2D
         '''
         # browses files in order to figure out available times
-        self.data = da.createGlobalVec()
+        #self.data = da.createGlobalVec()
         pass
     
     

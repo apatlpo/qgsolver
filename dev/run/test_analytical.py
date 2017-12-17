@@ -57,11 +57,8 @@ def uniform_grid_runs():
     #vgrid = {'Nz':300}
 
     # proceeds with computations
-    #qg = qg_model(hgrid = hgrid, vgrid = vgrid,
-    #              K = 0.e0, dt = 0.5*86400.e0,
-    #              ncores_x=ncores_x, ncores_y=ncores_y)
     qg = qg_model(hgrid = hgrid, vgrid = vgrid,
-                  K = 0.e0, dt = None,
+                  K = 0.e0, dt = 0.5*86400.e0,
                   ncores_x=ncores_x, ncores_y=ncores_y)
     #
     qg.set_q()
@@ -71,7 +68,7 @@ def uniform_grid_runs():
     # load background PV
 
     #
-    test=-1
+    test=1
     if test==0:
         # one time step and store
         qg.tstep(1)

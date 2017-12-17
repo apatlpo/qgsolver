@@ -27,7 +27,8 @@ class pvinversion():
         self.petscBoundaryType=False
         if ('periodic' in self.bdy_type) and (self.bdy_type['periodic']):
             self.petscBoundaryType = True
-        #
+
+        # background fields
         self._substract_fprime = substract_fprime
         
         # create the operator
@@ -86,12 +87,31 @@ class pvinversion():
 #
 
 
-    def solve(self, qg, Q=None, PSI=None, RHO=None):
+    def solve(self, da, grid, state, Q=None, PSI=None, RHO=None):
         """ Compute the PV inversion
+        Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
+
+        Returns
+        -------
+        state.PSI:
+            Put PV inversion result in state.PSI
         """
-        if Q is None or PSI is None:
-            print('!Error: pvinv.solve requires Q and PSI')
+        if Q is None and not hasattr(state,'Q'):
+            print('!Error: pvinv.solve requires Q or state.Q')
             sys.exit()
+        elif Q is None:
+            Q = state.Q
+        if PSI is None and not hasattr(state, 'PSI'):
+            print('!Error: pvinv.solve requires PSI or state.PSI')
+            sys.exit()
+        elif PSI is None:
+            PSI = state.PSI
+        if RHO is None and not hasattr(state, 'RHO'):
+            print('!Error: pvinv.solve requires RHO or state.RHO')
+            sys.exit()
+        elif RHO is None:
+            RHO = state.RHO
+        #
         # ONE = qg.set_identity()
         # qg.pvinv.L.mult(ONE,self._RHS)
         # write_nc([self._RHS], ['id'], 'data/identity.nc', qg)
@@ -103,18 +123,18 @@ class pvinversion():
         Q.copy(self._RHS)
         if self._substract_fprime:
             # substract f-f0 from PV
-            self.substract_fprime_from_rhs(qg)
+            self.substract_fprime_from_rhs(da, grid, state)
         # fix boundaries
-        self.set_rhs_bdy(qg, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy(da, grid, state, PSI=PSI, RHO=RHO)
         # apply mask
-        if qg.grid.mask:
+        if grid.mask:
             # mask rhs
-            self.set_rhs_mask(qg)
+            self.set_rhs_mask(da, grid, state)
         # store RHS in netcdf file rhs.nc
         #write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
         # qg.PSI.set(0)
         # actually solves the pb
-        self.ksp.solve(self._RHS, qg.state.PSI)
+        self.ksp.solve(self._RHS, state.PSI)
         # compute L*PSI and store in self._RHS
         #qg.pvinv.L.mult(qg.PSI,self._RHS)
         # store L*PSI in netcdf file lpsi.nc
@@ -122,78 +142,89 @@ class pvinversion():
 
         if self._verbose>1:
             print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()))
-            
-            
-            
-    def substract_fprime_from_rhs(self, qg):
-        """
-        Substract f'=f-f0 from the rhs used in PV inversion
-        """
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
 
-        D = qg.da.getVecArray(qg.grid.D)
+
+#
+# ==================== utils methods for inversions ===================================
+#
+
+    def substract_fprime_from_rhs(self, da, grid, state):
+        """ Substract f'=f-f0 from the rhs used in PV inversion
+        """
+        rhs = da.getVecArray(self._RHS)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+
+        D = da.getVecArray(grid.D)
 
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):                    
-                    rhs[i,j,k] -= D[i,j,qg.grid._k_f]  - qg.state.f0
+                    rhs[i,j,k] -= D[i,j,grid._k_f]  - state.f0
         
         if self._verbose>1:
             print('  Substract f-f0 from pv prior to inversion')
 
         
 
-    def set_rhs_bdy(self, qg, PSI=None, RHO=None):
+    def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
 
-        :param da: abstract distributed memory object of the domain
-        :param qg: qg_model instance
-        :return:
+        Parameters
+        ----------
+        da:
+
+        grid:
+
+        state:
+
+        PSI:
+
+        RHO:
+
         """
         
         if self._verbose>1:
             print('  Set RHS along boudaries for inversion ')
 
-        self.set_rhs_bdy_bottom(qg, PSI=PSI, RHO=RHO)
-        self.set_rhs_bdy_top(qg, PSI=PSI, RHO=RHO)
-        self.set_rhs_bdy_lat(qg)
+        self.set_rhs_bdy_bottom(da, grid, state, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy_top(da, grid, state, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy_lat(da, grid, state)
 
         return
 
 
-    def set_rhs_bdy_bottom(self, qg, PSI=None, RHO=None):
+    def set_rhs_bdy_bottom(self, da, grid, state, PSI=None, RHO=None):
         """
         Set bottom boundary condition
 
-        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
-        :return:
+        Parameters
+        ----------
+
+        PSI:
+
+        RHO:
+            Petsc vector that will be used to compute the bdy condition
+
         """
 
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = da.getVecArray(self._RHS)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        kdown = grid.kdown
+        kup = grid.kup
 
         # load vector used to compute boundary conditions
         if PSI is None:
-            psi = qg.da.getVecArray(qg.state.PSI)
+            psi = da.getVecArray(state.PSI)
         else:
-            psi = qg.da.getVecArray(PSI)
+            psi = da.getVecArray(PSI)
         if RHO is None:
-            rho = qg.da.getVecArray(qg.state.RHO)
+            rho = da.getVecArray(state.RHO)
         else:
-            rho = qg.da.getVecArray(RHO)
+            rho = da.getVecArray(RHO)
            
         # lower ghost area
         if zs < kdown:
@@ -207,17 +238,15 @@ class pvinversion():
         if self.bdy_type['bottom']=='N' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(qg.rho0*qg.state.f0)
+                    rhs[i, j, k] = - state.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(state.rho0*state.f0)
         elif self.bdy_type['bottom']=='NBG' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
         elif self.bdy_type['bottom']=='D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = psi[i,j,k]
-
-                    
         else:
             print(self.bdy_type['bottom']+" unknown bottom boundary condition")
             sys.exit()
@@ -225,7 +254,7 @@ class pvinversion():
         return
 
             
-    def set_rhs_bdy_top(self, qg, PSI=None, RHO=None):
+    def set_rhs_bdy_top(self, da, grid, state, PSI=None, RHO=None):
         """
         Set top boundary condition
 
@@ -233,26 +262,20 @@ class pvinversion():
         :return:
         """
         
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = da.getVecArray(self._RHS)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        kup = grid.kup
 
         # load vector used to compute boundary conditions
         if PSI is None:
-            psi = qg.da.getVecArray(qg.state.PSI)
+            psi = da.getVecArray(state.PSI)
         else:
-            psi = qg.da.getVecArray(PSI)
+            psi = da.getVecArray(PSI)
         if RHO is None:
-            rho = qg.da.getVecArray(qg.state.RHO)
+            rho = da.getVecArray(qg.state.RHO)
         else:
-            rho = qg.da.getVecArray(RHO)
+            rho = da.getVecArray(RHO)
 
         if ze > kup+1:
             for k in range(kup+1,ze):
@@ -265,11 +288,11 @@ class pvinversion():
         if self.bdy_type['top']=='N' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - qg.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(qg.rho0*qg.state.f0)
+                    rhs[i, j, k] = - state.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(state.rho0*state.f0)
         elif self.bdy_type['top']=='NBG' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/qg.grid.dzw[k] 
+                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
         elif self.bdy_type['top']=='D' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -279,7 +302,7 @@ class pvinversion():
             sys.exit()
 
 
-    def set_rhs_bdy_lat(self, qg, PSI=None):
+    def set_rhs_bdy_lat(self, da, grid, state, PSI=None):
         """
         Set lateral boundary condition
 
@@ -287,22 +310,19 @@ class pvinversion():
         :return:
         """
         
-        rhs = qg.da.getVecArray(self._RHS)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = da.getVecArray(self._RHS)
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
 
         # load vector used to compute boundary conditions
         if PSI is None:
-            psi = qg.da.getVecArray(qg.state.PSI)
+            psi = da.getVecArray(state.PSI)
         else:
-            psi = qg.da.getVecArray(PSI)
+            psi = da.getVecArray(PSI)
 
         # south bdy
         if ys <= jstart:
@@ -337,7 +357,7 @@ class pvinversion():
     
 
 
-    def set_rhs_mask(self, qg):
+    def set_rhs_mask(self, da, grid, state):
         """
         Set mask on rhs: where mask=0 (land) rhs=psi
 
@@ -345,20 +365,14 @@ class pvinversion():
         param: qg qg_model instance
         """
 
-        rhs = qg.da.getVecArray(self._RHS)
-        mask = qg.da.getVecArray(qg.grid.D)
-        mx, my, mz = qg.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        rhs = da.getVecArray(self._RHS)
+        mask = da.getVecArray(grid.D)
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
-        kdown = qg.grid.kdown
-        kup = qg.grid.kup
-        kmask = qg.grid._k_mask
+        kmask = grid._k_mask
 
-        psi = qg.da.getVecArray(qg.state.PSI)
+        psi = da.getVecArray(state.PSI)
         
         # interior
         for k in range(zs,ze):
