@@ -10,15 +10,34 @@ from petsc4py import PETSc
 from .inout import write_nc
 
 #
-#==================== Parallel solver ============================================
+#==================== PV inversion solver object ============================================
 #
 
 class pvinversion():
-    """ PV inversion, parallel
+    """ PV inversion solver
     """
     
-    def __init__(self, da, grid, bdy_type, verbose=0, sparam=None, substract_fprime=False):
+    def __init__(self, da, grid, bdy_type, sparam, verbose=0, bstate=None):
         """ Setup the PV inversion solver
+
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        bdy_type : dict
+            prescribe vertical and lateral boundary conditions. Examples
+                bdy_type = {'bottom': 'D', 'top': 'D'}    for Dirichlet bdy conditions
+                bdy_type = {'bottom': 'N', 'top': 'N'}    for Neumann bdy conditions
+                bdy_type = {'bottom': 'N', 'top': 'N'}    for Neumann bdy conditions using PSI instead of RHO
+                bdy_type = {'periodic': None}             for horizontal periodicity
+        sparam : ndarray
+            numpy array containing f^2/N^2
+        verbose : int
+            degree of verbosity, 0 means no outputs
+        bstate : None, state object, optional
+
         """
 
         self._verbose = verbose
@@ -29,7 +48,10 @@ class pvinversion():
             self.petscBoundaryType = True
 
         # background fields
-        self._substract_fprime = substract_fprime
+        if bstate is None:
+            self._bstate = False
+        else:
+            self._bstate = True
         
         # create the operator
         self.L = da.createMat()
@@ -40,9 +62,9 @@ class pvinversion():
 
         # Fill in operator values
         if grid._flag_hgrid_uniform and grid._flag_vgrid_uniform:
-            self._set_L(self.L, da, grid, sparam=sparam)
+            self._set_L(self.L, da, grid, sparam)
         else:
-            self._set_L_curv(self.L, da, grid, sparam=sparam)
+            self._set_L_curv(self.L, da, grid, sparam)
 
         #
         if self._verbose>0:
@@ -164,8 +186,6 @@ class pvinversion():
         if self._verbose>1:
             print('  Substract f-f0 from pv prior to inversion')
 
-        
-
     def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
@@ -194,7 +214,6 @@ class pvinversion():
         self.set_rhs_bdy_lat(da, grid, state)
 
         return
-
 
     def set_rhs_bdy_bottom(self, da, grid, state, PSI=None, RHO=None):
         """
@@ -253,7 +272,6 @@ class pvinversion():
                 
         return
 
-            
     def set_rhs_bdy_top(self, da, grid, state, PSI=None, RHO=None):
         """
         Set top boundary condition
@@ -484,7 +502,7 @@ class pvinversion():
     
     
     
-    def _set_L_curv(self,L, da, grid):
+    def _set_L_curv(self,L, da, grid, sparam):
         """ Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
         """

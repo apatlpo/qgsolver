@@ -56,7 +56,7 @@ class time_stepper():
 # ==================== time stepping method ============================================
 #
 
-    def go(self, nt, da, state, grid, pvinv, rhosb=False):
+    def go(self, nt, da, state, grid, pvinv, rhosb=False, bstate=None):
         """ Carry out the time stepping
         """
         if self._verbose>0:
@@ -176,9 +176,6 @@ class time_stepper():
                         dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
 
-
-
-   
     def _computeRHS_curv(self,da, grid, state):
         """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
@@ -312,7 +309,6 @@ class time_stepper():
                 for j in range(ys, ye):
                     rhs[i, j, k] = rhs[i - 1, j, k]
 
-
     def update_topdown_rho(self,da,grid, state):
         """ update top and down rho from time stepped Q for boundary conditions
         """
@@ -330,7 +326,6 @@ class time_stepper():
                 rho[i, j, kdown+1] = q[i, j, kdown]
                 rho[i, j, kup] = q[i, j, kup]
                 rho[i, j, kup-1] = q[i, j, kup]
-
 
     def copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
         """ Copy top and down rho into Q for easy implementation of rho time stepping
@@ -367,7 +362,6 @@ class time_stepper():
                 for i in range(xs, xe):           
                     q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
                     q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
-                
 
     def reset_topdown_q(self, da, grid, state):
         """ reset topdown Q with inner closest values
