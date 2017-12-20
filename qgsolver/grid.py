@@ -33,7 +33,7 @@ class grid(object):
             # uniform grid
             self._flag_hgrid_uniform = True            
             #
-            hgrid = {'Lx':3.e2*1.e3, 'Ly':2e2*1.e3, 'Nx':150, 'Ny':100}
+            hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':150, 'Ny':100}
             hgrid.update(hgrid_in)
             self._build_hgrid_uniform(**hgrid)
 

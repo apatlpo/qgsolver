@@ -13,8 +13,7 @@ import sys
 
 sys.path.append('../../')
 from qgsolver.qg import qg_model
-from qgsolver.inout import write_nc
-
+from qgsolver.state import add
 
 #
 #==================== Uniform grid case ============================================
@@ -63,13 +62,16 @@ def uniform_grid_runs():
 
     # pv inversion
     qg.set_q()
+    bstate = qg.set_bstate(q0=0.,beta=1.e-11)
+    if True:
+        add(qg.state,bstate,da=None)
     qg.invert_pv()
     qg.write_state(filename='data/output.nc')
 
     # load background PV
 
     #
-    test=0
+    test=-1
     if test==0:
         # one time step and store
         qg.tstep(1)

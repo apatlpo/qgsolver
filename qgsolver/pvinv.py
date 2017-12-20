@@ -17,7 +17,7 @@ class pvinversion():
     """ PV inversion solver
     """
     
-    def __init__(self, da, grid, bdy_type, sparam, verbose=0, bstate=None):
+    def __init__(self, da, grid, bdy_type, sparam, verbose=0, solver='gmres', pc=None):
         """ Setup the PV inversion solver
 
         Parameters
@@ -37,6 +37,12 @@ class pvinversion():
         verbose : int
             degree of verbosity, 0 means no outputs
         bstate : None, state object, optional
+            Activates substraction of
+        solver : str
+            petsc solver: 'gmres' (default), 'bicg', 'cg'
+        pc : str, optional
+            what is default?
+            preconditionner: 'icc', 'bjacobi', 'asm', 'mg', 'none'
 
         """
 
@@ -47,11 +53,11 @@ class pvinversion():
         if ('periodic' in self.bdy_type) and (self.bdy_type['periodic']):
             self.petscBoundaryType = True
 
-        # background fields
-        if bstate is None:
-            self._bstate = False
-        else:
-            self._bstate = True
+        ## background fields
+        #if bstate is None:
+        #    self._bstate = False
+        #else:
+        #    self._bstate = True
         
         # create the operator
         self.L = da.createMat()
@@ -73,32 +79,22 @@ class pvinversion():
         # global vector for PV inversion
         self._RHS = da.createGlobalVec()
 
-        # local vectors
-        #self._localRHS  = qg.da.createLocalVec()
-        #self._localPSI  = qg.da.createLocalVec()
-
         # create solver
         self.ksp = PETSc.KSP()
         self.ksp.create(PETSc.COMM_WORLD)
         self.ksp.setOperators(self.L)
-        # self.ksp.setType('cg')
-        self.ksp.setType('gmres')
-        # self.ksp.setType('bicg')
+        self.ksp.setType(solver)
         self.ksp.setInitialGuessNonzero(True)
         # and incomplete Cholesky for preconditionning
-        # self.ksp.getPC().setType('icc')
-        # self.ksp.getPC().setType('bjacobi')
-        # self.ksp.getPC().setType('asm')
-        # self.ksp.getPC().setType('mg')
-        # self.ksp.getPC().setType('none')
-        # self.ksp.setNormType(2)
+        if pc is not None:
+            self.ksp.getPC().setType('icc')
         # set tolerances
         self.ksp.setTolerances(rtol=1e-4)
         self.ksp.setTolerances(max_it=1000)
         #
         #
         for opt in sys.argv[1:]:
-	        PETSc.Options().setValue(opt, None)
+            PETSc.Options().setValue(opt, None)
         self.ksp.setFromOptions()
         
         if self._verbose>0:
@@ -108,8 +104,7 @@ class pvinversion():
 # ==================== perform inversion ===================================
 #
 
-
-    def solve(self, da, grid, state, Q=None, PSI=None, RHO=None):
+    def solve(self, da, grid, state, Q=None, PSI=None, RHO=None, bstate=None, addback_bstate=True):
         """ Compute the PV inversion
         Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
 
@@ -119,48 +114,42 @@ class pvinversion():
             Put PV inversion result in state.PSI
         """
         if Q is None and not hasattr(state,'Q'):
-            print('!Error: pvinv.solve requires Q or state.Q')
+            print('!Error: pvinv.solve requires state.Q or Q')
             sys.exit()
         elif Q is None:
             Q = state.Q
         if PSI is None and not hasattr(state, 'PSI'):
-            print('!Error: pvinv.solve requires PSI or state.PSI')
+            print('!Error: pvinv.solve requires state.PSI or PSI')
             sys.exit()
         elif PSI is None:
             PSI = state.PSI
         if RHO is None and not hasattr(state, 'RHO'):
-            print('!Error: pvinv.solve requires RHO or state.RHO')
+            print('!Error: pvinv.solve requires state.RHO or RHO')
             sys.exit()
         elif RHO is None:
             RHO = state.RHO
         #
-        # ONE = qg.set_identity()
-        # qg.pvinv.L.mult(ONE,self._RHS)
-        # write_nc([self._RHS], ['id'], 'data/identity.nc', qg)
-        # compute L*PSI and store in self._RHS
-        #qg.pvinv.L.mult(qg.PSI,self._RHS)
-        # store L*PSI in netcdf file lpsi.nc
-        #write_nc([self._RHS], ['rhs'], 'output/lpsiin.nc', qg)
+        # substract background fields
+        if bstate is not None:
+            Q += - bstate.Q
+            PSI += - bstate.PSI
+            RHO += - bstate.RHO
+        #
         # copy Q into RHS
         Q.copy(self._RHS)
-        if self._substract_fprime:
-            # substract f-f0 from PV
-            self.substract_fprime_from_rhs(da, grid, state)
         # fix boundaries
         self.set_rhs_bdy(da, grid, state, PSI=PSI, RHO=RHO)
         # apply mask
         if grid.mask:
             # mask rhs
             self.set_rhs_mask(da, grid, state)
-        # store RHS in netcdf file rhs.nc
-        #write_nc([self._RHS], ['rhs'], 'output/rhs.nc', qg)
-        # qg.PSI.set(0)
         # actually solves the pb
         self.ksp.solve(self._RHS, state.PSI)
-        # compute L*PSI and store in self._RHS
-        #qg.pvinv.L.mult(qg.PSI,self._RHS)
-        # store L*PSI in netcdf file lpsi.nc
-        #write_nc([self._RHS], ['Lpsi'], 'output/lpsiout.nc', qg)
+        # add back background state
+        if bstate is not None and addback_bstate:
+            Q += bstate.Q
+            state.PSI += bstate.PSI
+            RHO += bstate.RHO
 
         if self._verbose>1:
             print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()))
@@ -169,22 +158,6 @@ class pvinversion():
 #
 # ==================== utils methods for inversions ===================================
 #
-
-    def substract_fprime_from_rhs(self, da, grid, state):
-        """ Substract f'=f-f0 from the rhs used in PV inversion
-        """
-        rhs = da.getVecArray(self._RHS)
-        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-
-        D = da.getVecArray(grid.D)
-
-        for k in range(zs,ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe):                    
-                    rhs[i,j,k] -= D[i,j,grid._k_f]  - state.f0
-        
-        if self._verbose>1:
-            print('  Substract f-f0 from pv prior to inversion')
 
     def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
         """

@@ -38,7 +38,6 @@ class qg_model():
                  f0N2_file = None,
                  dt = None, K = 1.e2,
                  verbose = 1,
-                 substract_fprime=False,
                  flag_pvinv=True,
                  flag_omega=False
                  ):
@@ -138,8 +137,7 @@ class qg_model():
 
         # initiate pv inversion solver
         if flag_pvinv:
-            self.pvinv = pvinversion(self.da, self.grid, self.bdy_type, sparam=self.state._sparam, \
-                                     substract_fprime=substract_fprime)
+            self.pvinv = pvinversion(self.da, self.grid, self.bdy_type, sparam=self.state._sparam)
 
         # initiate omega inversion
         if flag_omega:
@@ -208,12 +206,19 @@ class qg_model():
         """
         self.state.set_rho(self.da, self.grid, **kwargs)
 
+    def set_bstate(self,**kwargs):
+        bstate = add(self.state, self.state, da=self.da, a1=0., a2=0., a3=0.)
+        bstate.set_q(self.da, self.grid, **kwargs)
+        bstate.set_psi(self.da, self.grid, **kwargs)
+        bstate.set_rho(self.da, self.grid, **kwargs)
+        return bstate
+
     def set_w(self, **kwargs):
         """ Set w
         """
         self.state.set_w(self.da, self.grid, **kwargs)
 
-    #
+#
 #==================== useful wrappers for solvers ============================================
 #
                  
