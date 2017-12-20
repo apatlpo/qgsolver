@@ -3,7 +3,7 @@
 
 import sys
 
-from .grid import *
+#from .grid import *
 from .state import *
 from .pvinv import *
 from .omegainv import *
@@ -14,8 +14,6 @@ import petsc4py
 petsc4py.init(sys.argv)
 from petsc4py import PETSc
 
-import numpy as np
-from .inout import read_nc_petsc, read_nc_petsc_2D
 from .inout import write_nc
 
 
@@ -197,26 +195,26 @@ class qg_model():
     def set_psi(self, **kwargs):
         """ Set psi
         """
-        self.state.set_psi(self, **kwargs)
+        self.state.set_psi(self.da, self.grid, **kwargs)
 
 
     def set_q(self, **kwargs):
         """ Set q
         """
-        self.state.set_q(self, **kwargs)
+        self.state.set_q(self.da, self.grid, **kwargs)
 
     def set_rho(self, **kwargs):
         """ Set rho
         """
-        self.state.set_rho(self, **kwargs)
+        self.state.set_rho(self.da, self.grid, **kwargs)
 
     def set_w(self, **kwargs):
         """ Set w
         """
-        self.state.set_w(self, **kwargs)
+        self.state.set_w(self.da, self.grid, **kwargs)
 
     #
-#==================== useful wrappers ============================================
+#==================== useful wrappers for solvers ============================================
 #
                  
     def invert_pv(self):
@@ -238,118 +236,72 @@ class qg_model():
         """
         self.tstepper.go(nt, self.da, self.state, self.grid, self.pvinv, rhosb=rhosb)
 
+
+#
+# ==================== IO ============================================
+#
+
+    def write_state(self,v=['PSI','Q'], vname=['psi','q'], filename='output.nc', append=False):
+        """ Outputs state to a netcdf file
+
+        Parameters
+        ----------
+        v : list of str
+            List of variables to output (must be contained in state object)
+        vname : list of str
+            list of the names used in netcdf files
+        filename : str
+            netcdf output filename
+        create : boolean, optional
+            if true creates a new file, append otherwise (default is True)
+
+        """
+        V=[]
+        for vv in v:
+            if hasattr(self.state,vv):
+                V.append(getattr(self.state,vv))
+            else:
+                print('Warning: variable '+vv+' not present in state vector and thus not outputted')
+        write_nc(V, vname, filename, self.da, self.grid, self.rank, append=append)
+
 #
 #==================== utils ============================================
 #
-
     def compute_CFL(self, PSI=None):
-        """ 
-        Compute CFL = max (u*dt/dx)
+        """ Compute CFL = max (u*dt/dx)
+
+        Parameters
+        ----------
+        PSI: petsc Vec, optional
+            PSI vector used for velocity computation
+
+        Returns
+        -------
+        CFL: float
+            CFL number
         """
 
         # compute U from psi
-        self.get_uv(PSI=PSI)
+        self.state.get_uv(self.da, self.grid, PSI=PSI)
 
         # compute abs(u*dt/dx)
-        self.compute_dudx(PSI=PSI)
+        self._compute_dudx(PSI=PSI)
 
-        CFL=self._U.max()[1]
+        CFL=self._U.max()[1]*self.tstepper.dt
         self._U.destroy()
         return CFL
 
-    def compute_dudx(self, PSI=None):
-        """
-        Compute abs(u*dt/dx)
-
+    def _compute_dudx(self, PSI=None):
+        """ Compute abs(u*dt/dx)
         """
         # get u
         u = self.da.getVecArray(self._U)
         # get dx
         D = self.da.getVecArray(self.grid.D)
 
-        dt = self.tstepper.dt
         kdxu = self.grid._k_dxu
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
     
         for k in range(zs,ze):
-            u[:,:,k] = u[:,:,k]*dt/D[:,:,kdxu]
-
-    def compute_KE(self, PSI=None):
-        """ 
-        Compute kinetic energy = 0.5 * sum (u**2+v**2)
-        """
-        
-        # compute local kinetic energy
-        self.compute_local_KE(PSI=PSI)
-        
-        # average spatially
-        KE=self._lKE.sum()
-        Vol=self._Vol.sum()
-        self._lKE.destroy()
-        self._Vol.destroy()
-        
-        return KE/Vol
-        
-    def compute_local_KE(self, PSI=None):
-        
-        ### create global vectors
-        self._lKE = self.da.createGlobalVec()
-        self._Vol = self.da.createGlobalVec()
-
-        ### create local vectors
-        local_PSI  = self.da.createLocalVec()
-        local_D = self.da.createLocalVec()
-
-        #### load vector PSI used to compute U and V
-        if PSI is None:
-            self.da.globalToLocal(self.PSI, local_PSI)
-        else:
-            self.da.globalToLocal(PSI, local_PSI)
-
-        self.da.globalToLocal(self.grid.D, local_D)
-
-        #
-        lKE = self.da.getVecArray(self._lKE)
-        Vol = self.da.getVecArray(self._Vol)
-        psi = self.da.getVecArray(local_PSI)
-        D = self.da.getVecArray(local_D)
-
-        mx, my, mz = self.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-
-        kmask = self.grid._k_mask
-        kdxu = self.grid._k_dxu
-        kdyu = self.grid._k_dyu
-        kdxv = self.grid._k_dxv
-        kdyv = self.grid._k_dyv
-        kdxt = self.grid._k_dxt
-        kdyt = self.grid._k_dyt
-
-        # Loop around volume
-        for k in range(zs,ze):
-            for j in range(ys, ye):
-                for i in range(xs, xe): 
-                    if (i==0    or j==0 or
-                        i==mx-1 or j==my-1):
-                        # lateral boundaries
-                        lKE[i, j, k] = 0.
-                        Vol[i,j,k] = 0.
-                    else:
-                        u = - 1. /D[i,j,kdyu] * \
-                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
-                               0.25*(psi[i+1,j-1,k]+psi[i+1,j,k]+psi[i,j,k]+psi[i,j-1,k]) )
-                        v =   1. /D[i,j,kdxv] * \
-                             ( 0.25*(psi[i+1,j,k]+psi[i+1,j+1,k]+psi[i,j+1,k]+psi[i,j,k]) - \
-                               0.25*(psi[i,j,k]+psi[i,j+1,k]+psi[i-1,j+1,k]+psi[i-1,j,k]) )
-                        Vol[i,j,k] = self.grid.dzt[k]*D[i,j,kdxt]*D[i,j,kdyt]
-                        lKE[i,j,k] = 0.5 * (u**2 + v**2) *Vol[i,j,k]
-
-        return
+            u[:,:,k] = u[:,:,k]/D[:,:,kdxu]
 	
-    def set_identity(self):
-        ONE = self.da.createGlobalVec()
-        one = self.da.getVecArray(ONE)
-        (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-        one[:] = 1.
-        return ONE
-

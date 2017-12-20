@@ -60,30 +60,30 @@ def uniform_grid_runs():
     qg = qg_model(hgrid = hgrid, vgrid = vgrid,
                   K = 0.e0, dt = 0.5*86400.e0,
                   ncores_x=ncores_x, ncores_y=ncores_y)
-    #
+
+    # pv inversion
     qg.set_q()
     qg.invert_pv()
-    write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg)
+    qg.write_state(filename='data/output.nc')
 
     # load background PV
 
     #
-    test=1
+    test=0
     if test==0:
         # one time step and store
         qg.tstep(1)
-        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        qg.write_state(filename='data/output.nc', append=True)
     elif test==1:
         # write/read/write
         qg.tstep(1)
-        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
-        #qg.set_q(file_q='data/output.nc')
+        qg.write_state(filename='data/output.nc', append=True)
         qg.tstep(1)
-        write_nc([qg['PSI'], qg['Q']], ['psi', 'q'], 'data/output.nc', qg, create=False)
+        qg.write_state(filename='data/output.nc', append=True)
     elif test==2:
         while qg.tstepper.t/86400. < 200 :
             qg.tstep(1)
-            write_nc([qg.state.PSI, qg.state.Q], ['psi', 'q'], 'data/output.nc', qg, create=False)
+            qg.write_state(filename='data/output.nc', append=True)
 
     if qg._verbose>0:
         print('----------------------------------------------------')
