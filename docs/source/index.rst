@@ -20,6 +20,7 @@ API
    :maxdepth: 2
 
    api/qgsolver
+
 ..   modules
 
 
