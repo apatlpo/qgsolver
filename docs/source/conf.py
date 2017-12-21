@@ -198,7 +198,8 @@ texinfo_documents = [
 #    app.connect('builder-inited', run_apidoc)
 
 import mock
-MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot', 'petsc4py']
+MOCK_MODULES = ['numpy', 'scipy', 'matplotlib', 'matplotlib.pyplot', \
+		'petsc4py','netCDF4']
 for mod_name in MOCK_MODULES:
     sys.modules[mod_name] = mock.Mock()
 
