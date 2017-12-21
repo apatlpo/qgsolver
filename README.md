@@ -37,6 +37,8 @@ conda install -c conda-forge matplotlib
 conda install -c conda-forge jupyter 
 ```
 
+# Run
+
 Use of qgsolver on Datarmor
 ```csh
 bash
@@ -46,4 +48,7 @@ python run_caparmor.py workdir
 ```
 run\_caparmor.py creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
 
+# API
+
+See [doc](http://qgsolver-doc.readthedocs.io/en/latest/)
 
