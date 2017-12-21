@@ -72,7 +72,7 @@ class qg_model():
         #
         # Build grid object
         #
-        self.grid = grid(hgrid, vgrid, vdom, hdom, mask, verbose=verbose)
+        self.grid = grid(hgrid, vgrid, hdom, vdom, mask=mask, verbose=verbose)
 
         # set boundary conditions
         if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):

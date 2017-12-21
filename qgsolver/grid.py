@@ -21,8 +21,44 @@ class grid(object):
     #
     # object init
     #
-    def __init__(self, hgrid_in, vgrid_in, vdom_in, hdom_in, mask, verbose=1):
+    def __init__(self, hgrid_in, vgrid_in, hdom_in, vdom_in, mask=False, verbose=1):
+        """ Builds a grid object
 
+        Parameters
+        ----------
+        hgrid_in : str, dict or None
+            horizontal grid file name or analytical grid if dict or None
+            Example:
+            hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':150, 'Ny':100}
+        vgrid_in : str, dict or None
+            vertical grid file name or analytical grid if dict or None
+            Example:
+            vgrid = {'H':4.e3, 'Nz':10}
+        hdom_in : dict
+            horizontal grid dimension description
+            Example:
+            hdom_in = {'Nx': 100, 'Ny': 200}
+            hdom_in = {'Nx': 100, 'Ny': 200, 'i0': 10, 'j0': 20}
+            i0 and j0 are start indices in grid input netcdf file
+            missing parameters are deduced but one should have: Nx=iend-istart+1, Ny=jend-jstart+1
+        vdom_in : dict
+            vertical grid dimension description
+            Example:
+            vdom_in = {'Nz': 10, 'k0': 10}
+            k0 is the start index in grid input netcdf file
+            missing parameters are deduced but one should have: kup-kdown+1
+        mask : boolean
+            activates the use of a mask
+        verbose : int
+            degree of verbosity, 0 means no outputs
+')
+            sys.exit()
+        elif self.jend-self.jstart+1!=self.Ny:
+            print('!Error:  not equal to Ny')
+            sys.exit()
+        elif self.kup-self.kdown+1!=self.Nz:
+            print('!Error: kup-kdown+1 not equal to Nz')
+        """
         self._verbose = verbose
         
         #
@@ -36,7 +72,6 @@ class grid(object):
             hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':150, 'Ny':100}
             hgrid.update(hgrid_in)
             self._build_hgrid_uniform(**hgrid)
-
         else:
             # curvilinear grid
             #print('!!! need to determine Nx and Ny from files')
@@ -140,8 +175,6 @@ class grid(object):
             print('!Error: kup-kdown+1 not equal to Nz')
             sys.exit()
 
-
-
     #
     # Uniform grids
     #
@@ -170,7 +203,15 @@ class grid(object):
     
     
     def load_metric_terms(self, da):
-        
+        """ Load metric terms from self.hgrid_file
+
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+
+        """
+
         # create a 3D vector containing metric terms
         self.D = da.createGlobalVec()
         # load curvilinear metric terms
@@ -255,13 +296,22 @@ class grid(object):
         #
         comm = da.getComm()
         comm.barrier()
-        pass
     
     def load_coriolis_parameter(self, coriolis_file, da):
+        """ Load the Coriolis parameter
+
+        Parameters
+        ----------
+        coriolis_file : str
+            netcdf file containing the Coriolis parameter
+        da : petsc DMDA
+            holds the petsc grid
+
+        """
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension 
-        self._k_f=zs+9       
+        self._k_f=zs+9
         # open and read netcdf file
         rootgrp = Dataset(coriolis_file, 'r')
         v[:, :, self._k_f] = np.transpose(rootgrp.variables['f'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
@@ -269,17 +319,20 @@ class grid(object):
         #
         comm=da.getComm()
         comm.barrier()
-        pass
      
     def load_mask(self, mask_file, da, mask3D=False):
-        """
-        load reference mask from metrics file
-        input:
-        - mask_file : netcdf file containning the mask
-        - da : instance of data management object
-        - mask3D: flag for 3D masks (default is False)
-        output:
-        - grid.D[grid._k_mask,:,:] : contains the mask
+        """Load reference mask from metrics file
+        grid.D[grid._k_mask,:,:] will contain the mask
+
+        Parameters
+        ----------
+        mask_file : str
+            netcdf file containing the mask
+        da : petsc DMDA
+            holds the petsc grid
+        mask3D: boolean
+            flag for 3D masks, default is False
+
         """
         self.mask3D = mask3D
         if not mask3D:
@@ -330,7 +383,7 @@ class grid(object):
     #
     def _build_vgrid_stretched(self,vgrid_file):
 
-        # store metric file but metric terms are loaded later
+        # store metric file but metric terms are loaded in load_metric_terms
         self.vgrid_file = vgrid_file
         # open netcdf file
         #rootgrp = Dataset(vgrid_file, 'r')
@@ -354,8 +407,8 @@ class grid(object):
             # not trivial to implement as min/max needs to be taken across tiles ...
             out = '  The horizontal grid is curvlinear with:\n' \
                 + '    Nx = %i , Ny = %i\n' % (self.Nx, self.Ny)
-                #+ '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
-                #+ '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
+            #    + '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
+            #    + '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
                 
         if self._flag_vgrid_uniform:
             out += '  The vertical grid is uniform with:\n' \
@@ -379,7 +432,7 @@ class grid(object):
 
         return out
       
-                  
+
 #
 #==================== extract grid data ============================================
 #
@@ -388,7 +441,7 @@ class grid(object):
         x,y = self.get_xy()
         z = self.get_z()
         return x,y,z
-                  
+
     def get_xy(self):
         if self._flag_hgrid_uniform:
             x=np.linspace(0,self.Lx,self.Nx)
@@ -404,6 +457,6 @@ class grid(object):
         else:
             z=self.zt
         return z
-   
+
 
 

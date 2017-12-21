@@ -78,7 +78,7 @@ def uniform_grid_runs():
     # load background PV
 
     #
-    test=-1
+    test=0
     if test==0:
         # one time step and store
         qg.tstep(1, bstate=bstate)
