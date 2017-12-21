@@ -51,13 +51,7 @@ class grid(object):
             activates the use of a mask
         verbose : int
             degree of verbosity, 0 means no outputs
-')
-            sys.exit()
-        elif self.jend-self.jstart+1!=self.Ny:
-            print('!Error:  not equal to Ny')
-            sys.exit()
-        elif self.kup-self.kdown+1!=self.Nz:
-            print('!Error: kup-kdown+1 not equal to Nz')
+            
         """
         self._verbose = verbose
         
