@@ -56,7 +56,7 @@ class time_stepper():
 # ==================== time stepping method ============================================
 #
 
-    def go(self, nt, da, grid, state, pvinv, rhosb=False, bstate=None):
+    def go(self, nt, da, grid, state, pvinv, rho_sb=False, bstate=None):
         """ Carry out the time stepping
 
         Parameters
@@ -81,7 +81,7 @@ class time_stepper():
             print('<--- Start time stepping ')
         _tstep=0
 
-        if rhosb:
+        if rho_sb:
             # copy upper and lower density into Q
             self.copy_topdown_rho_to_q()
 
@@ -93,7 +93,7 @@ class time_stepper():
             state.Q.copy(self._RHS0) # copies Q into RHS0
             state.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
-                if rhosb:
+                if rho_sb:
                     self.update_topdown_rho(da, grid, state)
                 pvinv.solve(da, grid, state)
                 #
@@ -111,7 +111,7 @@ class time_stepper():
                 print('t = %f d' % (self.t/86400.))
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
-        if rhosb:
+        if rho_sb:
             self.update_topdown_rho(da, grid, state)
         pvinv.solve(da, grid, state)
         # reset q

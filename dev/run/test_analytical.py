@@ -16,10 +16,10 @@ from qgsolver.qg import qg_model
 from qgsolver.state import add
 
 #
-#==================== Uniform grid case ============================================
+#==================== analytical / uniform grid case =========================================
 #
 
-def uniform_grid_runs():
+def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     """
     Tests with uniform grid, closed domains
     """
@@ -55,57 +55,61 @@ def uniform_grid_runs():
     #hgrid = {'Nx':1024, 'Ny':512}
     #vgrid = {'Nz':300}
 
-    # proceeds with computations
-    qg = qg_model(hgrid = hgrid, vgrid = vgrid,
-                  K = 0.e0, dt = 0.5*86400.e0,
-                  ncores_x=ncores_x, ncores_y=ncores_y)
+    if ping_mpi_cfg:
+        # escape before computing
+        return ncores_x, ncores_y
+    else:
 
-    # pv inversion
-    qg.set_q()
-    #
-    bstate = qg.set_bstate(q0=0.,beta=1.e-11)
-    #
-    # bstate=None # turns off background state
-    if True:
-        add(qg.state,bstate,da=None)
-    qg.write_state(filename='data/output.nc')
-    #
-    qg.invert_pv(bstate=bstate)
-    #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
-    #
-    qg.write_state(filename='data/output.nc', append=True)
-
-    # load background PV
-
-    #
-    test=0
-    if test==0:
-        # one time step and store
-        qg.tstep(1, bstate=bstate)
+        # proceeds with computations
+        qg = qg_model(hgrid = hgrid, vgrid = vgrid,
+                      K = 0.e0, dt = 0.5*86400.e0,
+                      ncores_x=ncores_x, ncores_y=ncores_y)
+    
+        # pv inversion
+        qg.set_q()
+        #
+        bstate = qg.set_bstate(q0=0.,beta=1.e-11)
+        #
+        # bstate=None # turns off background state
+        if True:
+            add(qg.state,bstate,da=None)
+        qg.write_state(filename='data/output.nc')
+        #
+        qg.invert_pv(bstate=bstate)
+        #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
+        #
         qg.write_state(filename='data/output.nc', append=True)
-    elif test==1:
-        # write/read/write
-        qg.tstep(1)
-        qg.write_state(filename='data/output.nc', append=True)
-        qg.tstep(1)
-        qg.write_state(filename='data/output.nc', append=True)
-    elif test==2:
-        while qg.tstepper.t/86400. < 200 :
-            qg.tstep(1)
+        
+        #
+        test=1
+        if test==0:
+            # one time step and store
+            qg.tstep(1, bstate=bstate)
             qg.write_state(filename='data/output.nc', append=True)
+        elif test==1:
+            while qg.tstepper.t/86400. < 200 :
+                qg.tstep(1)
+                qg.write_state(filename='data/output.nc', append=True)
+    
+        if qg._verbose>0:
+            print('----------------------------------------------------')
+            print('Elapsed time for all ',str(time.time() - cur_time))
+    
+        return qg
 
-    if qg._verbose>0:
-        print('----------------------------------------------------')
-        print('Elapsed time for all ',str(time.time() - cur_time))
+#
+#==================== main wrappers =========================================
+#
 
-    return qg
-
+def main(ping_mpi_cfg=False):    
+    
+    qg = uniform_grid_runs(ping_mpi_cfg=ping_mpi_cfg)
+    
+    if ping_mpi_cfg:
+        return qg[0], qg[1]
+    elif qg._verbose>0:
+        print('Test analytical done \n')
 
 if __name__ == "__main__":
-
-    qg = uniform_grid_runs()
-
-    if qg._verbose>0:
-        print('Test done \n')
-
+    main()
     

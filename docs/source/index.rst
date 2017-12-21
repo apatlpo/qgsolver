@@ -4,9 +4,11 @@ qgsolver_doc's documentation
 Install
 --------------------
 
-See README on qgsolvergt_
+See README on `qgsolver github repository`__
 
 .. _qgsolvergt: https://github.com/apatlpo/qgsolver
+
+__ qgsolvergt_
 
 Tutorial on a desktop
 --------------------
