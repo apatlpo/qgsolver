@@ -4,14 +4,18 @@ qgsolver_doc's documentation
 Install
 --------------------
 
-Here is some text explaining some very complicated stuff
+See README on qgsolvergt_
 
-    print 'hello'
-    >> hello
+.. _qgsolvergt: https://github.com/apatlpo/qgsolver
 
-Tutorial
+Tutorial on a desktop
 --------------------
 
+Tutorial on datarmor
+--------------------
+
+Creating input files
+--------------------
 
 API
 --------------------
@@ -21,13 +25,8 @@ API
 
    api/qgsolver
 
-..   modules
-
-
-
 Indices and tables
 --------------------
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
