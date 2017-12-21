@@ -1,3 +1,5 @@
+# borrowed from astropy
+
 name: petsc
 
 dependencies:
