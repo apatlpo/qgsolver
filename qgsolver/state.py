@@ -424,7 +424,7 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
     state1 : qgsolver state
     state2 : qgsolver state
     da : None or petsc DMDA
-        if None, state1 becomes the result of the operation, otherwise a new state is created
+        if None state1 is updated; otherwise a new state is created
     a1 : float, optional
         default value = 1.
     a2 : float, optional

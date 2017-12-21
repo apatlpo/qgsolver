@@ -1,15 +1,14 @@
-#!python
+#!/usr/bin/python
 # -*- encoding: utf8 -*-
 
-# python2.7 setup.py
-# python2.7 setup.py build_ext --inplace
+""" Launch simulation on datarmor
+"""
 
 import os
 import shutil
 import sys
 import importlib
 
-        
 def read_pyscript(pyscript='test_basic.py'):
         
     # append qgsolver directory to import package
@@ -22,11 +21,10 @@ def read_pyscript(pyscript='test_basic.py'):
     nb_cores = ncores_x*ncores_y
     nb_nodes = ((nb_cores-1)/28)+1
     memory = 120
-    print'ncores_x=%i, ncores_y=%i, nb_cores=%i, nb_nodes=%i' %(ncores_x, ncores_y, nb_cores, nb_nodes)
+    print('ncores_x=%i, ncores_y=%i, nb_cores=%i, nb_nodes=%i' \
+          %(ncores_x, ncores_y, nb_cores, nb_nodes))
     return ncores_x, ncores_y, nb_cores, nb_nodes, memory
     
-
-
 def copy_scripts():
     
     if os.path.exists(RPATH) :

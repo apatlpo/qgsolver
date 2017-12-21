@@ -71,19 +71,21 @@ class time_stepper():
             ocean state that will be timestepped
         pvinv : pv inversion object
             PV inverser
-        rhosb : boolean, optional
+        rho_sb : boolean, optional
             turn on advection of surface and bottom densities, default if false
         bstate : state object, None, optional
             background state that will be added in advective terms
 
         """
-        if self._verbose>0:
-            print('<--- Start time stepping ')
+        if self._verbose>1:
+            print('<--- Start time stepping ', flush=True)
         _tstep=0
 
         if rho_sb:
             # copy upper and lower density into Q
-            self.copy_topdown_rho_to_q()
+            self._copy_topdown_rho_to_q(da, grid, state, flag_PSI=True)
+            if bstate is not None:
+                self._copy_topdown_rho_to_q(da, grid, bstate, flag_PSI=True)
 
         while _tstep < nt:
             # update time parameters and indexes
@@ -94,59 +96,70 @@ class time_stepper():
             state.Q.copy(self._RHS1) # copies Q into RHS1
             for rk in range(4):
                 if rho_sb:
-                    self.update_topdown_rho(da, grid, state)
+                    self._update_topdown_rho(da, grid, state)
+                #
                 pvinv.solve(da, grid, state)
                 #
-                if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
-                    self._computeRHS(da, grid, state)
+                self._dRHS.set(0.)
+                #
+                if bstate is None:
+                    self._computeADV(da, grid, state.Q, state.PSI)
                 else:
-                    self._computeRHS_curv(da, grid, state)
+                    self._computeADV(da, grid, state.Q, state.PSI)
+                    self._computeADV(da, grid, state.Q, bstate.PSI)
+                    self._computeADV(da, grid, bstate.Q, state.PSI)
+                #
+                self._computeDISS(da, grid, state.Q)
                 #
                 if rk < 3: state.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
+            #
             self._RHS1.copy(state.Q) # copies RHS1 into Q
             # reset q at boundaries
-            self.set_rhs_bdy(da, state)
+            self._set_rhs_bdy(da, state)
             if self._verbose>0:
-                print('t = %f d' % (self.t/86400.))
+                print('t = %f d' % (self.t/86400.), flush=True)
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
         if rho_sb:
-            self.update_topdown_rho(da, grid, state)
+            self._update_topdown_rho(da, grid, state)
         pvinv.solve(da, grid, state)
         # reset q
-        self.reset_topdown_q(da, grid, state)
-        if self._verbose>0:
+        self._reset_topdown_q(da, grid, state)
+        if bstate is not None:
+            self._reset_topdown_q(da, grid, bstate)
+        if self._verbose>1:
             print('Time stepping done --->')
 
 #
-# ==================== Compute RHS ============================================
+# ==================== Compute RHS advection ============================================
 #
 
-    def _computeRHS(self,da, grid, state):
-        """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
+    def _computeADV(self, da, grid, Q, PSI):
+        """ Wrapper around RHS computation code
+        """
+        if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
+            self._computeADV_uniform(da, grid, Q, PSI)
+        else:
+            self._computeADV_curv(da, grid, Q, PSI)
+
+    def _computeADV_uniform(self, da, grid, Q, PSI):
+        """ Compute the advection of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
         """
-    
-        ### compute PV inversion to streamfunction
-        #qg.invert_pv()
         
-        ### declare local vectors
-        local_RHS  = da.createLocalVec()
-        #local_dRHS  = qg.da.createLocalVec()
+        # declare local vectors
+        local_Q  = da.createLocalVec()
         local_PSI  = da.createLocalVec()
-
-        ###
-        da.globalToLocal(state.Q, local_RHS)
-        da.globalToLocal(state.PSI, local_PSI)
-        #qg.da.globalToLocal(self._dRHS, local_dRHS)
         #
-        q = da.getVecArray(local_RHS)
+        da.globalToLocal(Q, local_Q)
+        da.globalToLocal(PSI, local_PSI)
+        #
+        q = da.getVecArray(local_Q)
         psi = da.getVecArray(local_PSI)
         dq = da.getVecArray(self._dRHS)
-        #dq = qg.da.getVecArray(local_dRHS)
         #
         mx, my, mz = da.getSizes()
         dx, dy, dz = grid.dx, grid.dy, grid.dz
@@ -154,7 +167,7 @@ class time_stepper():
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
-        ### advect PV:
+        # advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
         #
         for k in range(zs, ze):
@@ -188,26 +201,21 @@ class time_stepper():
                                + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])
                         J_cp *= idx*idy*0.25
                         #
-                        dq[i, j, k] = ( J_pp + J_pc + J_cp )/3.
-                        #
-                        ### Dissipation
-                        dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
-                                       + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
+                        dq[i, j, k] += ( J_pp + J_pc + J_cp )/3.
 
-    def _computeRHS_curv(self,da, grid, state):
+    def _computeADV_curv(self,da, grid, Q, PSI):
         """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
         """
 
-        ### declare local vectors
+        # declare local vectors
         local_Q  = da.createLocalVec()
         local_PSI  = da.createLocalVec()
-        
-        ###
-        da.globalToLocal(state.Q, local_Q)
-        da.globalToLocal(state.PSI, local_PSI)
+        #
+        da.globalToLocal(Q, local_Q)
+        da.globalToLocal(PSI, local_PSI)
         #
         q = da.getVecArray(local_Q)
         psi = da.getVecArray(local_PSI)
@@ -236,7 +244,7 @@ class time_stepper():
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
-                        ### Jacobian
+                        # Jacobian
                         #
                         # naive approach leads to noodling (see Arakawa 1966, J_pp)
                         # dq[i, j, k] = - ( -dpsidy * dqdx + dpsidx * dqdy)
@@ -259,9 +267,9 @@ class time_stepper():
                                + q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k])
                         J_cp *= 0.25
                         #
-                        dq[i, j, k] = ( J_pp + J_pc + J_cp )/3. /D[i,j,kdxt]/D[i,j,kdyt]
+                        dq[i, j, k] += ( J_pp + J_pc + J_cp )/3. /D[i,j,kdxt]/D[i,j,kdyt]
                         #
-                        ### Add advection of planetary vorticity, shouldn't f-f0 be part of q though !!!
+                        # Add advection of planetary vorticity, shouldn't f-f0 be part of q though !!!
                         Jp_pp =   ( D[i+1,j,kf] - D[i-1,j,kf] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) \
                                - ( D[i,j+1,kf] - D[i,j-1,kf] ) * ( psi[i+1,j,k] - psi[i-1,j,k] )
                         Jp_pp *= 0.25
@@ -279,7 +287,82 @@ class time_stepper():
                         Jp_cp *= 0.25
                         #
                         dq[i, j, k] += ( Jp_pp + Jp_pc + Jp_cp )/3. /D[i,j,kdxt]/D[i,j,kdyt]
-                        ### Dissipation
+
+#
+# ==================== Compute RHS dissipation ============================================
+#
+
+    def _computeDISS(self, da, grid, Q):
+        """ Wrapper around RHS computation code
+        """
+        if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
+            self._computeDISS_uniform(da, grid, Q)
+        else:
+            self._computeDISS_curv(da, grid, Q)
+
+    def _computeDISS_uniform(self, da, grid, Q):
+        """ Compute potential vorticity diffusion, uniform grid
+        """
+        
+        # declare local vectors
+        local_Q  = da.createLocalVec()
+        #
+        da.globalToLocal(Q, local_Q)
+        #
+        q = da.getVecArray(local_Q)
+        dq = da.getVecArray(self._dRHS)
+        #
+        mx, my, mz = da.getSizes()
+        dx, dy, dz = grid.dx, grid.dy, grid.dz
+        idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
+        idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        #
+        # PV dissipation
+        # RHS= K*laplacian(q)
+        #
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    if not (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
+                        #
+                        # Dissipation
+                        dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
+                                       + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
+
+    def _computeDISS_curv(self,da, grid, Q):
+        """ Compute potential vorticity diffusion, curvilinear grid
+        """
+
+        # declare local vectors
+        local_Q  = da.createLocalVec()
+        #
+        da.globalToLocal(Q, local_Q)
+        #
+        q = da.getVecArray(local_Q)
+        dq = da.getVecArray(self._dRHS)
+        #
+        mx, my, mz = da.getSizes()
+        #
+        local_D  = da.createLocalVec()
+        da.globalToLocal(grid.D, local_D)
+        D = da.getVecArray(local_D)
+        kdxu, kdyu = grid._k_dxu, grid._k_dyu
+        kdxv, kdyv = grid._k_dxv, grid._k_dyv
+        kdxt, kdyt = grid._k_dxt, grid._k_dyt
+        kf = grid._k_f
+        #
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        #
+        # PV dissipation
+        # RHS= K*laplacian(q)
+        # 
+        for k in range(zs, ze):
+            for j in range(ys, ye):
+                for i in range(xs, xe):
+                    if not (i==0    or j==0 or
+                        i==mx-1 or j==my-1):
                         #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
                         #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
                         dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \
@@ -289,19 +372,18 @@ class time_stepper():
                                                -q[i,j-1,k] * D[i,j-1,kdxv]/D[i,j-1,kdyv] \
                                                 )
 
+
 #
 # ==================== timestepper utils ============================================
 #
 
-    def set_rhs_bdy(self, da, state):
+    def _set_rhs_bdy(self, da, state):
         """ Reset rhs at boundaries such that drhs/dn=0 """
         #
         rhs = da.getVecArray(state.Q)
-
         #
         mx, my, mz = da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-
         # south bdy
         if (ys == 0):
             j = 0
@@ -327,17 +409,17 @@ class time_stepper():
                 for j in range(ys, ye):
                     rhs[i, j, k] = rhs[i - 1, j, k]
 
-    def update_topdown_rho(self,da,grid, state):
+    def _reset_topdown_rho(self, da, grid, state):
         """ update top and down rho from time stepped Q for boundary conditions
         """
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-
+        #
         kdown = grid.kdown
         kup = grid.kup
-        
+        #
         q = da.getVecArray(state.Q)
         rho = da.getVecArray(state.RHO)
-           
+        #  
         for j in range(ys, ye):
             for i in range(xs, xe):           
                 rho[i, j, kdown] = q[i, j, kdown]
@@ -345,7 +427,7 @@ class time_stepper():
                 rho[i, j, kup] = q[i, j, kup]
                 rho[i, j, kup-1] = q[i, j, kup]
 
-    def copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
+    def _copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
         """ Copy top and down rho into Q for easy implementation of rho time stepping
 
         Parameters
@@ -361,12 +443,12 @@ class time_stepper():
             if False uses RHO
         """
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-
+        #
         kdown = grid.kdown
         kup = grid.kup
-        
+        #
         q = da.getVecArray(state.Q)
-                
+        #   
         if flag_PSI:
             psi = da.getVecArray(state.PSI)
             psi2rho = -(state.rho0*state.f0)/state.g
@@ -381,16 +463,16 @@ class time_stepper():
                     q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
                     q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
 
-    def reset_topdown_q(self, da, grid, state):
+    def _reset_topdown_q(self, da, grid, state):
         """ reset topdown Q with inner closest values
         """
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-
+        #
         kdown = grid.kdown
         kup = grid.kup
-        
+        #
         q = da.getVecArray(state.Q)
-
+        #
         for j in range(ys, ye):
             for i in range(xs, xe):           
                 q[i, j, kdown] = q[i, j, kdown+1]

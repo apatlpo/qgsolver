@@ -61,18 +61,20 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     else:
 
         # proceeds with computations
-        qg = qg_model(hgrid = hgrid, vgrid = vgrid,
+        qg = qg_model(hgrid = hgrid, vgrid = vgrid, boundary_types={'periodic': None}, 
                       K = 0.e0, dt = 0.5*86400.e0,
-                      ncores_x=ncores_x, ncores_y=ncores_y)
+                      ncores_x=ncores_x, ncores_y=ncores_y, verbose=1)
     
         # pv inversion
         qg.set_q()
         #
-        bstate = qg.set_bstate(q0=0.,beta=1.e-11)
-        #
-        # bstate=None # turns off background state
         if True:
-            add(qg.state,bstate,da=None)
+            bstate = qg.set_bstate(q0=0.,beta=1.e-11)
+            #
+            # bstate=None # turns off background state
+            if True:
+                # add the background state to qg.state
+                add(qg.state,bstate,da=None)
         qg.write_state(filename='data/output.nc')
         #
         qg.invert_pv(bstate=bstate)

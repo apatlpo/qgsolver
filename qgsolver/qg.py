@@ -33,7 +33,7 @@ class qg_model():
                  ncores_x=None, ncores_y=None,
                  hgrid = None, vgrid=None,
                  vdom={}, hdom={}, mask=False,
-                 bdy_type_in={},
+                 boundary_types={},
                  N2 = 1e-3, f0 = 7e-5,
                  f0N2_file = None,
                  dt = None, K = 1.e2,
@@ -54,7 +54,7 @@ class qg_model():
             defines horizontal grid choice
         vgrid : dict or str
             defines vertical grid choice
-        bdy_type_in : dict
+        boundary_types : dict
             may be used to turn on periodic boundary conditions {'periodic'}
         N2 : float
             Brunt Vaisala frequency
@@ -75,14 +75,14 @@ class qg_model():
         self.grid = grid(hgrid, vgrid, hdom, vdom, mask=mask, verbose=verbose)
 
         # set boundary conditions
-        if ('periodic' in bdy_type_in.keys()) and (bdy_type_in['periodic']):
+        if ('periodic' in boundary_types.keys()) and (boundary_types['periodic']):
             self.petscBoundaryType = 'periodic'
         else:
             self.petscBoundaryType = None
         # default top and bottom boudary condition = 'N' pour Neumann.
         # Other possibility 'D' for Direchlet
         self.bdy_type = {'top':'N','bottom':'N'}
-        self.bdy_type.update(bdy_type_in)
+        self.bdy_type.update(boundary_types)
 
 
         #
@@ -137,16 +137,17 @@ class qg_model():
 
         # initiate pv inversion solver
         if flag_pvinv:
-            self.pvinv = pvinversion(self.da, self.grid, self.bdy_type, sparam=self.state._sparam)
+            self.pvinv = pvinversion(self.da, self.grid, self.bdy_type, sparam=self.state._sparam,
+                                     verbose=self._verbose)
 
         # initiate omega inversion
         if flag_omega:
             self.W = self.da.createGlobalVec()
-            self.omegainv = omegainv(self.da, self.grid, self.bdy_type)
+            self.omegainv = omegainv(self.da, self.grid, self.bdy_type, verbose=self._verbose)
 
         # initiate time stepper
         if dt is not None:
-            self.tstepper = time_stepper(self.da, self.grid, dt, K)
+            self.tstepper = time_stepper(self.da, self.grid, dt, K, verbose=self._verbose)
 
 
 

@@ -18,7 +18,7 @@ cd qgsolver
 
 ## libraries required
 
-qgsolver requires petsc4py (and thus petsc) and netcdf4
+qgsolver requires [petsc4py](https://bitbucket.org/petsc/petsc4py) (and thus petsc) and netcdf4
 
 ### Install with conda 
 

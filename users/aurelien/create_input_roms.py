@@ -1,27 +1,20 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
-""" Create metrics, psi, pv fields for a curvlinear grid
+""" Create metrics, psi, pv fields from a ROMS output in an idealized setup 
 """
 
 import os,sys
 import shutil
 import numpy as np
-# import matplotlib.pyplot as plt
-# import cartopy.crs as ccrs
 import netCDF4
 from netCDF4 import Dataset
 
 # lpolib
-sys.path.append('/home/slyne/aponte/natl60/lporoms')
+sys.path.append('/home/slyne/aponte/lporoms')
 from lpolib.lporun import LPORun
 from lpolib.utils import *
 
-# maybe temporary
-# import matplotlib as mpl
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-#from scipy.fftpack._fftpack import zfft
-import scipy.linalg as linalg
 
 d2r = np.pi/180.
 fillvalue = netCDF4.default_fillvals['f8']
