@@ -116,7 +116,7 @@ class state():
         """
         if file_psi is not None:
             if self._verbose:
-                print('Set psi from file ' + file_psi + ' ...')
+                print('  Set psi from file ' + file_psi + ' ...')
             read_nc_petsc(self.PSI, 'psi', file_psi, da, grid, fillmask=0.)
         elif analytical_psi:
             self.set_psi_analytically(da, psi0)
@@ -133,7 +133,7 @@ class state():
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         if self._verbose:
-            print('Set psi analytically')
+            print('  Set psi analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -157,7 +157,7 @@ class state():
         #
         if file_q is not None:
             if self._verbose:
-                print('Set q from file ' + file_q + ' ...')
+                print('  Set q from file ' + file_q + ' ...')
             read_nc_petsc(self.Q, 'q', file_q, da, grid, fillmask=0.)
         elif analytical_q:
             self.set_q_analytically(da, grid, q0, beta)
@@ -170,7 +170,7 @@ class state():
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         if self._verbose:
-            print('Set q analytically')
+            print('  Set q analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -198,7 +198,7 @@ class state():
         #
         if file_rho is not None:
             if self._verbose:
-                print('Set rho from file ' + file_rho + ' ...')
+                print('  Set rho from file ' + file_rho + ' ...')
             read_nc_petsc(self.RHO, 'rho', file_rho, da, grid, fillmask=0.)
         elif analytical_rho:
             self.set_rho_analytically(da, rho0)
@@ -210,7 +210,7 @@ class state():
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         if self._verbose:
-            print('Set rho analytically')
+            print('  Set rho analytically')
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -433,18 +433,21 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
         default value = 0.
 
     """
-    if da is not None:
-        new_state = state(da,None,N2=None,verbose=state1._verbose)
-    else:
-        new_state = state1
-    new_state['Q'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
-    new_state['PSI'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
-    new_state['RHO'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
+    if state1 is not None and state2 is not None:
+        if da is not None:
+            new_state = state(da,None,N2=None,verbose=state1._verbose)
+        else:
+            new_state = state1
+        new_state['Q'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
+        new_state['PSI'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
+        new_state['RHO'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
 
-    # we use state1 parameters
-    new_state.N2 = state1.N2
-    new_state.f0 = state1.f0
-    new_state._compute_sparam()
+        # we use state1 parameters
+        new_state.N2 = state1.N2
+        new_state.f0 = state1.f0
+        new_state._compute_sparam()
+    else:
+        new_state = None
 
     if da is not None:
         return new_state

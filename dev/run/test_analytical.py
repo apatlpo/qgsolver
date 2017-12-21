@@ -62,11 +62,18 @@ def uniform_grid_runs():
 
     # pv inversion
     qg.set_q()
+    #
     bstate = qg.set_bstate(q0=0.,beta=1.e-11)
+    #
+    # bstate=None # turns off background state
     if True:
         add(qg.state,bstate,da=None)
-    qg.invert_pv()
     qg.write_state(filename='data/output.nc')
+    #
+    qg.invert_pv(bstate=bstate)
+    #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
+    #
+    qg.write_state(filename='data/output.nc', append=True)
 
     # load background PV
 
@@ -74,7 +81,7 @@ def uniform_grid_runs():
     test=-1
     if test==0:
         # one time step and store
-        qg.tstep(1)
+        qg.tstep(1, bstate=bstate)
         qg.write_state(filename='data/output.nc', append=True)
     elif test==1:
         # write/read/write

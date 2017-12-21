@@ -36,8 +36,6 @@ class pvinversion():
             numpy array containing f^2/N^2
         verbose : int
             degree of verbosity, 0 means no outputs
-        bstate : None, state object, optional
-            Activates substraction of
         solver : str
             petsc solver: 'gmres' (default), 'bicg', 'cg'
         pc : str, optional
@@ -49,16 +47,11 @@ class pvinversion():
         self._verbose = verbose
         #
         self.bdy_type = bdy_type
-        self.petscBoundaryType=False
         if ('periodic' in self.bdy_type) and (self.bdy_type['periodic']):
             self.petscBoundaryType = True
+        else:
+            self.petscBoundaryType = False
 
-        ## background fields
-        #if bstate is None:
-        #    self._bstate = False
-        #else:
-        #    self._bstate = True
-        
         # create the operator
         self.L = da.createMat()
         #
@@ -108,6 +101,25 @@ class pvinversion():
         """ Compute the PV inversion
         Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
 
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+        Q : petsc Vec, None, optional
+            potential vorticity, use state.Q if None
+        PSI : petsc Vec, None, optional
+            streamfunction, use state.PSI if None
+        RHO : petsc Vec, None, optional
+            density, use state.RHO if None
+        bstate : state object, None, optional
+            background state that will be added in advective terms
+        addback_bstate : boolean
+            if True, add background state back to output variables ()
+
         Returns
         -------
         state.PSI:
@@ -147,6 +159,7 @@ class pvinversion():
         self.ksp.solve(self._RHS, state.PSI)
         # add back background state
         if bstate is not None and addback_bstate:
+            print('add back bstate after pv inversion')
             Q += bstate.Q
             state.PSI += bstate.PSI
             RHO += bstate.RHO
@@ -160,22 +173,22 @@ class pvinversion():
 #
 
     def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
-        """
-        Set South/North, East/West, Bottom/Top boundary conditions
+        """ Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
 
         Parameters
         ----------
-        da:
-
-        grid:
-
-        state:
-
-        PSI:
-
-        RHO:
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+        PSI : petsc Vec, None, optional
+            streamfunction, use state.PSI if None
+        RHO : petsc Vec, None, optional
+            density, use state.RHO if None
 
         """
         
@@ -186,19 +199,21 @@ class pvinversion():
         self.set_rhs_bdy_top(da, grid, state, PSI=PSI, RHO=RHO)
         self.set_rhs_bdy_lat(da, grid, state)
 
-        return
-
     def set_rhs_bdy_bottom(self, da, grid, state, PSI=None, RHO=None):
-        """
-        Set bottom boundary condition
+        """ Set bottom boundary condition
 
         Parameters
         ----------
-
-        PSI:
-
-        RHO:
-            Petsc vector that will be used to compute the bdy condition
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+        PSI : petsc Vec, None, optional
+            streamfunction, use state.PSI if None
+        RHO : petsc Vec, None, optional
+            density, use state.RHO if None
 
         """
 
@@ -206,7 +221,6 @@ class pvinversion():
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
         kdown = grid.kdown
-        kup = grid.kup
 
         # load vector used to compute boundary conditions
         if PSI is None:
@@ -246,11 +260,21 @@ class pvinversion():
         return
 
     def set_rhs_bdy_top(self, da, grid, state, PSI=None, RHO=None):
-        """
-        Set top boundary condition
+        """Set top boundary condition
 
-        :param PSI, RHO: Petsc vectors that will be used to compute the bdy condition
-        :return:
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+        PSI : petsc Vec, None, optional
+            streamfunction, use state.PSI if None
+        RHO : petsc Vec, None, optional
+            density, use state.RHO if None
+
         """
         
         rhs = da.getVecArray(self._RHS)
@@ -264,7 +288,7 @@ class pvinversion():
         else:
             psi = da.getVecArray(PSI)
         if RHO is None:
-            rho = da.getVecArray(qg.state.RHO)
+            rho = da.getVecArray(state.RHO)
         else:
             rho = da.getVecArray(RHO)
 
@@ -292,13 +316,20 @@ class pvinversion():
             print(self.bdy_type['top']+" unknown top boundary condition")
             sys.exit()
 
-
     def set_rhs_bdy_lat(self, da, grid, state, PSI=None):
-        """
-        Set lateral boundary condition
+        """Set lateral boundary condition
 
-        :param PSI: Petsc vector that will be used to compute the bdy condition
-        :return:
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+        PSI : petsc Vec, None, optional
+            streamfunction, use state.PSI if None
+
         """
         
         rhs = da.getVecArray(self._RHS)
@@ -343,22 +374,23 @@ class pvinversion():
                 for j in range(ys, ye):
                     for i in range(max(xs,iend),xe):
                         rhs[i, j, k] = psi[i, j, k]
-                        
-        return
-    
-
 
     def set_rhs_mask(self, da, grid, state):
-        """
-        Set mask on rhs: where mask=0 (land) rhs=psi
+        """Set mask on rhs: where mask=0 (land) rhs=psi
 
-        param: da abstract distributed memory object of the domain
-        param: qg qg_model instance
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state
+
         """
 
         rhs = da.getVecArray(self._RHS)
         mask = da.getVecArray(grid.D)
-        mx, my, mz = da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
         kmask = grid._k_mask
@@ -382,13 +414,24 @@ class pvinversion():
     def _set_L(self,L, da, grid, sparam):
         """ Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
+
+        Parameters
+        ----------
+        L : petsc Mat
+            potential vorticity operator
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        sparam : ndarray
+            f0^2/N^2/ array
+
         """
         
         if self._verbose>0:
             print('  ... assumes a uniform horizontal and vertical grid')
         
         #
-        mx, my, mz = da.getSizes()
         dx, dy, dz = grid.dx, grid.dy, grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
@@ -412,23 +455,23 @@ class pvinversion():
                 for i in range(xs, xe):
                     row.index = (i,j,k)
                     row.field = 0
-    
+
                     # lateral points outside the domain: dirichlet, psi=...
-                    if (i<=istart or j<=jstart or
-                        i>=iend or j>=jend):
+                    if ( (i<=istart and self.petscBoundaryType is not 'periodic') \
+                           or (i>=iend and self.petscBoundaryType is not 'periodic') \
+                           or j<=jstart or j>=jend):
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
-                        if self.bdy_type['bottom']=='N' or self.bdy_type['bottom']=='NBG':
+                        if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
                             for index, value in [
-                                ((i,j,k), -idz),
-                                ((i,j,k+1),  idz)
-                                ]:
+                                    ((i,j,k), -idz),
+                                    ((i,j,k+1),  idz)]:
                                 col.index = index
                                 col.field = 0
                                 L.setValueStencil(row, col, value)
-                        elif self.bdy_type['bottom']=='D':
+                        elif self.bdy_type['bottom'] == 'D':
                             L.setValueStencil(row, row, 1.0)
                         else:
                             print('unknown bottom boundary condition')
@@ -436,15 +479,14 @@ class pvinversion():
     
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif (k==kup):
-                        if self.bdy_type['top']=='N' or self.bdy_type['top']=='NBG':
+                        if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
                             for index, value in [
-                                ((i,j,k-1), -idz),
-                                ((i,j,k),  idz),
-                                ]:
+                                    ((i,j,k-1), -idz),
+                                    ((i,j,k),  idz)]:
                                 col.index = index
                                 col.field = 0
                                 L.setValueStencil(row, col, value)
-                        elif self.bdy_type['top']=='D':
+                        elif self.bdy_type['top'] == 'D':
                             L.setValueStencil(row, row, 1.0)
                         else:
                             print('unknown top boundary condition')
@@ -457,35 +499,39 @@ class pvinversion():
                     # interior points: pv is prescribed
                     else:
                         for index, value in [
-                            ((i,j,k-1), sparam[k-1]*idz2),
-                            ((i,j-1,k), idy2),
-                            ((i-1,j,k), idx2),
-                            ((i, j, k), -2.*(idx2+idy2)-(sparam[k]*idz2+sparam[k-1]*idz2)),
-                            ((i+1,j,k), idx2),
-                            ((i,j+1,k), idy2),
-                            ((i,j,k+1), sparam[k]*idz2)
-                            ]:
+                                ((i,j,k-1), sparam[k-1]*idz2),
+                                ((i,j-1,k), idy2),
+                                ((i-1,j,k), idx2),
+                                ((i, j, k), -2.*(idx2+idy2)-(sparam[k]*idz2+sparam[k-1]*idz2)),
+                                ((i+1,j,k), idx2),
+                                ((i,j+1,k), idy2),
+                                ((i,j,k+1), sparam[k]*idz2)]:
                             col.index = index
                             col.field = 0
                             L.setValueStencil(row, col, value)
         L.assemble()
         return
-    
-    
-    
-    
-    
+
     def _set_L_curv(self,L, da, grid, sparam):
         """ Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
+
+        Parameters
+        ----------
+        L : petsc Mat
+            potential vorticity operator
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        sparam : ndarray
+            f0^2/N^2/ array
+
         """
         
         if self._verbose>0:
             print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
-        mx, my, mz = da.getSizes()
-        #
-        #D = qg.da.getVecArray(qg.grid.D)
         local_D  = da.createLocalVec()
         da.globalToLocal(grid.D, local_D)
         D = da.getVecArray(local_D)
@@ -499,7 +545,6 @@ class pvinversion():
         #
         idzt = 1./grid.dzt
         idzw = 1./grid.dzw
-        #idz, idz2 = 1./dz, 1./dz**2
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         istart = grid.istart
@@ -524,18 +569,17 @@ class pvinversion():
                         L.setValueStencil(row, row, 1.)
     
                     # lateral points outside the domain: dirichlet, psi=...
-                    elif (    (i<=istart and self.BoundaryType is not 'periodic') \
-                           or (i>=iend and self.BoundaryType is not 'periodic') \
+                    elif ( (i<=istart and self.petscBoundaryType is not 'periodic')
+                           or (i>=iend and self.petscBoundaryType is not 'periodic')
                            or j<=jstart or j>=jend):
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif (k==kdown):
-                        if self.bdy_type['bottom']=='N' or self.bdy_type['bottom']=='NBG':
+                        if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
                             for index, value in [
-                                ((i,j,k), -idzw[k]),
-                                ((i,j,k+1),  idzw[k])
-                                ]:
+                                    ((i,j,k), -idzw[k]),
+                                    ((i,j,k+1),  idzw[k])]:
                                 col.index = index
                                 col.field = 0
                                 L.setValueStencil(row, col, value)
@@ -549,9 +593,8 @@ class pvinversion():
                     elif (k==kup):
                         if self.bdy_type['top']=='N' or self.bdy_type['top']=='NBG':
                             for index, value in [
-                                ((i,j,k-1), -idzw[k-1]),
-                                ((i,j,k),  idzw[k-1]),
-                                ]:
+                                    ((i,j,k-1), -idzw[k-1]),
+                                    ((i,j,k),  idzw[k-1])]:
                                 col.index = index
                                 col.field = 0
                                 L.setValueStencil(row, col, value)
@@ -563,38 +606,26 @@ class pvinversion():
     
                     # points below and above the domain
                     elif (k<kdown) or (k>kup):
-                        # L.setValueStencil(row, row, 0.0)
                         L.setValueStencil(row, row, 1.0)
-    
-                    # lateral points outside the domain: dirichlet, psi=...
-                    # elif (i<=istart or j<=jstart or
-                    #     i>=iend or j>=jend):
-                    #     L.setValueStencil(row, row, 1.0)
-    
+
                     # interior points: pv is prescribed
                     else:
                         
                         for index, value in [
-    
-                            ((i,j,k-1), qg._sparam[k-1]*idzt[k]*idzw[k-1]),
-                            ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
-                            ((i-1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
-                            ((i, j, k), -1./D[i,j,kdxt]/D[i,j,kdyt]*( \
-                                             D[i,j,kdyu]/D[i,j,kdxu] \
-                                            +D[i-1,j,kdyu]/D[i-1,j,kdxu] \
-                                            +D[i,j,kdxv]/D[i,j,kdyv] \
-                                            +D[i,j-1,kdxv]/D[i,j-1,kdyv])
-                             - (qg._sparam[k]*idzt[k]*idzw[k]+qg._sparam[k-1]*idzt[k]*idzw[k-1])),
-                            ((i+1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdyu]/D[i,j,kdxu]),
-                            ((i,j+1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdxv]/D[i,j,kdyv]),
-                            ((i,j,k+1), qg._sparam[k]*idzt[k]*idzw[k])
-                            ]:
+                                ((i,j,k-1), sparam[k-1]*idzt[k]*idzw[k-1]),
+                                ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
+                                ((i-1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
+                                ((i, j, k), -1./D[i,j,kdxt]/D[i,j,kdyt]*(
+                                                 D[i,j,kdyu]/D[i,j,kdxu]
+                                                +D[i-1,j,kdyu]/D[i-1,j,kdxu]
+                                                +D[i,j,kdxv]/D[i,j,kdyv]
+                                                +D[i,j-1,kdxv]/D[i,j-1,kdyv])
+                                            - (sparam[k]*idzt[k]*idzw[k]+sparam[k-1]*idzt[k]*idzw[k-1])),
+                                ((i+1,j,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdyu]/D[i,j,kdxu]),
+                                ((i,j+1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdxv]/D[i,j,kdyv]),
+                                ((i,j,k+1), sparam[k]*idzt[k]*idzw[k])]:
                             col.index = index
                             col.field = 0
                             L.setValueStencil(row, col, value)
-    
-                   
+        #
         L.assemble()
-        return
-    
-    

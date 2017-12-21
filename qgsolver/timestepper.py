@@ -56,8 +56,26 @@ class time_stepper():
 # ==================== time stepping method ============================================
 #
 
-    def go(self, nt, da, state, grid, pvinv, rhosb=False, bstate=None):
+    def go(self, nt, da, grid, state, pvinv, rhosb=False, bstate=None):
         """ Carry out the time stepping
+
+        Parameters
+        ----------
+        nt: int
+            Number of time steps
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        state : state object
+            ocean state that will be timestepped
+        pvinv : pv inversion object
+            PV inverser
+        rhosb : boolean, optional
+            turn on advection of surface and bottom densities, default if false
+        bstate : state object, None, optional
+            background state that will be added in advective terms
+
         """
         if self._verbose>0:
             print('<--- Start time stepping ')

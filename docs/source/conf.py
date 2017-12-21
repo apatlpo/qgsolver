@@ -35,9 +35,9 @@ sys.path.insert(0, os.path.abspath('../..'))
 # ones.
 #extensions = ['sphinx.ext.autodoc']
 #extensions = ['sphinx.ext.napoleon']
-#extensions = ['sphinx.ext.autodoc','sphinx.ext.napoleon','sphinx.ext.mathjax']
-extensions = ['sphinx.ext.autodoc']
-#, 'sphinx.ext.napoleon', \
+extensions = ['sphinx.ext.autodoc','sphinx.ext.napoleon','sphinx.ext.mathjax']
+#extensions = ['sphinx.ext.autodoc']
+#i, 'sphinx.ext.napoleon', \
 #              'sphinx.ext.mathjax', \
 #              'IPython.sphinxext.ipython_console_highlighting']
 

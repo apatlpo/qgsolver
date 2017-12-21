@@ -207,6 +207,8 @@ class qg_model():
         self.state.set_rho(self.da, self.grid, **kwargs)
 
     def set_bstate(self,**kwargs):
+        if self._verbose:
+            print('Set background state:')
         bstate = add(self.state, self.state, da=self.da, a1=0., a2=0., a3=0.)
         bstate.set_q(self.da, self.grid, **kwargs)
         bstate.set_psi(self.da, self.grid, **kwargs)
@@ -222,12 +224,13 @@ class qg_model():
 #==================== useful wrappers for solvers ============================================
 #
                  
-    def invert_pv(self):
-        """ wrapper around solver pv inversion method
+    def invert_pv(self, bstate=None, addback_bstate=True):
+        """ wrapper around pv inversion solver
         """
         if hasattr(self,'state'):
             self.pvinv.solve(self.da, self.grid, self.state, \
-                             Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO)
+                             Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO, \
+                             bstate=bstate, addback_bstate=addback_bstate)
         else:
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
 
@@ -236,10 +239,10 @@ class qg_model():
         """
         self.omegainv.solve(self)
 
-    def tstep(self, nt=1, rhosb=False):
+    def tstep(self, nt=1, rho_sb=False, bstate=None):
         """ Time step wrapper
         """
-        self.tstepper.go(nt, self.da, self.state, self.grid, self.pvinv, rhosb=rhosb)
+        self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb=rho_sb, bstate=bstate)
 
 
 #
