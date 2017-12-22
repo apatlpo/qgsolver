@@ -19,12 +19,14 @@ class state():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        N2 : float
-            Brunt Vaisala frequency
-        f0 : float
-            Coriolis frequency
-        f0N2_file : str
-            netcdf file containing N2 and f0
+        N2 : float, optional
+            Brunt Vaisala frequency, default=1.e-3
+        f0 : float, optional,
+            Coriolis frequency, default=7.e-5
+        f0N2_file : str, optional
+            netcdf file containing N2 and f0, default is None
+        verbose : int, optional
+            degree of verbosity, 0 means no outputs
 
         """
 

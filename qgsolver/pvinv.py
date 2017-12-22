@@ -32,9 +32,9 @@ class pvinversion():
                 bdy_type = {'periodic': None}             for horizontal periodicity
         sparam : ndarray
             numpy array containing f^2/N^2
-        verbose : int
+        verbose : int, optional
             degree of verbosity, 0 means no outputs
-        solver : str
+        solver : str, optional
             petsc solver: 'gmres' (default), 'bicg', 'cg'
         pc : str, optional
             what is default?

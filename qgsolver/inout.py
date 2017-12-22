@@ -25,6 +25,13 @@ def write_nc(V, vname, filename, da, grid, append=False):
     filename : str
         netcdf output filename
         qg object
+    da : petsc DMDA
+        holds the petsc grid
+    grid : qgsolver grid object
+        grid data holder
+    append: boolean
+        append data to an existing file if True, create new file otherwise
+        default is False
 
     """
 
@@ -109,8 +116,9 @@ def read_nc_petsc(V, vname, filename, da, grid, fillmask=None):
         holds the petsc grid
     grid : qgsolver grid object
         grid data holder
-    fillmask : float
+    fillmask : float, optional
         value that will replace the default netCDF fill value for NaNs
+        default is None
 
     """
     (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -149,10 +157,8 @@ def read_nc_petsc(V, vname, filename, da, grid, fillmask=None):
         sys.exit()
     da.getComm().barrier()
 
-
 def read_nc_petsc_2D(V, vname, filename, level, da, grid):
-    """
-    Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level
+    """Read a 2D variable from a netcdf file and stores it in a petsc 3D Vector at k=level
 
     Parameters
     ----------
@@ -192,7 +198,6 @@ def read_nc_petsc_2D(V, vname, filename, level, da, grid):
     else:
         print('Error: read '+vname+': '+filename+' does not exist. Program will stop.')
         sys.exit()         
-
 
 def read_nc(vnames, filename, grid):
     """ Read variables from a netcdf file
@@ -248,7 +253,6 @@ def read_nc(vnames, filename, grid):
         print('!Error: read '+vnames+': '+filename+' does not exist. Program will stop.')
         sys.exit()
 
-
 def read_hgrid_dimensions(hgrid_file):
     """ Reads grid dimension from netcdf file
     Could put dimension names as optional inputs ...
@@ -270,7 +274,6 @@ def read_hgrid_dimensions(hgrid_file):
     Nx = len(rootgrp.dimensions['x'])
     Ny = len(rootgrp.dimensions['y'])    
     return Nx, Ny
-
 
 def get_global(V, da, rank):
     """ Returns a copy of the global V array on process 0, otherwise returns None

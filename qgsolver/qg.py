@@ -28,7 +28,7 @@ class qg_model():
                  hgrid = None, vgrid=None,
                  vdom={}, hdom={}, mask=False,
                  boundary_types={},
-                 N2 = 1e-3, f0 = 7e-5,
+                 N2 = 1.e-3, f0 = 7.e-5,
                  f0N2_file = None,
                  dt = None, K = 1.e2,
                  verbose = 1,
@@ -50,12 +50,22 @@ class qg_model():
             defines vertical grid choice
         boundary_types : dict
             may be used to turn on periodic boundary conditions {'periodic'}
-        N2 : float
-            Brunt Vaisala frequency
-        f0 : float
-            Coriolis frequency
+        N2 : float, optional
+            Brunt Vaisala frequency, default=1.e-3
+        f0 : float, optional
+            Coriolis frequency, default=7e-5
         f0N2_file : str
             netcdf file containing N2 and f0
+        dt : float, optional
+            time step
+        K : float, optional
+            dissipation coefficient, default = 1.e2
+        verbose : int, optional
+            degree of verbosity, 0 means no outputs
+        flag_pvinv: boolean, optional
+            turn on setup of PV inversion solver, default is True
+        flag_omega: boolean, optional
+            turn on setup of omega equation inversion solver, default is False
 
         """
 

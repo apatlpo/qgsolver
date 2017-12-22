@@ -34,9 +34,9 @@ class omegainv():
             averaged Coriolis frequency, used in operator
         N2 : ndarray
             buoyancy frequency, used in operator
-        verbose : int
+        verbose : int, optional
             degree of verbosity, 0 means no outputs
-        solver : str
+        solver : str, optional
             petsc solver: 'gmres' (default), 'bicg', 'cg'
         pc : str, optional
             what is default?

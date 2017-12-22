@@ -47,10 +47,10 @@ class grid(object):
             vdom_in = {'Nz': 10, 'k0': 10}
             k0 is the start index in grid input netcdf file
             missing parameters are deduced but one should have: kup-kdown+1
-        mask : boolean
-            activates the use of a mask
-        verbose : int
-            degree of verbosity, 0 means no outputs
+        mask : boolean, optional
+            activates the use of a mask, default is false
+        verbose : int, optional
+            degree of verbosity, 0 means no outputs, default is 1
             
         """
         self._verbose = verbose
