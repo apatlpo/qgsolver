@@ -143,7 +143,8 @@ class qg_model():
         # initiate omega inversion
         if flag_omega:
             self.W = self.da.createGlobalVec()
-            self.omegainv = omegainv(self.da, self.grid, self.bdy_type, verbose=self._verbose)
+            self.omegainv = omegainv(self.da, self.grid, self.bdy_type, self.state.f0, self.state.N2,
+                                     verbose=self._verbose)
 
         # initiate time stepper
         if dt is not None:
@@ -271,7 +272,7 @@ class qg_model():
                 V.append(getattr(self.state,vv))
             else:
                 print('Warning: variable '+vv+' not present in state vector and thus not outputted')
-        write_nc(V, vname, filename, self.da, self.grid, self.rank, append=append)
+        write_nc(V, vname, filename, self.da, self.grid, append=append)
 
 #
 #==================== utils ============================================

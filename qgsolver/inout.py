@@ -7,13 +7,13 @@ from petsc4py import PETSc
 import numpy as np
 from netCDF4 import Dataset
 import netCDF4
-import time
 
 #
 #==================== Pure IO ============================================
 #
 
-def write_nc(V, vname, filename, da, grid, rank, append=False):
+
+def write_nc(V, vname, filename, da, grid, append=False):
     """ Write a variable to a netcdf file
 
     Parameters
@@ -31,7 +31,8 @@ def write_nc(V, vname, filename, da, grid, rank, append=False):
     # number of variables to be stored
     Nv=len(vname)
     # process rank
-    rank = rank
+    rank = da.getComm().getRank()
+    #
     if grid.mask:
         # get global mask for rank 0 (None for other proc)
         global_D = get_global(grid.D, da, rank)
@@ -169,12 +170,12 @@ def read_nc_petsc_2D(V, vname, filename, level, da, grid):
         grid data holder
 
     """
-    v = qg.da.getVecArray(V)
-    (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
-    istart = xs + qg.grid.i0
-    iend = xe + qg.grid.i0
-    jstart = ys + qg.grid.j0
-    jend = ye + qg.grid.j0
+    v = da.getVecArray(V)
+    (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+    istart = xs + grid.i0
+    iend = xe + grid.i0
+    jstart = ys + grid.j0
+    jend = ye + grid.j0
 
     if os.path.isfile(filename): 
         rootgrp = Dataset(filename, 'r')
@@ -193,7 +194,7 @@ def read_nc_petsc_2D(V, vname, filename, level, da, grid):
         sys.exit()         
 
 
-def read_nc(vnames, filename,grid, da):
+def read_nc(vnames, filename, grid):
     """ Read variables from a netcdf file
     Data is loaded on all MPI tiles.
 
@@ -203,6 +204,8 @@ def read_nc(vnames, filename,grid, da):
         list of variables names name of the variable in the netcdf variable
     filename : str
         netcdf input filename
+    grid : qgsolver grid object
+        grid data holder
 
     """
    

@@ -86,7 +86,6 @@ class pvinversion():
         self.ksp.setTolerances(rtol=1e-4)
         self.ksp.setTolerances(max_it=1000)
         #
-        #
         for opt in sys.argv[1:]:
             PETSc.Options().setValue(opt, None)
         self.ksp.setFromOptions()
