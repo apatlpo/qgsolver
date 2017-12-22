@@ -2,21 +2,15 @@
 # -*- encoding: utf8 -*-
 
 import sys
-
-#from .grid import *
+import petsc4py
+#from Cython.Compiler.Main import verbose
+petsc4py.init(sys.argv)
+#
 from .state import *
 from .pvinv import *
 from .omegainv import *
 from .timestepper import *
-
-import petsc4py
-#from Cython.Compiler.Main import verbose
-petsc4py.init(sys.argv)
-from petsc4py import PETSc
-
 from .inout import write_nc
-
-
 
 
 class qg_model():
@@ -64,10 +58,6 @@ class qg_model():
             netcdf file containing N2 and f0
 
         """
-
-        # useful parameters
-        #self.g = 9.81
-        #self.rho0 = 1000.
 
         #
         # Build grid object

@@ -5,6 +5,7 @@
 import sys
 from petsc4py import PETSc
 from .inout import write_nc
+from .utils import g, rho0
 
 #
 #==================== Parallel solver ============================================
@@ -99,9 +100,9 @@ class omegainv():
 # ==================== perform inversion ===================================
 #
 
-    def solve(self, da, grid, state, PSI=None, U=None, V=None, RHO=None):
+    def solve(self, da, grid, state, W=None, PSI=None, U=None, V=None, RHO=None):
         """ Compute the omega equation inversion
-        Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
+        The result of the inversion is held in state.W
 
         Parameters
         ----------
@@ -111,17 +112,26 @@ class omegainv():
             grid data holder
         state : state object
             ocean state
+        W : petsc Vec, None, optional
+            input vertical velocity that will be used for boundary conditions and masked areas
         PSI : petsc Vec, None, optional
             streamfunction, use state.PSI if None
+        U, V, RHO : petsc Vec, None, optional
+            vectors used for computations of the Q vector
 
-        Returns
-        -------
-        state.W:
-            Put PV inversion result in state.PSI
         """
 
+        if W is None:
+            if not hasattr(state,'W'):
+                state.W = da.createGlobalVec()
+                state.W.set(0.)
+            W = state.W
+
+        if PSI is None:
+            PSI = state.PSI
+
         # Initialize  RHS
-        self.set_rhs(da, grid, state, PSI, U, V, RHO)
+        self.set_rhs(da, grid, W, PSI, U, V, RHO)
 
         # actually solves the pb
         self.ksp.solve(self._RHS, state.W)
@@ -135,7 +145,7 @@ class omegainv():
 # ==================== utils methods for inversions ===================================
 #
 
-    def set_rhs(self, da, grid, state, PSI, U, V, RHO):
+    def set_rhs(self, da, grid, W, PSI, U, V, RHO):
         """Compute the RHS of the omega equation i.e: 2*f0*nabla.Q with Q=-J(nabla.psi,dpsidz)
 
         Parameters
@@ -144,10 +154,10 @@ class omegainv():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        state : state object
-            ocean state
+        W : petsc Vec
+            vertical velocity
         PSI : petsc Vec, None, optional
-            streamfunction, use state.PSI if None
+            streamfunction used to compute U, V, RHO if not provided
         U : petsc Vec, None, optional
             zonal velocity
         V : petsc Vec, None, optional
@@ -156,9 +166,6 @@ class omegainv():
             density
 
         """
-
-        if PSI is None:
-            PSI = state.PSI
 
         # get u/v
         if U is None or V is None:
@@ -184,10 +191,10 @@ class omegainv():
         self.compute_divQ(da, grid)
 
         # fix boundaries
-        self.set_rhs_bdy(da, grid)
+        self.set_rhs_bdy(da, grid, W)
 
         # mask rhs
-        self.set_rhs_mask(da, grid)
+        self.set_rhs_mask(da, grid, W)
 
     def set_uv_from_psi(self, da, grid, PSI):
         """ Compute U & V from Psi:
@@ -199,8 +206,8 @@ class omegainv():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        PSI : petsc Vec, None, optional
-            streamfunction, use state.PSI if None
+        PSI : petsc Vec
+            streamfunction
 
         """
 
@@ -214,7 +221,7 @@ class omegainv():
 
         # load vector PSI used to compute U and V
         da.globalToLocal(PSI, local_PSI)
-        da.globalToLocal(qg.grid.D, local_D)
+        da.globalToLocal(grid.D, local_D)
 
         #
         u = da.getVecArray(self._U)
@@ -232,7 +239,7 @@ class omegainv():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe): 
-                    if (i==0    or j==0 or i==mx-1 or j==my-1):
+                    if (i==0 or j==0 or i==mx-1 or j==my-1):
                         # lateral boundaries
                         u[i, j, k] = 0.
                         v[i, j, k] = 0.
@@ -254,12 +261,8 @@ class omegainv():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        rho0 : float
-            1000kg/m^3
-        g : float
-            9.81 m/s^2
-        PSI : petsc Vec, None, optional
-            streamfunction, use state.PSI if None
+        PSI : petsc Vec
+            streamfunction
 
         """
      
@@ -283,13 +286,13 @@ class omegainv():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe): 
-                    if (k==0    or k==mz-1):
+                    if (k==0 or k==mz-1):
                         # top and bottom boundaries
                         rho[i, j, k] = 0.
                     else:
-                        rho[i,j,k] = - self.rho0*self.f0/self.g/grid.dzt[k] * \
-                             ( 0.5*(psi[i,j,k+1]+psi[i,j,k]) - \
-                               0.5*(psi[i,j,k]+psi[i,j,k-1]) )
+                        rho[i,j,k] = - rho0*self.f0/g/grid.dzt[k] * \
+                                        ( 0.5*(psi[i,j,k+1]+psi[i,j,k]) -
+                                        0.5*(psi[i,j,k]+psi[i,j,k-1]) )
    
     def set_Q(self, da, grid, U=None, V=None, RHO=None):
         """ Compute Q vector
@@ -356,18 +359,18 @@ class omegainv():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe): 
-                    if (i==0    or j==0 or i==mx-1 or j==my-1 ):
+                    if (i==0 or j==0 or i==mx-1 or j==my-1 ):
                         # lateral boundaries
                         qxu[i, j, k] = 0.
                         qyv[i, j, k] = 0. 
                     else:
-                        qxu[i,j,k] = self.g/self.f0/self.rho0 * (
+                        qxu[i,j,k] = g/self.f0/rho0 * (
                               (0.5*(u[i+1,j,k]+u[i,j,k])-0.5*(u[i,j,k]+u[i-1,j,k]))/D[i,j,kdxu] *
                               (rho[i+1,j,k]-rho[i,j,k])/D[i,j,kdxu] +
                               (0.5*(v[i+1,j,k]+v[i+1,j-1,k])-0.5*(v[i,j,k]+v[i,j-1,k]))/D[i,j,kdxu] *
                               (0.25*(rho[i+1,j,k]+rho[i+1,j+1,k]+rho[i,j+1,k]+rho[i,j,k]) -
                                0.25*(rho[i+1,j-1,k]+rho[i+1,j,k]+rho[i,j,k]+rho[i,j-1,k]) )/D[i,j,kdyu])
-                        qyv[i,j,k] = self.g/self.f0/self.rho0 * (
+                        qyv[i,j,k] = g/self.f0/rho0 * (
                               (0.5*(u[i,j+1,k]+u[i-1,j+1,k])-0.5*(u[i,j,k]+u[i-1,j,k]))/D[i,j,kdyv] *
                               (0.25*(rho[i+1,j,k]+rho[i+1,j+1,k]+rho[i,j+1,k]+rho[i,j,k]) -
                                0.25*(rho[i,j,k]+rho[i,j+1,k]+rho[i-1,j+1,k]+rho[i-1,j,k]))/D[i,j,kdxv] +
@@ -411,11 +414,11 @@ class omegainv():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i==0    or j==0 or i==mx-1 or j==my-1 or k==0    or k==mz-1 ):
+                    if (i==0 or j==0 or i==mx-1 or j==my-1 or k==0 or k==mz-1 ):
                         # lateral boundaries
                         rhs[i, j, k] = 0.
                     else:
-                        # qx = qxu moyenné au niveau w, qy = qyv moyenné au niveau w,
+                        # qx = qxu averaged at level w, qy = qyv averaged at level w
                         qxi = 0.5*(qxu[i,j,k+1]+qxu[i,j,k])
                         qxim = 0.5*(qxu[i-1,j,k+1]+qxu[i-1,j,k])
                         qyj = 0.5*(qyv[i,j,k+1]+qyv[i,j,k])
@@ -427,7 +430,7 @@ class omegainv():
                                      (D[i,j,kdyu]*qxi - D[i-1,j,kdyu]*qxim) +
                                      (D[i,j,kdxv]*qyj - D[i,j-1,kdxv]*qyjm) )
 
-    def _set_rhs_bdy(self, da, grid):
+    def _set_rhs_bdy(self, da, grid, W):
         """
         Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
@@ -438,11 +441,11 @@ class omegainv():
         if self._verbose>0:
             print('  set RHS along boudaries for inversion ')
 
-        self._set_rhs_bdy_bottom(da, grid)
-        self._set_rhs_bdy_top(da, grid)
-        self._set_rhs_bdy_lat(da, grid)
+        self._set_rhs_bdy_bottom(da, grid, W)
+        self._set_rhs_bdy_top(da, grid, W)
+        self._set_rhs_bdy_lat(da, grid, W)
 
-    def _set_rhs_bdy_bottom(self, da, grid, W=None):
+    def _set_rhs_bdy_bottom(self, da, grid, W):
         """ Set bottom boundary condition
         """
 
@@ -452,10 +455,7 @@ class omegainv():
         kdown = grid.kdown
 
         # load vector used to compute boundary conditions
-        if W is None:
-            w = da.getVecArray(qg.W)
-        else:
-            w = da.getVecArray(W)
+        w = da.getVecArray(W)
            
         # lower ghost area
         if zs < kdown:
@@ -482,7 +482,7 @@ class omegainv():
             print(self.bdy_type['bottom']+' unknown bottom boundary condition')
             sys.exit()
 
-    def _set_rhs_bdy_top(self, da, grid, W=None):
+    def _set_rhs_bdy_top(self, da, grid, W):
         """ Set top boundary condition
         """
         
@@ -492,10 +492,7 @@ class omegainv():
         kup = grid.kup
 
         # load vector used to compute boundary conditions
-        if W is None:
-            w = da.getVecArray(qg.W)
-        else:
-            w = da.getVecArray(W)
+        w = da.getVecArray(W)
 
         if ze > kup+1:
             for k in range(kup+1,ze):
@@ -522,23 +519,20 @@ class omegainv():
             print(self.bdy_type['top']+' unknown top boundary condition')
             sys.exit()
 
-    def _set_rhs_bdy_lat(self, da, grid, W=None):
+    def _set_rhs_bdy_lat(self, da, grid, W):
         """ Set lateral boundary condition
         """
         
         rhs = da.getVecArray(self._RHS)
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = qg.grid.istart
-        iend = qg.grid.iend
-        jstart = qg.grid.jstart
-        jend = qg.grid.jend
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
 
         # load vector used to compute boundary conditions
-        if W is None:
-            w = da.getVecArray(qg.W)
-        else:
-            w = da.getVecArray(W)
+        w = da.getVecArray(W)
 
         # south bdy
         if ys <= jstart:
@@ -571,7 +565,7 @@ class omegainv():
                     for i in range(max(xs,iend),xe):
                         rhs[i, j, k] = w[i, j, k]
 
-    def _set_rhs_mask(self, da, grid):
+    def _set_rhs_mask(self, da, grid, W):
         """ Set mask on rhs: where mask=0 (land) rhs=psi
         """
 
@@ -581,7 +575,7 @@ class omegainv():
 
         kmask = grid._k_mask
 
-        w = da.getVecArray(qg.W)
+        w = da.getVecArray(W)
 
         # interior
         for k in range(zs,ze):
@@ -714,9 +708,8 @@ class omegainv():
         #
         idzt = 1./grid.dzt
         idzw = 1./grid.dzw
-        #idz, idz2 = 1./dz, 1./dz**2
         #
-        (xs, xe), (ys, ye), (zs, ze) = qg.da.getRanges()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         istart = grid.istart
         iend = grid.iend
         jstart = grid.jstart
@@ -775,10 +768,10 @@ class omegainv():
                                 ((i,j,k-1), self.f0**2*idzt[k]*idzw[k]),
                                 ((i,j-1,k), self.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),
                                 ((i-1,j,k), self.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i-1,j,kdyu]/D[i-1,j,kdxu]),
-                                ((i, j, k), -self.N2[k]/D[i,j,kdxt]/D[i,j,kdyt]*( \
-                                                 D[i,j,kdyu]/D[i,j,kdxu] \
-                                                +D[i-1,j,kdyu]/D[i-1,j,kdxu] \
-                                                +D[i,j,kdxv]/D[i,j,kdyv] \
+                                ((i, j, k), -self.N2[k]/D[i,j,kdxt]/D[i,j,kdyt]*(
+                                                 D[i,j,kdyu]/D[i,j,kdxu]
+                                                +D[i-1,j,kdyu]/D[i-1,j,kdxu]
+                                                +D[i,j,kdxv]/D[i,j,kdyv]
                                                 +D[i,j-1,kdxv]/D[i,j-1,kdyv])
                                  - (self.f0**2*idzt[k+1]*idzw[k]+self.f0**2*idzt[k]*idzw[k])),
                                 ((i+1,j,k), self.N2[k]/D[i,j,kdxt]/D[i,j,kdyt] * D[i,j,kdyu]/D[i,j,kdxu]),

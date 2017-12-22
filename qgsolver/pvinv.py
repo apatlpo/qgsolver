@@ -3,11 +3,8 @@
 
 
 import sys
-import numpy as np
-
 from petsc4py import PETSc
-
-from .inout import write_nc
+from .utils import g, rho0
 
 #
 #==================== PV inversion solver object ============================================
@@ -244,7 +241,7 @@ class pvinversion():
         if self.bdy_type['bottom']=='N' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - state.g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(state.rho0*state.f0)
+                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(rho0*state.f0)
         elif self.bdy_type['bottom']=='NBG' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -303,7 +300,7 @@ class pvinversion():
         if self.bdy_type['top']=='N' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - state.g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(state.rho0*state.f0)
+                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(rho0*state.f0)
         elif self.bdy_type['top']=='NBG' :
             for j in range(ys, ye):
                 for i in range(xs, xe):

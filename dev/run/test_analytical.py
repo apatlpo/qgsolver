@@ -83,7 +83,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         qg.write_state(filename='data/output.nc', append=True)
         
         #
-        test=1
+        test=0
         if test==0:
             # one time step and store
             qg.tstep(1, bstate=bstate)
@@ -102,6 +102,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
 #
 #==================== main wrappers =========================================
 #
+
 
 def main(ping_mpi_cfg=False):    
     

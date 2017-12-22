@@ -1,15 +1,9 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
-import sys
-
 from .grid import *
-from .pvinv import *
-from .omegainv import *
-
-import numpy as np
-from .inout import read_nc_petsc, read_nc_petsc_2D
-
+from .inout import read_nc_petsc
+from .utils import g, rho0
 
 class state():
     '''
@@ -35,10 +29,6 @@ class state():
         """
 
         self._verbose = verbose
-
-        # useful parameters
-        self.g = 9.81
-        self.rho0 = 1000.
 
         # PV
         self.Q = da.createGlobalVec()
@@ -279,18 +269,18 @@ class state():
         for k in range(kdown + 1, kup):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rho[i, j, k] = -self.rho0 * self.f0 / self.g * \
+                    rho[i, j, k] = -rho0 * self.f0 /g * \
                                    0.5 * ((psi[i, j, k + 1] - psi[i, j, k]) * idzw[k] \
                                           + (psi[i, j, k] - psi[i, j, k - 1]) * idzw[k - 1])
         # extrapolate top and bottom
         k = kdown
         for j in range(ys, ye):
             for i in range(xs, xe):
-                rho[i, j, k] = -self.rho0 * self.f0 / self.g * (psi[i, j, k + 1] - psi[i, j, k]) * idzw[k]
+                rho[i, j, k] = -rho0 * self.f0 /g * (psi[i, j, k + 1] - psi[i, j, k]) * idzw[k]
         k = kup
         for j in range(ys, ye):
             for i in range(xs, xe):
-                rho[i, j, k] = -self.rho0 * self.f0 / self.g * (psi[i, j, k] - psi[i, j, k - 1]) * idzw[k - 1]
+                rho[i, j, k] = -rho0 * self.f0 / g * (psi[i, j, k] - psi[i, j, k - 1]) * idzw[k - 1]
         return
 
     def get_uv(self, da, grid, PSI=None):
