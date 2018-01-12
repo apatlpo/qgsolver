@@ -6,6 +6,8 @@ Test the basic features of the library:
 Setup of uniform grid
 PV inversion of an analytical PV distribution
 Time stepping
+
+mpirun -n 4 python test_analytical.py
 """
 
 import time
@@ -61,36 +63,36 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
     else:
 
         # proceeds with computations
-        qg = qg_model(hgrid = hgrid, vgrid = vgrid, boundary_types={'periodic': None}, 
+        qg = qg_model(hgrid = hgrid, vgrid = vgrid, boundary_types={'periodic': True}, 
                       K = 0.e0, dt = 0.5*86400.e0,
                       ncores_x=ncores_x, ncores_y=ncores_y, verbose=1)
-    
+
         # pv inversion
         qg.set_q()
+        qg.invert_pv()
+        qg.write_state(filename='data/output.nc')
         #
         if True:
             bstate = qg.set_bstate(psi0=0., q0=0., beta=1.e-11, rho0=0.)
             #
             # bstate=None # turns off background state
-            if True:
-                # add the background state to qg.state
+            if False:
+                # add the background state to qg.state, debug
                 add(qg.state,bstate,da=None)
-        qg.write_state(filename='data/output.nc')
-        #
-        qg.invert_pv(bstate=bstate)
-        #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
-        #
-        qg.write_state(filename='data/output.nc', append=True)
+                qg.write_state(filename='data/output.nc', append=True)
+                #
+                qg.invert_pv(bstate=bstate)
+                #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
         
         #
-        test=0
+        test=1
         if test==0:
             # one time step and store
             qg.tstep(1, bstate=bstate)
             qg.write_state(filename='data/output.nc', append=True)
         elif test==1:
             while qg.tstepper.t/86400. < 200 :
-                qg.tstep(1)
+                qg.tstep(2)
                 qg.write_state(filename='data/output.nc', append=True)
     
         if qg._verbose>0:

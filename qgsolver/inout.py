@@ -44,6 +44,10 @@ def write_nc(V, vname, filename, da, grid, append=False):
         # get global mask for rank 0 (None for other proc)
         global_D = get_global(grid.D, da, rank)
 
+    # test file existence
+    if not os.path.isfile(filename):
+        append=False 
+
     if rank == 0 and not append:
 
         # create a netcdf file to store QG pv for inversion

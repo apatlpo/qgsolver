@@ -46,9 +46,9 @@ class pvinversion():
         #
         self.bdy_type = bdy_type
         if ('periodic' in self.bdy_type) and (self.bdy_type['periodic']):
-            self.petscBoundaryType = True
+            self.petscBoundaryType = 'periodic'
         else:
-            self.petscBoundaryType = False
+            self.petscBoundaryType = None
 
         # create the operator
         self.L = da.createMat()
@@ -94,7 +94,8 @@ class pvinversion():
 # ==================== perform inversion ===================================
 #
 
-    def solve(self, da, grid, state, Q=None, PSI=None, RHO=None, bstate=None, addback_bstate=True):
+    def solve(self, da, grid, state, Q=None, PSI=None, RHO=None, \
+              bstate=None, addback_bstate=True, numit=False):
         """ Compute the PV inversion
         Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
 
@@ -116,6 +117,8 @@ class pvinversion():
             background state that will be added in advective terms
         addback_bstate : boolean
             if True, add background state back to output variables ()
+        numit : boolean
+            if True, returns the number of iterations
 
         Returns
         -------
@@ -156,13 +159,16 @@ class pvinversion():
         self.ksp.solve(self._RHS, state.PSI)
         # add back background state
         if bstate is not None and addback_bstate:
-            print('add back bstate after pv inversion')
+            if self._verbose>1:
+                print('add back bstate after pv inversion')
             Q += bstate.Q
             state.PSI += bstate.PSI
             RHO += bstate.RHO
 
         if self._verbose>1:
             print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()))
+        if numit:
+            return self.ksp.getIterationNumber()
 
 
 #
@@ -344,14 +350,14 @@ class pvinversion():
             psi = da.getVecArray(PSI)
 
         # south bdy
-        if ys <= jstart:
+        if ys <= jstart and self.petscBoundaryType is not 'periodic':
             #j = 0
             for k in range(zs, ze):
                 for j in range(ys,min(ye,jstart+1)):
                     for i in range(xs, xe):
                         rhs[i, j, k] = psi[i, j, k]
         # north bdy
-        if ye >= jend:
+        if ye >= jend and self.petscBoundaryType is not 'periodic':
             #j = my - 1
             for k in range(zs, ze):
                 for j in range(max(ys,jend),ye):
@@ -454,9 +460,8 @@ class pvinversion():
                     row.field = 0
 
                     # lateral points outside the domain: dirichlet, psi=...
-                    if ( (i<=istart and self.petscBoundaryType is not 'periodic') \
-                           or (i>=iend and self.petscBoundaryType is not 'periodic') \
-                           or j<=jstart or j>=jend):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
@@ -565,10 +570,8 @@ class pvinversion():
                     if D[i,j,kmask]==0.:
                         L.setValueStencil(row, row, 1.)
     
-                    # lateral points outside the domain: dirichlet, psi=...
-                    elif ( (i<=istart and self.petscBoundaryType is not 'periodic')
-                           or (i>=iend and self.petscBoundaryType is not 'periodic')
-                           or j<=jstart or j>=jend):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...

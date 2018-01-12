@@ -94,11 +94,12 @@ class time_stepper():
             #
             state.Q.copy(self._RHS0) # copies Q into RHS0
             state.Q.copy(self._RHS1) # copies Q into RHS1
+            numit=0
             for rk in range(4):
                 if rho_sb:
                     self._update_topdown_rho(da, grid, state)
                 #
-                pvinv.solve(da, grid, state)
+                numit += pvinv.solve(da, grid, state, numit=True)/4.
                 #
                 self._dRHS.set(0.)
                 #
@@ -111,14 +112,16 @@ class time_stepper():
                 #
                 self._computeDISS(da, grid, state.Q)
                 #
-                if rk < 3: state.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
+                if rk < 3:
+                    state.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
             #
             self._RHS1.copy(state.Q) # copies RHS1 into Q
             # reset q at boundaries
             self._set_rhs_bdy(da, state)
             if self._verbose>0:
-                print('t = %f d' % (self.t/86400.), flush=True)
+                print('t = %.2f d, PV inv number of iteration= %.0f' % (self.t/86400., numit), flush=True)
+                #print('t = %f d' % (self.t/86400.), flush=True)
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
         if rho_sb:
