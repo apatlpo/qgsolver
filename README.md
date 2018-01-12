@@ -56,7 +56,7 @@ bash
 source activate petsc
 cd /home/slyne/aponte/natl60/qgsolver/
 cd dev/run/
-python run_datarmor.py qgsolver/roms_out run_roms.py
+python run_datarmor.py qgsolver/roms_out run_roms.py /home1/datawork/aponte/qgsolver/roms_in/
 ```
 
 

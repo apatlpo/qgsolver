@@ -52,7 +52,7 @@ def write_batchfile():
     fo.write('cd $PBS_O_WORKDIR\n')
     fo.write('\n')
     fo.write('# get the path for python\n')
-    fo.write('setenv PATH ${HOME}/.miniconda2/envs/petsc/bin:${PATH}\n')
+    fo.write('setenv PATH ${HOME}/.miniconda3/envs/petsc/bin:${PATH}\n')
     fo.write('setenv PYTHONPATH $PBS_O_WORKDIR/..\n')
     fo.write('\n')
     #fo.write('time mpirun -np '+str(nb_cores)+' python run.py -ksp_view -ksp_monitor -ksp_converged_reason >& output.mpi\n')
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         move_input_files()
         
         # submit job
-        os.system('cd '+RPATH+'/qgsolver')
+        os.system('\ncd '+RPATH+'/qgsolver')
         # os.system('qsub job_datarmor')
         print('cd '+RPATH+'/qgsolver')
         print('qsub job_datarmor')

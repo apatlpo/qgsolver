@@ -2,20 +2,11 @@
 # -*- encoding: utf8 -*-
 
 """
-Test the basic features of the library:
-Setup of uniform grid
-PV inversion of an analytical PV distribution
+Run qgsolver with outputs from idealized ROMS numerical simulations
 """
 
 import time
 import sys
-
-#try:
-#    from qgsolver.qg import qg_model
-#    from qgsolver.io import write_nc
-#except:
-#    print 'qgsolver not yet in path'
-#    sys.exit
 
 from qgsolver.qg import qg_model
 
