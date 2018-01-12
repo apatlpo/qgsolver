@@ -9,8 +9,8 @@ import shutil
 import sys
 import importlib
 
-def read_pyscript(pyscript='test_basic.py'):
-        
+def read_pyscript(pyscript):
+    
     # append qgsolver directory to import package
     sys.path.append(RPATH)
     # Search the number of cores in test_basic.py
@@ -33,7 +33,7 @@ def copy_scripts():
     os.chdir(RPATH)
     
     # copy python files in workdir
-    shutil.copytree(HOMEDIR+'/src_parallel/','./qgsolver')
+    shutil.copytree(HOMEDIR+'/qgsolver/','.')
     os.mkdir(RPATH+'/input')
     os.mkdir(RPATH+'/output')
     shutil.copy(startdir+'/'+script,'./qgsolver/run.py')
@@ -64,19 +64,8 @@ def write_batchfile():
     
     
 def move_input_files():
-    
     # copy data file in workdir
     os.system('ln -s '+inputdir+'/*.nc '+RPATH+'/input')
-    #if casename=='roms':
-    #    #shutil.copy(HOMEDIR+'/dev/data/jet_cfg1_wp5_4km_k3.2e8_0a1500j_zlvl_pv.nc',RPATH+'/input')
-    #    os.system('ln -s /home1/datawork/aponte/qgsolver/roms_data/*.nc '+RPATH+'/input')
-    #elif casename=='nemo':
-    #    #shutil.copy(HOMEDIR+'/dev/data/nemo_metrics.nc',RPATH+'/dev/data')
-    #    #shutil.copy(HOMEDIR+'/dev/data/nemo_psi.nc',RPATH+'/dev/data')
-    #    #shutil.copy(HOMEDIR+'/dev/data/nemo_pv.nc',RPATH+'/dev/data')
-    #    #shutil.copy(HOMEDIR+'/dev/data/nemo_rho.nc',RPATH+'/dev/data')
-    #    os.system('ln -s /home1/datawork/slgentil/nemo_mask_data/*.nc '+RPATH+'/input')
-    return
 
 
 
@@ -85,10 +74,10 @@ if __name__ == "__main__":
 
     # check number of arguments
     if  len(sys.argv) < 3:
-        print '[syntaxe] : run_caparmor workdir script inputdir'
-        print 'rundir = directory created in /work/username'
-        print 'script = script that will use qgsolver'
-        print 'inputdir = dir where input are found'
+        print('[syntaxe] : run_caparmor workdir script inputdir')
+        print('rundir = directory created in /work/username')
+        print('script = script that will use qgsolver')
+        print('inputdir = dir where input are found')
         #print 'case = uniform or roms or nemo'
         quit()
     
@@ -113,12 +102,12 @@ if __name__ == "__main__":
     copy_scripts()
 
     # read py script
-    ncores_x, ncores_y, nb_cores, nb_nodes, memory = read_pyscript(pyscript='run.py')
+    ncores_x, ncores_y, nb_cores, nb_nodes, memory = read_pyscript('run.py')
     
     try:
         import petsc4py
         #from petsc4py import version
-        print 'petsc4py is available'    
+        print('petsc4py is available')    
     
         # write batch file
         write_batchfile()
@@ -129,9 +118,9 @@ if __name__ == "__main__":
         # submit job
         os.system('cd '+RPATH+'/qgsolver')
         # os.system('qsub job_datarmor')
-        print 'cd '+RPATH+'/qgsolver'
-        print 'qsub job_datarmor'
-        print 'Log file:  output.mpi'    
+        print('cd '+RPATH+'/qgsolver')
+        print('qsub job_datarmor')
+        print('Log file:  output.mpi')    
 
     except:
         print 'petsc4py is not available, install serial code'

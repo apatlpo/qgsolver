@@ -61,7 +61,7 @@ class time_stepper():
 
         Parameters
         ----------
-        nt: int
+        nt : int
             Number of time steps
         da : petsc DMDA
             holds the petsc grid

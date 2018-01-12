@@ -37,9 +37,30 @@ conda install -c conda-forge matplotlib
 conda install -c conda-forge jupyter 
 ```
 
-# Run
+# Run on datarmor
 
-Use of qgsolver on Datarmor
+Generate input files if necessary on your workstation
+```csh
+cd qgsolver/dev/input/
+python create_input_roms.py -o roms_in/
+```
+
+On datarmor, copy input files if necessary:
+```csh
+cp -r /home/slyne/aponte/natl60/qgsolver/dev/input/roms_in /home1/datawork/aponte/qgsolver/
+```
+
+Run qgsolver on Datarmor:
+```csh
+bash
+source activate petsc
+cd /home/slyne/aponte/natl60/qgsolver/
+cd dev/run/
+python run_datarmor.py qgsolver/roms_out run_roms.py
+```
+
+
+old version:
 ```csh
 bash
 source activate petsc

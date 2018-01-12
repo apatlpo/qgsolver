@@ -1,114 +1,35 @@
 #!/usr/bin/python
 # -*- encoding: utf8 -*-
 
-""" Create metrics, psi, pv fields for a curvlinear grid
+""" Create metrics, psi, pv fields from a ROMS output in an idealized setup 
 """
 
 import os,sys
+import argparse
 import shutil
 import numpy as np
-# import matplotlib.pyplot as plt
-# import cartopy.crs as ccrs
-import netCDF4
-from netCDF4 import Dataset
+#import netCDF4
+from netCDF4 import Dataset, default_fillvals
+
+from utils import *
 
 # lpolib
-sys.path.append('/home/slyne/aponte/natl60/lporoms')
+sys.path.append('/home/slyne/aponte/lporoms')
 from lpolib.lporun import LPORun
 from lpolib.utils import *
 
-# maybe temporary
-# import matplotlib as mpl
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-#from scipy.fftpack._fftpack import zfft
-import scipy.linalg as linalg
 
 d2r = np.pi/180.
-fillvalue = netCDF4.default_fillvals['f8']
-
-def create_nc(filename, lon, lat, zt, zw):
-    
-    ### create a netcdf file
-    rootgrp = Dataset(filename, 'w',
-                      format='NETCDF4_CLASSIC', clobber=True)
-
-    # create dimensions
-    rootgrp.createDimension('x', lon.shape[1])
-    rootgrp.createDimension('y', lat.shape[0])
-    rootgrp.createDimension('zt', zt.size)
-    rootgrp.createDimension('zw', zw.size)
-    
-    # create variables
-    dtype='f8'
-    nc_lon = rootgrp.createVariable('lon',dtype,('y','x'))
-    nc_lat = rootgrp.createVariable('lat',dtype,('y','x'))
-    nc_zt = rootgrp.createVariable('zt',dtype,('zt'))
-    nc_zw = rootgrp.createVariable('zw',dtype,('zw'))
-    
-    nc_lon[:] = lon
-    nc_lat[:] = lat
-    nc_zt[:] = zt
-    nc_zw[:] = zw
-        
-    # rootgrp.createVariable(name,dtype,('zt','y','x',)))
-    return rootgrp
+dtype='f8'
+fillvalue = default_fillvals[dtype]
 
 
-
-if __name__ == "__main__":
-
-    # check number of arguments
-    if  len(sys.argv) < 2:
-        print '[syntaxe] : python create_input_roms.py rundir runscript'
-        print 'rundir = directory created (relative to local dir)'
-        print 'runscript = script that will be executed'
-        quit()
-   
-    # get useful dirs
-    startdir=os.getcwd()+'/'
-    # get args
-    RPATH = startdir+sys.argv[1]+'/'
-
-    if os.path.exists(RPATH) :
-        os.system('rm -Rf '+RPATH)
-    os.mkdir(RPATH)
-    os.chdir(RPATH)
-    shutil.copytree(startdir+'../../src_parallel/',RPATH+'qgsolver')
-    os.mkdir(RPATH+'input')
-    os.mkdir(RPATH+'output')
-    runscript = sys.argv[2]
-    shutil.copy(startdir+runscript,RPATH)
-
-
-    #
-    # Start now to build input files
-    #
-
-    # doesn't keep levels under the depth mask_depth
-    #mask_depth = -3000.
-    #mask_depth = -7000.
-
-    ### ROMS
-    rpath="/home2/pharos/othr/aponte/roms_ird/"
-    # rpath="/home/mulroy/slgentil/models/roms/Roms_Agrif/"
-    # dirname=rpath+"curie1/jet_cfg1_wp5_2km_k1e7_TSUP5_2000a3000j"
-    dirname=rpath+"caparmor/jet_cfg1_wp5_4km_k3.2e8_0a1500j"
-    
-    # suffix of variables used in the output
-    suff='_t_dirac'
-    #suff='_a'
-
-    # time index is also added to the suffix
-    #it=5
-    it=11
-    #it=15
-    
-    # Create a lporun class
-    d=LPORun(dirname,verbose=True, open_nc=[], tdir_max=10)
-    
+def metrics():
+    ''' Compute and store metric terms
+    '''
     
     ### horizontal grid
-    print "read horizontal grid"
+    print('read horizontal grid')
     (xr,yr)=d.getXY('rho')
     (xp,yp)=d.getXY('psi')
     #print xr.shape
@@ -126,9 +47,8 @@ if __name__ == "__main__":
     L = x.shape[1]
     M = x.shape[0]
 
-    
-    ### vertical grid, caution: level 0 in nemo correspond to the surface, level N correspond to positive depth
-    print "read vertical grid"
+    ### vertical grid
+    print('read vertical grid')
     ssh=d.his.variables['ssh'+suff][it,:,:]
     (xr,yr)=d.getXY('rho')
     zr0=d.getZ('rho')        # Nominal z grid at t points, 1D array
@@ -144,20 +64,12 @@ if __name__ == "__main__":
     dzt = np.hstack((zw[0]-zt[0],np.diff(zw)))
     # dzw = np.hstack(([zt[1]-zt[0]],np.diff(zt),zt[-1]-zt[-2]))
     dzw = np.hstack((np.diff(zt),zw[-1]-zt[-1]))
-
-
-    # find nearest index in zt for mask_depth
-    #index_mask_depth = min(range(len(zt)), key=lambda i: abs(zt[i]-mask_depth))
-    #print "mask reference at level:",index_mask_depth
        
     # store metric terms
     #zt = np.hstack((zt,zt[[-1]]))
-    print "create metrics grid"
-    # metricsout = create_nc('data/nemo_metrics.nc', lon, lat, zt[index_mask_depth:], zw[index_mask_depth:])
-    metricsout = create_nc(RPATH+'input/roms_metrics.nc', x, y, zt, zw)
+    print('create metrics grid')
+    metricsout = create_nc(outdir+'/roms_metrics.nc', x, y, zt, zw)
     #
-    dtype='f8'
-    # 
     nc_dxt = metricsout.createVariable('dxt',dtype,('y','x'))
     nc_dxt[:] = dxt
     nc_dyt = metricsout.createVariable('dyt',dtype,('y','x'))
@@ -173,21 +85,231 @@ if __name__ == "__main__":
     nc_dzt = metricsout.createVariable('dzt',dtype,('zt'))
     nc_dzt[:] = dzt
     nc_dzw = metricsout.createVariable('dzw',dtype,('zw'))
-    nc_dzw[:] = dzw
-    
-    # metricsout.close()
+    nc_dzw[:] = dzw    
+
+    return metricsout, ssh, x, y, zt, zw
+
+
+def store_psi(background=False):
+    if not background:
+        print('create psi file')
+        psiout = create_nc(outdir+'roms_psi.nc', x, y, zt, zw)
+        nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
+        nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
+        return psiout    
+    else:
+        print('create a file for background fields')
+        bgout = create_nc(outdir+'roms_bg.nc', x, y, zt, zw)
+        nc_psi = bgout.createVariable('psi',dtype,('zt','y','x'))
+        nc_psi[:] = np.tile(p[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_psi[:].shape[2])) \
+                    /d.hgrid.f0/d.rho0
+        return bgout
         
+def store_rho(background=False):
+    if not background:
+        print('create rho file')
+        rhoout = create_nc(outdir+'roms_rho.nc', x, y, zt, zw)
+        nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
+        nc_rho[:] = rho[:,1:-1,:-2]
+        return rhoout
+    else:
+        print('store background density')
+        nc_rho = bgout.createVariable('rho',dtype,('zt','y','x'))
+        nc_rho[:] = np.tile(rho[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_rho[:].shape[2]))
+
+def store_pv(background=False):
+    if not background:
+        print('compute and store PV')
+        
+        # compute stratification profile
+        N2 = -g*np.diff(rho_a)/d.rho0/np.diff(zt)
+        # N2 = np.hstack((N2[0],N2,N2[-1]))
+        N2 = np.hstack((N2,N2[-1]))
+        
+        pvout = create_nc(outdir+'roms_pv.nc', x, y, zt, zw)
+        #
+        nc_f = pvout.createVariable('f',dtype,('y','x'))
+        nc_f[:] = f  
+        #  
+        nc_f0 = pvout.createVariable('f0',dtype)
+        nc_f0[:] = f0
+        #
+        nc_N2 = pvout.createVariable('N2',dtype,('zw'))
+        nc_N2[:] = N2
+        #
+        lnc_q = pvout.createVariable('q',dtype,('zt','y','x'))
     
-    ###
+        print('zt from ',zt[0],' to ',zt[-1])
+        print('zw from ',zw[0],' to ',zw[-1])
+        
+        flag_pv = 0    
+        for k in np.arange(d.N):
+        
+            if flag_pv == 0 :
+                
+                # compute relative vorticity
+                lu = u[k, :, :]
+                lv = v[k, :, :]
+                xi = psi2rho(vorticity(lu, lv, d.hgrid))
+                
+                # compute vortex stretching
+                if ( k==0 ):
+                    # use bottom density                
+                    # bottom bdy condition not used in the solver
+                    S = np.zeros_like(rho[0,:,:])
+                elif ( k==d.N-1 ):
+                    # use top density              
+                    # bottom bdy condition not used in the solver
+                    S = np.zeros_like(rho[0,:,:])
+                else:
+                    S = ( (rho[k+1,...]+rho[k,...])*0.5 \
+                            *(zt[k+1]-zt[k])/(rho_a[k+1]-rho_a[k]) \
+                         -(rho[k,...]+rho[k-1,...])*0.5 \
+                            *(zt[k]-zt[k-1])/(rho_a[k]-rho_a[k-1]) \
+                         ) /(zw[k]-zw[k-1])
+                #S = S * d.hgrid.f
+                S = S * d.hgrid.f0
+        
+                # assemble q
+                pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
+                # store q
+                lnc_q[k,:,:] = pv
+                
+            elif flag_pv == 1:
+                
+                # compute relative vorticity
+                dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
+                dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
+        
+                psi = p[k,:,:]/d.hgrid.f0/d.rho0
+        
+                psixx = np.zeros(dx2.shape)
+                psixx[:,1:-1] = np.diff(psi[:,:], n=2, axis=1)
+                psixx[:,0] = psixx[:,-2]
+                psixx[:,-1]= psixx[:,1]
+                psixx = np.divide(psixx,dx2)
+        
+                psiyy = np.zeros(dy2.shape)
+                psiyy[1:-1,:] = np.diff(psi[:,:], n=2, axis=0)
+                psiyy[0,:] = psiyy[1,:]
+                psiyy[-1,:] = psiyy[-2,:]
+                psiyy = np.divide(psiyy,dy2)
+        
+                xi = psixx + psiyy
     
+                if (k == 0):
+                    # bottom bdy condition not used in the solver
+                    S = np.zeros_like(xi)[1:-1,:-2]
+                elif (k == d.N - 1):
+                    # top bdy condition not used in the solver
+                    S = np.zeros_like(xi)[1:-1,:-2]
+                else:
+                    # interior pv
+                    S =  ( (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zt[k+1]-zt[k]) - \
+                           (d.hgrid.f0**2/nc_N2[k-1])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
+                         )/(zw[k]-zw[k-1])
+        
+                # assemble q
+                pv= f-f0 + xi[1:-1,:-2] + S[:]
+    
+                # store q
+                lnc_q[k,:,:] = pv
+                
+            elif flag_pv ==2:
+                
+                # compute relative vorticity
+                lu = u[k, :, :]
+                lv = v[k, :, :]
+                xi = psi2rho(vorticity(lu, lv, d.hgrid))
+                
+                # compute vortex stretching
+                if ( k==0 ):
+                    # use bottom density
+                    S = np.zeros_like(xi)
+                    # S = 0.
+                elif ( k==d.N-1 ):
+                    # use top density
+                    S = np.zeros_like(xi)
+                    # S = 0.
+                else:
+                    S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k] \
+                                       +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k-1] \
+                                       ) /(zw[k]-zw[k-1])
+        
+                # assemble q
+                pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
+                # store q
+                lnc_q[k,:,:] = pv
+        return pvout, lnc_q
+    else:
+        print('compute and store background PV')
+        #
+        nc_qbg = bgout.createVariable('q',dtype,('zt','y','x'))
+        nc_qbg[:] = np.tile(nc_q[:].mean(axis=2,keepdims=True),(1,1,nc_q[:].shape[2]))
+        
+   
+
+
+if __name__ == "__main__":
+    ''' Main code to read a ROMS output and create a qgsolver input
+    
+    Usage
+    -----
+    python create_input_roms.py 
+    python create_input_roms.py input_dir/  # place files in input_dir/
+     
+    '''
+
+    # default directories
+    romsdir = '/home2/pharos/othr/aponte/roms_ird/caparmor/jet_cfg1_wp5_4km_k3.2e8_0a1500j/'
+    outdir = './input/'    
+
+    # parse input arguments
+    parser = argparse.ArgumentParser(description='Create input files from ROMS output')
+    parser.add_argument('-r', dest='romsdir', help='directory where ROMS outputs are found',
+                        default=romsdir)
+    parser.add_argument('-o', dest='outdir', help='destination directory',
+                        default=outdir)    
+    args = parser.parse_args()
+    #
+    romsdir = args.romsdir    
+    #
+    outdir = args.outdir   
+    if os.path.exists(outdir):
+        if query_yes_no(outdir+' exists, erase and replace? ', default="yes"):
+            os.system('rm -Rf '+outdir)
+            os.mkdir(outdir)
+        else:
+            print('Choose a different name then')
+            sys.exit()
+    else:
+        os.mkdir(outdir)
+    #
+    print('Input directory: '+outdir)
+    print('ROMS output directory: \n\t'+romsdir)
+            
+
+    #
+    # Start now to build input files
+    #
+    
+    # suffix of variables used in the output
+    suff='_t_dirac'
+    #suff='_a'
+
+    # time index is also added to the suffix
+    #it=5
+    it=11
+    #it=15
+    
+    # Create a lporun class
+    d=LPORun(romsdir,verbose=True, open_nc=[], tdir_max=10)
+    
+    # metric terms
+    metricsout, ssh, x, y, zt, zw = metrics()
+            
     # compute the Coriolis frequency and a reference value
-    # from oocgcm/oocgcm/parameters/physicalparameters.py
-    #grav = 9.81                  # acceleration due to gravity (m.s-2)
     g=9.81
-    #omega = 7.292115083046061e-5 # earth rotation rate (s-1)
-    #earthrad = 6371229            # mean earth radius (m)
-    #f = 2. * omega * np.sin(lat * d2r)
-    #f0 = 8.5158e-5
     f = d.hgrid.f[1:-1,:-2]
     f0 = d.hgrid.f0
     
@@ -204,294 +326,46 @@ if __name__ == "__main__":
     rho_a = rho.mean(axis=2).mean(axis=1)
     rho += -rho_a.reshape((d.N,1,1))
     
-    # store stratification profile
-    print "compute stratification"
-    N2 = -g*np.diff(rho_a)/d.rho0/np.diff(zt)
-    # N2 = np.hstack((N2[0],N2,N2[-1]))
-    N2 = np.hstack((N2,N2[-1]))
-    
     # compute p from rho manually (does not agree with ROMS)
     p = np.zeros_like(rho)
     p[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho[-1,...])*ssh[None,:,:]
     for k in range(d.N-2,-1,-1):
-        p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zr0[k+1,None,None]-zr0[k,None,None])
+        p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zt[k+1,None,None]-zt[k,None,None])
 
+    # store psi
+    psiout = store_psi()
+    bgout = store_psi(background=True)
 
-    ### store psi    
-    print "create psi file"
-    psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
-    nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
-    nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
-    # close file
-    #psiout.close()
-   
     # compute PV
-    print "compute and store PV"
-
-    pvout = create_nc(RPATH+'input/roms_pv.nc', x, y, zt, zw)
-    #
-    nc_f = pvout.createVariable('f',dtype,('y','x'))
-    nc_f[:] = f  
-    #  
-    nc_f0 = pvout.createVariable('f0',dtype)
-    nc_f0[:] = f0
-    #
-    nc_N2 = pvout.createVariable('N2',dtype,('zw'))
-    nc_N2[:] = N2
-    #
-    nc_q = pvout.createVariable('q',dtype,('zt','y','x'))
-
-    print "zt from ",zt[0]," to ",zt[-1]
-    print "zw from ",zw[0]," to ",zw[-1]
-    # print zw
-    # print N2
-    # #print f[:,0]
-    # print f0
+    pvout, nc_q = store_pv()
+    store_pv(background=True)
     
-    flag_pv = 0
-    
-    for k in np.arange(d.N):
-    
-        if flag_pv == 0 :
-            
-            # compute relative vorticity
-            lu = u[k, :, :]
-            lv = v[k, :, :]
-            xi = psi2rho(vorticity(lu, lv, d.hgrid))
-            
-            # compute vortex stretching
-            if ( k==0 ):
-                # use bottom density                
-                # bottom bdy condition not used in the solver
-                S = np.zeros_like(rho[0,:,:])
-            elif ( k==d.N-1 ):
-                # use top density              
-                # bottom bdy condition not used in the solver
-                S = np.zeros_like(rho[0,:,:])
-            else:
-                S = ( (rho[k+1,...]+rho[k,...])*0.5 \
-                        *(zt[k+1]-zt[k])/(rho_a[k+1]-rho_a[k]) \
-                     -(rho[k,...]+rho[k-1,...])*0.5 \
-                        *(zt[k]-zt[k-1])/(rho_a[k]-rho_a[k-1]) \
-                     ) /(zw[k]-zw[k-1])
-            #S = S * d.hgrid.f
-            S = S * d.hgrid.f0
-    
-            # assemble q
-            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
-            # store q
-            nc_q[k,:,:] = pv
-            
-        elif flag_pv == 1:
-            
-            # compute relative vorticity
-            dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
-            dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
-    
-            psi = p[k,:,:]/d.hgrid.f0/d.rho0
-    
-            psixx = np.zeros(dx2.shape)
-            psixx[:,1:-1] = np.diff(psi[:,:], n=2, axis=1)
-            psixx[:,0] = psixx[:,-2]
-            psixx[:,-1]= psixx[:,1]
-            psixx = np.divide(psixx,dx2)
-    
-            psiyy = np.zeros(dy2.shape)
-            psiyy[1:-1,:] = np.diff(psi[:,:], n=2, axis=0)
-            psiyy[0,:] = psiyy[1,:]
-            psiyy[-1,:] = psiyy[-2,:]
-            psiyy = np.divide(psiyy,dy2)
-    
-            xi = psixx + psiyy
-
-            if (k == 0):
-                # bottom bdy condition not used in the solver
-                S = np.zeros_like(xi)[1:-1,:-2]
-            elif (k == d.N - 1):
-                # top bdy condition not used in the solver
-                S = np.zeros_like(xi)[1:-1,:-2]
-            else:
-                # interior pv
-                S =  ( (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zt[k+1]-zt[k]) - \
-                       (d.hgrid.f0**2/nc_N2[k-1])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
-                     )/(zw[k]-zw[k-1])
-    
-            # assemble q
-            pv= f-f0 + xi[1:-1,:-2] + S[:]
-
-            # store q
-            nc_q[k,:,:] = pv
-            
-        elif flag_pv ==2:
-            
-            # compute relative vorticity
-            lu = u[k, :, :]
-            lv = v[k, :, :]
-            xi = psi2rho(vorticity(lu, lv, d.hgrid))
-            
-            # compute vortex stretching
-            if ( k==0 ):
-                # use bottom density
-                S = np.zeros_like(xi)
-                # S = 0.
-            elif ( k==d.N-1 ):
-                # use top density
-                S = np.zeros_like(xi)
-                # S = 0.
-            else:
-                S = d.hgrid.f0 * ( -g*(rho[k+1,...]+rho[k,...])*0.5 /nc_N2[k] \
-                                   +g*(rho[k,...]+rho[k-1,...])*0.5 /nc_N2[k-1] \
-                                   ) /(zw[k]-zw[k-1])
-    
-            # assemble q
-            pv= f-f0 + xi[1:-1,:-2] + S[1:-1,:-2]
-            # store q
-            nc_q[k,:,:] = pv            
-    
-    print nc_q[:,0,0]
-    psiout.close()
-    
-    #datadir='/home7/pharos/othr/NATL60/'
-    #pv_file = datadir+'DIAG_DIMUP/qgpv/LMX/test/LMX_y2007m01d01_qgpv_v2_test_accurate.nc'
-    #pvin = Dataset(pv_file, 'r')
-    #q = pvin.variables['qgpv_v2']
-    #print q._FillValue
-
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
-    print "store mask"
-    print 
+    print('store mask')
     nc_mask = metricsout.createVariable('mask',dtype,('y','x'), fill_value=-999.0)
     nc_mask[:] = 1.
-    #nc_mask[:] = np.where(nc_mask == nc_mask._FillValue, nc_mask, 1.) 
-    #nc_mask[:] = np.where(nc_mask != nc_mask._FillValue, nc_mask, 0.) 
-    #print nc_mask[:].shape
     nc_mask[:5,:]=0.
     nc_mask[-5:,:]=0.
-
-    # enlarge the mask: if the i,j point has an adjacent land point then it becames land
-    #dummy = nc_mask[1:-1,1:-1]+nc_mask[:-2,1:-1]+nc_mask[2:,1:-1]+nc_mask[1:-1,:-2]+nc_mask[1:-1,2:]
-    #nc_mask[1:-1,1:-1] = np.where(dummy == 5, nc_mask[1:-1,1:-1], 0.)
+    
+    # close files
     metricsout.close()
-    #pvin.close()
+    psiout.close()    
     pvout.close()
-
-  
-    ### store psi    
-    #print "create psi file"
-    #psiout = create_nc(RPATH+'input/roms_psi.nc', x, y, zt, zw)
-    #nc_psi = psiout.createVariable('psi',dtype,('zt','y','x'))
-    #nc_psi[:] = p[:,1:-1,:-2]/d.hgrid.f0/d.rho0
-    ## close file
-    #psiout.close()    
-
-
-    ### store rho - rho_background   
-    print "create rho file"
-    rhoout = create_nc(RPATH+'input/roms_rho.nc', x, y, zt, zw)
-    nc_rho = rhoout.createVariable('rho',dtype,('zt','y','x'))
-    nc_rho[:] = rho[:,1:-1,:-2]    
+    
+    # store rho - rho_background  
+    rhoout = store_rho()
+    store_rho(background=True)
     rhoout.close()
 
-
     # commands to execute code
-    print 'You need to execute the following commands: '
-    print '  bash'
-    print '  source activate petsc_env'
-    print '  cd '+RPATH
-    print '  mpirun -np 8  python  '+runscript
-    print '  (the number of mpi processes may need to adjusted here or in the run script)'
+    print('You need to execute the following commands: ')
+    print('  bash')
+    print('  source activate petsc')
+    print('  cd '+outdir)
+    print('  mpirun -np 8  python run.py')
+    print('  (the number of mpi processes may need to adjusted here or in the run script)')
 
     
-    # plt.ion()
-    # plt.show(); 
 
-
-
-    sys.exit()
-    
-    
-    ### debug solve 1D pb in the southern part
-    
-    # solve for the surface solution 
-    
-    f0 = d.hgrid.f0; g=9.81; rho0=d.rho0;
-    
-    def build_linpb(j):
-        i=0
-        Lop = sp.csr_matrix((d.N,d.N))
-        for k in np.arange(1,d.N-1):
-            Lop[k,k] = f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
-                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-            Lop[k,k+1] = -f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-            Lop[k,k-1] = -f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-        #
-        # bottom bdy, dirichlet psi=0, get away of compatibility issues
-        k=0
-        Lop[k,k] = f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
-                +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-        #Lop[k,k] = f0**2 /g*rho0 * ( \
-        #            +1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-        #             /(zw[k+1,j,i]-zw[k,j,i])
-        Lop[k,k+1] = -f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-        #Lop[k,k]=1;Lop[k,k+1]=0; # debugging test
-        # surface bdy
-        k=d.N-1
-        Lop[k,k] = f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) )\
-                 /(zw[k+1,j,i]-zw[k,j,i])
-        Lop[k,k-1] = -f0**2 /g*rho0 * ( \
-                 1.0/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) ) \
-                 /(zw[k+1,j,i]-zw[k,j,i])
-        # rhs
-        rhs=np.zeros((d.N))
-        # surface:
-        k=d.N-1
-        rhs[k]= -f0 * nc_rho_s[j,i] \
-             *(zr[k,j,i]-zr[k-1,j,i])/(rho_bs[k,j,i]-rho_bs[k-1,j,i]) \
-                     /(zw[k+1,j,i]-zw[k,j,i])
-        k=0
-        #rhs[k]=nc_psi[k,j,i]
-        #rhs[k]=  f0 * nc_rho_b[j,i] \
-        #         *(zr[k+1,j,i]-zr[k,j,i])/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) \
-        #             /(zw[k+1,j,i]-zw[k,j,i])
-        #rhs[k]+=  f0**2 /g*rho0 * ( \
-        #         1.0/(rho_bs[k+1,j,i]-rho_bs[k,j,i]) ) \
-        #         /(zw[k+1,j,i]-zw[k,j,i]) \
-        #         *nc_psi[k,j,i]
-        #
-        return Lop, rhs
-    
-    
-    # north profile
-    j=d.M
-    Lop, rhs = build_linpb(j)
-    psi_surf_north=spsolve(Lop,rhs)
-    
-    # south profile
-    j=0
-    Lop, rhs = build_linpb(j)
-    psi_surf_south=spsolve(Lop,rhs)
-    
-    # plot north and south surface solutions
-    plt.figure()
-    plt.plot(psi_surf_north,zr[:,-1,0],'b',label='psi_surf_north')
-    plt.plot(nc_psi_north[:],zr[:,-1,0],'b-+',label='psi_north')
-    plt.plot(psi_surf_south,zr[:,-1,0],'r',label='psi_surf_south')
-    plt.plot(nc_psi_south[:],zr[:,-1,0],'r-+',label='psi_south')
-    plt.grid(True)
-    plt.legend(loc=0)
-    
-    if prtfig:
-        plt.savefig("figs/psi_1D.pdf")
 
 
