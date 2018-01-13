@@ -441,7 +441,7 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
             new_state = state1
         # copy core variables
         _vars = ['Q','PSI','RHO','U','V','W']
-        for v in vars:
+        for v in _vars:
             if hasattr(state1,v) and hasattr(state2,v):
                 new_state[v] = a1 * state1[v] + a2 * state2[v] + a3
         # we use state1 parameters
