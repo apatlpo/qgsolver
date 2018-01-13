@@ -439,10 +439,11 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
             new_state = state(da,None,N2=None,verbose=state1._verbose)
         else:
             new_state = state1
-        new_state['Q'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
-        new_state['PSI'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
-        new_state['RHO'] = a1 * state1['Q'] + a2 * state2['Q'] + a3
-
+        # copy core variables
+        _vars = ['Q','PSI','RHO','U','V','W']
+        for v in vars:
+            if hasattr(state1,v) and hasattr(state2,v):
+                new_state[v] = a1 * state1[v] + a2 * state2[v] + a3
         # we use state1 parameters
         new_state.N2 = state1.N2
         new_state.f0 = state1.f0
