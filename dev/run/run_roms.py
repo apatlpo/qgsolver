@@ -51,16 +51,21 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         file_q = datapath+'roms_pv.nc'
         file_psi = datapath+'roms_psi.nc'
         file_rho = datapath+'roms_rho.nc'
+        file_bg = datapath+'roms_bg.nc'
                
-        qg = qg_model(hgrid=hgrid, vgrid=vgrid, f0N2_file=file_q, K=20.e0, dt=0.02 * d2s,
-                      vdom=vdom, hdom=hdom, ncores_x=ncores_x, ncores_y=ncores_y, 
-                      bdy_type_in=bdy_type, substract_fprime=True, verbose=1)   
-        
+        qg = qg_model(ncores_x=ncores_x, ncores_y=ncores_y,
+                      hgrid=hgrid, vgrid=vgrid, vdom=vdom, hdom=hdom, mask=True,
+                      boundary_types=bdy_type,
+                      f0N2_file=file_q, K=20.e0, dt=0.02 * d2s,
+                      verbose=1)
+
         # start filling in variables    
-        qg.set_q(file_q=file_q)
-        qg.set_psi(file_psi=file_psi)   
-        qg.set_rho(file_rho=file_rho)
+        qg.set_q(file=file_q)
+        qg.set_psi(file=file_psi)   
+        qg.set_rho(file=file_rho)
         qg.write_state(filename=outdir+'output.nc')
+        #
+        qg.set_bstate(file=file_bg)
         #
         qg.invert_pv()
         qg.write_state(filename=outdir+'output.nc', append=True)

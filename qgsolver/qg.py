@@ -297,15 +297,15 @@ class qg_model():
         # compute abs(u*dt/dx)
         self._compute_dudx(PSI=PSI)
 
-        CFL=self._U.max()[1]*self.tstepper.dt
-        self._U.destroy()
+        CFL=self.state._U.max()[1]*self.tstepper.dt
+        self.state._U.destroy()
         return CFL
 
     def _compute_dudx(self, PSI=None):
         """ Compute abs(u*dt/dx)
         """
         # get u
-        u = self.da.getVecArray(self._U)
+        u = self.da.getVecArray(self.state._U)
         # get dx
         D = self.da.getVecArray(self.grid.D)
 

@@ -2,7 +2,7 @@
 # -*- encoding: utf8 -*-
 
 from .grid import *
-from .inout import read_nc_petsc
+from .inout import read_nc, read_nc_petsc
 from .utils import g, rho0
 
 class state():
@@ -47,8 +47,8 @@ class state():
             if self._verbose>0:
                 print('  Reads N2, f0 and f from '+f0N2_file)
             #
-            self.N2 = read_nc('N2', f0N2_file, self)
-            self.f0 = read_nc('f0', f0N2_file, self)
+            self.N2 = read_nc('N2', f0N2_file, grid)
+            self.f0 = read_nc('f0', f0N2_file, grid)
             grid.load_coriolis_parameter(f0N2_file, da)
             #
             self._compute_sparam()
@@ -91,7 +91,7 @@ class state():
         """
         self._sparam = self.f0**2 /self.N2
 
-    def set_psi(self, da, grid, analytical_psi=True, psi0=0., file_psi=None, **kwargs):
+    def set_psi(self, da, grid, analytical_psi=True, psi0=0., file=None, **kwargs):
         """ Set psi (streamfunction)
 
         Parameters
@@ -102,14 +102,14 @@ class state():
             grid data holder
         analytical_psi : boolean, optional
             True set psi analytically, default is True
-        file_psi : str, optional
+        file : str, optional
             filename where psi can be found
 
         """
-        if file_psi is not None:
+        if file is not None:
             if self._verbose:
-                print('  Set psi from file ' + file_psi + ' ...')
-            read_nc_petsc(self.PSI, 'psi', file_psi, da, grid, fillmask=0.)
+                print('  Set psi from file ' + file + ' ...')
+            read_nc_petsc(self.PSI, 'psi', file, da, grid, fillmask=0.)
         elif analytical_psi:
             self.set_psi_analytically(da, psi0)
         else:
@@ -131,7 +131,7 @@ class state():
                 for i in range(xs, xe):
                     psi[i, j, k] = psi0
 
-    def set_q(self, da, grid, analytical_q=True, q0=1.e-5, beta=0., file_q=None, **kwargs):
+    def set_q(self, da, grid, analytical_q=True, q0=1.e-5, beta=0., file=None, **kwargs):
         """ Set q (PV)
 
         Parameters
@@ -142,15 +142,15 @@ class state():
             grid data holder
         analytical_psi : boolean, optional
             True set psi analytically, default is True
-        file_q : str, optional
+        file : str, optional
             filename where q can be found
 
         """
         #
-        if file_q is not None:
+        if file is not None:
             if self._verbose:
-                print('  Set q from file ' + file_q + ' ...')
-            read_nc_petsc(self.Q, 'q', file_q, da, grid, fillmask=0.)
+                print('  Set q from file ' + file + ' ...')
+            read_nc_petsc(self.Q, 'q', file, da, grid, fillmask=0.)
         elif analytical_q:
             self.set_q_analytically(da, grid, q0, beta)
 
@@ -172,7 +172,7 @@ class state():
                     q[i, j, k] *= np.sin(2 * j / float(my - 1) * np.pi)
                     q[i, j, k] += beta*grid.dy*(j-my/2.)
 
-    def set_rho(self, da, grid, analytical_rho=True, rho0=0., file_rho=None, **kwargs):
+    def set_rho(self, da, grid, analytical_rho=True, rho0=0., file=None, **kwargs):
         """ Set rho (density)
 
         Parameters
@@ -183,15 +183,15 @@ class state():
             grid data holder
         analytical_psi : boolean, optional
             True set psi analytically, default is True
-        file_rho : str, optional
+        file : str, optional
             filename where rho can be found
 
         """
         #
-        if file_rho is not None:
+        if file is not None:
             if self._verbose:
-                print('  Set rho from file ' + file_rho + ' ...')
-            read_nc_petsc(self.RHO, 'rho', file_rho, da, grid, fillmask=0.)
+                print('  Set rho from file ' + file + ' ...')
+            read_nc_petsc(self.RHO, 'rho', file, da, grid, fillmask=0.)
         elif analytical_rho:
             self.set_rho_analytically(da, rho0)
 
@@ -208,7 +208,7 @@ class state():
                 for i in range(xs, xe):
                     rho[i, j, k] = rho0
 
-    def set_w(self, da, grid, analytical_w=True, file_w=None, **kwargs):
+    def set_w(self, da, grid, analytical_w=True, file=None, **kwargs):
         """ Set w
 
         Parameters
@@ -219,15 +219,15 @@ class state():
             grid data holder
         analytical_psi : boolean, optional
             True set psi analytically, default is True
-        file_w : str, optional
+        file : str, optional
             filename where w can be found
 
         """
         #
-        if file_w is not None:
+        if file is not None:
             if self._verbose:
-                print('Set w from file ' + file_w + ' ...')
-            read_nc_petsc(self.W, 'w', file_w, da, grid, fillmask=0.)
+                print('Set w from file ' + file + ' ...')
+            read_nc_petsc(self.W, 'w', file, da, grid, fillmask=0.)
         elif analytical_w:
             self.set_w_analytically(da)
 
