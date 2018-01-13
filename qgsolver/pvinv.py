@@ -154,7 +154,7 @@ class pvinversion():
         # apply mask
         if grid.mask:
             # mask rhs
-            self.set_rhs_mask(da, grid, state)
+            self.set_rhs_mask(da, grid, PSI)
         # actually solves the pb
         self.ksp.solve(self._RHS, state.PSI)
         # add back background state
@@ -378,7 +378,7 @@ class pvinversion():
                     for i in range(max(xs,iend),xe):
                         rhs[i, j, k] = psi[i, j, k]
 
-    def set_rhs_mask(self, da, grid, state):
+    def set_rhs_mask(self, da, grid, PSI):
         """Set mask on rhs: where mask=0 (land) rhs=psi
 
         Parameters
@@ -387,8 +387,8 @@ class pvinversion():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        state : state object
-            ocean state
+        PSI : petsc Vec
+            streamfunction used over masked areas
 
         """
 
@@ -398,7 +398,7 @@ class pvinversion():
 
         kmask = grid._k_mask
 
-        psi = da.getVecArray(state.PSI)
+        psi = da.getVecArray(PSI)
         
         # interior
         for k in range(zs,ze):
@@ -569,8 +569,9 @@ class pvinversion():
                     # masked points (land=0), L=1
                     if D[i,j,kmask]==0.:
                         L.setValueStencil(row, row, 1.)
-    
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+   
+                    # domain edges 
+                    elif (i<=istart or i>=iend or j<=jstart or j>=jend) \
                         and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
     

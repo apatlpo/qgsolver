@@ -417,8 +417,8 @@ class state():
                         Vol[i, j, k] = self.grid.dzt[k] * D[i, j, kdxt] * D[i, j, kdyt]
                         lKE[i, j, k] = 0.5 * (u ** 2 + v ** 2) * Vol[i, j, k]
 
-def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
-    """ add fields of two states: a1*state1 + a2*state2 + a3
+def add(state1, state2, da=None, a1=1., a2=1.):
+    """ add fields of two states: a1*state1 + a2*state2 
 
     Parameters
     ----------
@@ -430,8 +430,6 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
         default value = 1.
     a2 : float, optional
         default value = 1.
-    a2 : float, optional
-        default value = 0.
 
     """
     if state1 is not None and state2 is not None:
@@ -443,7 +441,7 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
         _vars = ['Q','PSI','RHO','U','V','W']
         for v in _vars:
             if hasattr(state1,v) and hasattr(state2,v):
-                new_state[v] = a1 * state1[v] + a2 * state2[v] + a3
+                new_state[v] = a1 * state1[v] + a2 * state2[v] 
         # we use state1 parameters
         new_state.N2 = state1.N2
         new_state.f0 = state1.f0

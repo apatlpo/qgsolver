@@ -64,14 +64,16 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
         qg.set_rho(file=file_rho)
-        qg.write_state(filename=outdir+'output.nc')
+        qg.write_state(filename=outdir+'output0.nc')
         #
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state,bstate,da=None,a2=-1.)
         #qg.state += -bstate
+        qg.write_state(filename=outdir+'output1.nc')
         #
         qg.invert_pv()
-        qg.write_state(filename=outdir+'output.nc', append=True)
+        #qg.write_state(filename=outdir+'output.nc', append=True)
+        qg.write_state(filename=outdir+'output2.nc')
         
         # compute CFL
         CFL = qg.compute_CFL()
