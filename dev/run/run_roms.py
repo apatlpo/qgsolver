@@ -9,6 +9,7 @@ import time
 import sys
 
 from qgsolver.qg import qg_model
+from qgsolver.state import add
 
 #
 #==================== ROMS case ============================================
@@ -65,7 +66,9 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         qg.set_rho(file=file_rho)
         qg.write_state(filename=outdir+'output.nc')
         #
-        qg.set_bstate(file=file_bg)
+        bstate = qg.set_bstate(file=file_bg)
+        add(qg.state,bstate,da=None,a2=-1.)
+        #qg.state += -bstate
         #
         qg.invert_pv()
         qg.write_state(filename=outdir+'output.nc', append=True)

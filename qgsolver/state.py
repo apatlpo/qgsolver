@@ -82,6 +82,15 @@ class state():
         else:
             print(key + ' not in state')
 
+    def __mul__(self,other):
+        return None 
+
+    def __add__(self,other):
+        return None
+
+    def __sub__(self,other):
+        return None
+
 #
 # ==================== fill state variables ============================================
 #
@@ -443,5 +452,4 @@ def add(state1, state2, da=None, a1=1., a2=1., a3=0.):
 
     if da is not None:
         return new_state
-    else:
-        pass
+
