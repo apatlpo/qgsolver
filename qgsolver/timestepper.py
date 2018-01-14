@@ -98,7 +98,7 @@ class time_stepper():
             numit=0
             for rk in range(4):
                 if rho_sb:
-                    self._update_topdown_rho(da, grid, state)
+                    self._reset_topdown_rho(da, grid, state)
                 #
                 numit += pvinv.solve(da, grid, state, numit=True)/4.
                 #
@@ -126,7 +126,7 @@ class time_stepper():
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
         if rho_sb:
-            self._update_topdown_rho(da, grid, state)
+            self._reset_topdown_rho(da, grid, state)
         pvinv.solve(da, grid, state)
         # reset q
         self._reset_topdown_q(da, grid, state)
