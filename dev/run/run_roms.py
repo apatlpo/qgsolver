@@ -64,16 +64,16 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
         qg.set_rho(file=file_rho)
-        qg.write_state(filename=outdir+'output0.nc')
+        qg.write_state(filename=outdir+'input_with_bg.nc')
         #
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state,bstate,da=None,a2=-1.)
         #qg.state += -bstate
-        qg.write_state(filename=outdir+'output1.nc')
+        qg.write_state(filename=outdir+'input_no_bg.nc')
         #
         qg.invert_pv()
         #qg.write_state(filename=outdir+'output.nc', append=True)
-        qg.write_state(filename=outdir+'output2.nc')
+        #qg.write_state(filename=outdir+'output2.nc')
         
         # compute CFL
         CFL = qg.compute_CFL()
@@ -81,26 +81,31 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
                 
         #
         test=-1
-        idx=1
         if test==0:
+            #Should be updated
             # one time step and store
-            qg.tstep(1)
-            qg.write_state(filename=outdir+'output.nc', append=True)
+            #qg.tstep(1, rho_sb=True, bstate=bstate)
+            #qg.write_state(filename=outdir+'output.nc', append=True)
+            pass
         elif test==1:
-            while qg.tstepper.t/86400. < 200 :
-                qg.tstep(50)
-                qg.write_state(filename=outdir+'output.nc', append=True)
+            #Should be updated
+            #while qg.tstepper.t/86400. < 200 :
+            #    qg.tstep(50, rho_sb=True, bstate=bstate)
+            #    qg.write_state(filename=outdir+'output.nc', append=True)
+            pass
         elif test==2:           # input
             Ndays = 100.     # in days
             dt_out = 1.    # in days
             #
+            idx=1
             di = int(dt_out * d2s/qg.tstepper.dt)
             while qg.tstepper.t/d2s < Ndays :
-                qg.tstep(di)
+                qg.write_state(filename=outdir+'output_%.3i.nc'%idx)
+                #
+                qg.tstep(di, rho_sb=True, bstate=bstate)
                 KE = qg.compute_KE()
                 if qg._verbose>0: print(' KE = %.6e' %KE)
                 idx+=1
-                qg.write_state(filename=outdir+'output_%.3i.nc'%idx)
         
         if qg._verbose>0:
             print('----------------------------------------------------')

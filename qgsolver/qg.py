@@ -211,7 +211,7 @@ class qg_model():
     def set_bstate(self,**kwargs):
         if self._verbose:
             print('Set background state:')
-        bstate = add(self.state, self.state, da=self.da, a1=0., a2=0., a3=0.)
+        bstate = add(self.state, self.state, da=self.da, a1=0., a2=0.)
         bstate.set_q(self.da, self.grid, **kwargs)
         bstate.set_psi(self.da, self.grid, **kwargs)
         bstate.set_rho(self.da, self.grid, **kwargs)
