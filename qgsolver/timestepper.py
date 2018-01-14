@@ -7,6 +7,7 @@ import numpy as np
 
 #from .set_L import *
 from .inout import write_nc
+from .utils import g, rho0
 
 
 #
@@ -454,7 +455,7 @@ class time_stepper():
         #   
         if flag_PSI:
             psi = da.getVecArray(state.PSI)
-            psi2rho = -(state.rho0*state.f0)/state.g
+            psi2rho = -(rho0*state.f0)/g
             for j in range(ys, ye):
                 for i in range(xs, xe):           
                     q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/grid.dzw[kdown] *psi2rho
