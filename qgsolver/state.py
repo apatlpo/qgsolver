@@ -11,7 +11,7 @@ class state():
     '''
 
     def __init__(self, da, grid, N2=1.e-3, f0=7e-5, f0N2_file=None, verbose=0):
-        """Declare Petsc vectors
+        '''Declare Petsc vectors
 
         Parameters
         ----------
@@ -28,7 +28,7 @@ class state():
         verbose : int, optional
             degree of verbosity, 0 means no outputs
 
-        """
+        '''
 
         self._verbose = verbose
 
@@ -63,8 +63,8 @@ class state():
             self._compute_sparam()
 
     def __str__(self):
-        """ Plot useful statistics about the state
-        """
+        ''' Plot useful statistics about the state
+        '''
         out = '  State vector desribed by: \n' \
               + '    N max = %.2e 1/s  \n'%(np.sqrt(self.N2)) \
               + '    f0 = %.2e \n' %(self.f0)
@@ -96,12 +96,12 @@ class state():
 #
 
     def _compute_sparam(self):
-        """ Compute f^2/N^2
-        """
+        ''' Compute f^2/N^2
+        '''
         self._sparam = self.f0**2 /self.N2
 
     def set_psi(self, da, grid, analytical_psi=True, psi0=0., file=None, **kwargs):
-        """ Set psi (streamfunction)
+        ''' Set psi (streamfunction)
 
         Parameters
         ----------
@@ -114,7 +114,7 @@ class state():
         file : str, optional
             filename where psi can be found
 
-        """
+        '''
         if file is not None:
             if self._verbose:
                 print('  Set psi from file ' + file + ' ...')
@@ -127,9 +127,15 @@ class state():
             sys.exit()
 
     def set_psi_analytically(self, da, psi0):
-        """ Set psi analytically
-
-        """
+        ''' Set psi analytically
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        psi0 : float
+            amplitude used to set the streamfunction
+        '''
         psi = da.getVecArray(self.PSI)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
@@ -141,7 +147,7 @@ class state():
                     psi[i, j, k] = psi0
 
     def set_q(self, da, grid, analytical_q=True, q0=1.e-5, beta=0., file=None, **kwargs):
-        """ Set q (PV)
+        ''' Set q (PV)
 
         Parameters
         ----------
@@ -153,8 +159,11 @@ class state():
             True set psi analytically, default is True
         file : str, optional
             filename where q can be found
-
-        """
+        q0 : float, optional
+            amplitude of the PV anomaly, default is 1.e-5
+        beta : float, optional
+            meridional variations of planetary vorticity, default is 0            
+        '''
         #
         if file is not None:
             if self._verbose:
@@ -164,8 +173,19 @@ class state():
             self.set_q_analytically(da, grid, q0, beta)
 
     def set_q_analytically(self,da, grid, q0, beta):
-        """ Set q analytically
-        """
+        ''' Set q analytically
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder
+        q0 : float
+            amplitude of the PV anomaly
+        beta : float
+            meridional variations of planetary vorticity
+        '''
         q = da.getVecArray(self.Q)
         mx, my, mz = da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -181,8 +201,8 @@ class state():
                     q[i, j, k] *= np.sin(2 * j / float(my - 1) * np.pi)
                     q[i, j, k] += beta*grid.dy*(j-my/2.)
 
-    def set_rho(self, da, grid, analytical_rho=True, rho0=0., file=None, **kwargs):
-        """ Set rho (density)
+    def set_rho(self, da, grid, analytical_rho=True, rhoana=0., file=None, **kwargs):
+        ''' Set rho (density)
 
         Parameters
         ----------
@@ -194,19 +214,23 @@ class state():
             True set psi analytically, default is True
         file : str, optional
             filename where rho can be found
-
-        """
+        '''
         #
         if file is not None:
             if self._verbose:
                 print('  Set rho from file ' + file + ' ...')
             read_nc_petsc(self.RHO, 'rho', file, da, grid, fillmask=0.)
         elif analytical_rho:
-            self.set_rho_analytically(da, rho0)
+            self.set_rho_analytically(da, rhoana)
 
-    def set_rho_analytically(self, da, rho0):
-        """ Set rho analytically
-        """
+    def set_rho_analytically(self, da, rhoana):
+        ''' Set rho analytically
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        '''
         rho = da.getVecArray(self.RHO)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
@@ -215,10 +239,10 @@ class state():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rho[i, j, k] = rho0
+                    rho[i, j, k] = rhoana
 
     def set_w(self, da, grid, analytical_w=True, file=None, **kwargs):
-        """ Set w
+        ''' Set w
 
         Parameters
         ----------
@@ -230,8 +254,7 @@ class state():
             True set psi analytically, default is True
         file : str, optional
             filename where w can be found
-
-        """
+        '''
         #
         if file is not None:
             if self._verbose:
@@ -241,8 +264,13 @@ class state():
             self.set_w_analytically(da)
 
     def set_w_analytically(self,da):
-        """ Set w analytically
-        """
+        ''' Set w analytically
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        '''
         w = da.getVecArray(self.W)
         mx, my, mz = da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -260,8 +288,19 @@ class state():
 #
 
     def update_rho(self, da, grid, PSI=None, RHO=None):
-        """ update rho from psi
-        """
+        ''' update rho from psi
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder        
+        PSI: petsc Vec, optional
+            PSI vector used for computation density, use state.PSI if None
+        RHO: petsc Vec, optional
+            RHO vector where output is stored, store in state.RHO if None
+        '''
 
         if PSI is None:
             PSI = self.PSI
@@ -295,11 +334,17 @@ class state():
         return
 
     def get_uv(self, da, grid, PSI=None):
-        """ Compute horizontal velocities
-        Compute U & V from Psi
-        U = -dPSIdy
-        V =  dPSIdx
-        """
+        ''' Compute horizontal velocities from Psi: state._U = -dPSIdy, state._V =  dPSIdx
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder        
+        PSI: petsc Vec, optional
+            PSI vector used for velocity computation
+        '''
 
         ### create global vectors
         self._U = da.createGlobalVec()
@@ -352,8 +397,22 @@ class state():
                                       psi[i, j, k] + psi[i, j + 1, k] + psi[i - 1, j + 1, k] + psi[i - 1, j, k]))
 
     def compute_KE(self, da, grid, PSI=None):
-        """ Compute kinetic energy = 0.5 * sum (u**2+v**2)
-        """
+        ''' Compute domain averaged kinetic energy = 0.5 * sum (u**2+v**2)
+        
+        Parameters
+        ----------
+        da : petsc DMDA
+            holds the petsc grid
+        grid : qgsolver grid object
+            grid data holder        
+        PSI: petsc Vec, optional
+            PSI vector used for velocity computation
+            
+        Returns
+        -------
+        KE: float
+            Kinetic energy in m/s
+        '''
 
         # compute local kinetic energy
         self._compute_local_KE(da, grid, PSI=PSI)
@@ -414,11 +473,11 @@ class state():
                         v = 1. / D[i, j, kdxv] * \
                             (0.25 * (psi[i + 1, j, k] + psi[i + 1, j + 1, k] + psi[i, j + 1, k] + psi[i, j, k]) - \
                              0.25 * (psi[i, j, k] + psi[i, j + 1, k] + psi[i - 1, j + 1, k] + psi[i - 1, j, k]))
-                        Vol[i, j, k] = self.grid.dzt[k] * D[i, j, kdxt] * D[i, j, kdyt]
+                        Vol[i, j, k] = grid.dzt[k] * D[i, j, kdxt] * D[i, j, kdyt]
                         lKE[i, j, k] = 0.5 * (u ** 2 + v ** 2) * Vol[i, j, k]
 
 def add(state1, state2, da=None, a1=1., a2=1.):
-    """ add fields of two states: a1*state1 + a2*state2 
+    ''' add fields of two states: a1*state1 + a2*state2 
 
     Parameters
     ----------
@@ -430,8 +489,7 @@ def add(state1, state2, da=None, a1=1., a2=1.):
         default value = 1.
     a2 : float, optional
         default value = 1.
-
-    """
+    '''
     if state1 is not None and state2 is not None:
         if da is not None:
             new_state = state(da,None,N2=None,verbose=state1._verbose)

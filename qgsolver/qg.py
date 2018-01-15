@@ -14,9 +14,9 @@ from .inout import write_nc
 
 
 class qg_model():
-    """
+    '''
     QG model
-    """
+    '''
 
 
 #
@@ -35,7 +35,7 @@ class qg_model():
                  flag_pvinv=True,
                  flag_omega=False
                  ):
-        """
+        '''
         QG model initializer
 
         Parameters
@@ -66,8 +66,7 @@ class qg_model():
             turn on setup of PV inversion solver, default is True
         flag_omega: boolean, optional
             turn on setup of omega equation inversion solver, default is False
-
-        """
+        '''
 
         #
         # Build grid object
@@ -161,7 +160,6 @@ class qg_model():
             Number of MPI tiles in x direction
         ncores_y: int
             Number of MPI tiles in y direction
-
         '''
         # test whether tiling is consistent with dimensions
         if self.grid.Nx % ncores_x != 0 or self.grid.Ny % ncores_y != 0:
@@ -193,22 +191,24 @@ class qg_model():
 #
 
     def set_psi(self, **kwargs):
-        """ Set psi
-        """
+        ''' Set psi, wrapper around state.set_psi
+        '''
         self.state.set_psi(self.da, self.grid, **kwargs)
 
 
     def set_q(self, **kwargs):
-        """ Set q
-        """
+        ''' Set q, wrapper around state.set_q
+        '''
         self.state.set_q(self.da, self.grid, **kwargs)
 
     def set_rho(self, **kwargs):
-        """ Set rho
-        """
+        ''' Set rho, wrapper around state.set_rho
+        '''
         self.state.set_rho(self.da, self.grid, **kwargs)
 
     def set_bstate(self,**kwargs):
+        ''' Set background state
+        '''
         if self._verbose:
             print('Set background state:')
         bstate = add(self.state, self.state, da=self.da, a1=0., a2=0.)
@@ -218,8 +218,8 @@ class qg_model():
         return bstate
 
     def set_w(self, **kwargs):
-        """ Set w
-        """
+        ''' Set w, wrapper around state.set_w
+        '''
         self.state.set_w(self.da, self.grid, **kwargs)
 
 #
@@ -227,8 +227,8 @@ class qg_model():
 #
                  
     def invert_pv(self, bstate=None, addback_bstate=True):
-        """ wrapper around pv inversion solver
-        """
+        ''' wrapper around pv inversion solver pvinv.solve
+        '''
         if hasattr(self,'state'):
             self.pvinv.solve(self.da, self.grid, self.state, \
                              Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO, \
@@ -237,13 +237,13 @@ class qg_model():
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
 
     def invert_omega(self):
-        """ wrapper around solver solve method
-        """
+        ''' wrapper around solver solve method omegainv.solve
+        '''
         self.omegainv.solve(self)
 
     def tstep(self, nt=1, rho_sb=False, bstate=None):
-        """ Time step wrapper
-        """
+        ''' Time step wrapper tstepper.go
+        '''
         self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb=rho_sb, bstate=bstate)
 
 
@@ -252,7 +252,7 @@ class qg_model():
 #
 
     def write_state(self,v=['PSI','Q'], vname=['psi','q'], filename='output.nc', append=False):
-        """ Outputs state to a netcdf file
+        ''' Outputs state to a netcdf file
 
         Parameters
         ----------
@@ -264,8 +264,7 @@ class qg_model():
             netcdf output filename
         create : boolean, optional
             if true creates a new file, append otherwise (default is True)
-
-        """
+        '''
         V=[]
         for vv in v:
             if hasattr(self.state,vv):
@@ -278,7 +277,7 @@ class qg_model():
 #==================== utils ============================================
 #
     def compute_CFL(self, PSI=None):
-        """ Compute CFL = max (u*dt/dx)
+        ''' Compute CFL = max (u*dt/dx)
 
         Parameters
         ----------
@@ -289,7 +288,7 @@ class qg_model():
         -------
         CFL: float
             CFL number
-        """
+        '''
 
         # compute U from psi
         self.state.get_uv(self.da, self.grid, PSI=PSI)
@@ -302,8 +301,8 @@ class qg_model():
         return CFL
 
     def _compute_dudx(self, PSI=None):
-        """ Compute abs(u*dt/dx)
-        """
+        ''' Compute abs(u*dt/dx)
+        '''
         # get u
         u = self.da.getVecArray(self.state._U)
         # get dx
@@ -314,4 +313,21 @@ class qg_model():
     
         for k in range(zs,ze):
             u[:,:,k] = u[:,:,k]/D[:,:,kdxu]
-	
+
+    def compute_KE(self, PSI=None):
+        ''' Compute the domain averaged kinetic energy, wrapper around state.compute_KE
+        
+        Parameters
+        ----------
+        PSI: petsc Vec, optional
+            PSI vector used for velocity computation
+            
+        Returns
+        -------
+        KE: float
+            Kinetic energy in m/s                    
+        '''
+        return self.state.compute_KE(self.da, self.grid, PSI=PSI)
+        
+        
+        

@@ -12,11 +12,11 @@ from .utils import g, rho0
 
 
 class pvinversion():
-    """ PV inversion solver
-    """
+    ''' PV inversion solver
+    '''
     
     def __init__(self, da, grid, bdy_type, sparam, verbose=0, solver='gmres', pc=None):
-        """ Setup the PV inversion solver
+        ''' Setup the PV inversion solver
 
         Parameters
         ----------
@@ -40,7 +40,7 @@ class pvinversion():
             what is default?
             preconditionner: 'icc', 'bjacobi', 'asm', 'mg', 'none'
 
-        """
+        '''
 
         self._verbose = verbose
         #
@@ -76,9 +76,8 @@ class pvinversion():
         self.ksp.setOperators(self.L)
         self.ksp.setType(solver)
         self.ksp.setInitialGuessNonzero(True)
-        # and incomplete Cholesky for preconditionning
         if pc is not None:
-            self.ksp.getPC().setType('icc')
+            self.ksp.getPC().setType(pc)
         # set tolerances
         self.ksp.setTolerances(rtol=1e-4)
         self.ksp.setTolerances(max_it=1000)
@@ -96,7 +95,7 @@ class pvinversion():
 
     def solve(self, da, grid, state, Q=None, PSI=None, RHO=None, \
               bstate=None, addback_bstate=True, numit=False):
-        """ Compute the PV inversion
+        ''' Compute the PV inversion
         Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
 
         Parameters
@@ -124,7 +123,7 @@ class pvinversion():
         -------
         state.PSI:
             Put PV inversion result in state.PSI
-        """
+        '''
         if Q is None and not hasattr(state,'Q'):
             print('!Error: pvinv.solve requires state.Q or Q')
             sys.exit()
@@ -176,7 +175,7 @@ class pvinversion():
 #
 
     def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
-        """ Set South/North, East/West, Bottom/Top boundary conditions
+        ''' Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
 
@@ -192,8 +191,7 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
-
-        """
+        '''
         
         if self._verbose>1:
             print('  Set RHS along boudaries for inversion ')
@@ -203,7 +201,7 @@ class pvinversion():
         self.set_rhs_bdy_lat(da, grid, state)
 
     def set_rhs_bdy_bottom(self, da, grid, state, PSI=None, RHO=None):
-        """ Set bottom boundary condition
+        ''' Set bottom boundary condition
 
         Parameters
         ----------
@@ -217,8 +215,7 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
-
-        """
+        '''
 
         rhs = da.getVecArray(self._RHS)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -263,7 +260,7 @@ class pvinversion():
         return
 
     def set_rhs_bdy_top(self, da, grid, state, PSI=None, RHO=None):
-        """Set top boundary condition
+        '''Set top boundary condition
 
         Parameters
         ----------
@@ -277,8 +274,7 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
-
-        """
+        '''
         
         rhs = da.getVecArray(self._RHS)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -320,7 +316,7 @@ class pvinversion():
             sys.exit()
 
     def set_rhs_bdy_lat(self, da, grid, state, PSI=None):
-        """Set lateral boundary condition
+        '''Set lateral boundary condition
 
         Parameters
         ----------
@@ -332,8 +328,7 @@ class pvinversion():
             ocean state
         PSI : petsc Vec, None, optional
             streamfunction, use state.PSI if None
-
-        """
+        '''
         
         rhs = da.getVecArray(self._RHS)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -379,7 +374,7 @@ class pvinversion():
                         rhs[i, j, k] = psi[i, j, k]
 
     def set_rhs_mask(self, da, grid, PSI):
-        """Set mask on rhs: where mask=0 (land) rhs=psi
+        '''Set mask on rhs: where mask=0 (land) rhs=psi
 
         Parameters
         ----------
@@ -389,8 +384,7 @@ class pvinversion():
             grid data holder
         PSI : petsc Vec
             streamfunction used over masked areas
-
-        """
+        '''
 
         rhs = da.getVecArray(self._RHS)
         mask = da.getVecArray(grid.D)
@@ -415,7 +409,7 @@ class pvinversion():
 #
     
     def _set_L(self,L, da, grid, sparam):
-        """ Builds the laplacian operator along with boundary conditions
+        ''' Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
 
         Parameters
@@ -428,8 +422,7 @@ class pvinversion():
             grid data holder
         sparam : ndarray
             f0^2/N^2/ array
-
-        """
+        '''
         
         if self._verbose>0:
             print('  ... assumes a uniform horizontal and vertical grid')
@@ -515,7 +508,7 @@ class pvinversion():
         return
 
     def _set_L_curv(self,L, da, grid, sparam):
-        """ Builds the laplacian operator along with boundary conditions
+        ''' Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
 
         Parameters
@@ -528,8 +521,7 @@ class pvinversion():
             grid data holder
         sparam : ndarray
             f0^2/N^2/ array
-
-        """
+        '''
         
         if self._verbose>0:
             print('  ... assumes a curvilinear and/or vertically stretched grid')

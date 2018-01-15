@@ -16,9 +16,9 @@ from .utils import g, rho0
 
 
 class time_stepper():
-    """ Time stepper, parallel with petsc4py
+    ''' Time stepper, parallel with petsc4py
     4 steps explicit RungeKutta
-    """
+    '''
     
     def __init__(self, da, grid, dt, K, verbose=0, t0 = 0.):
         
@@ -58,7 +58,7 @@ class time_stepper():
 #
 
     def go(self, nt, da, grid, state, pvinv, rho_sb=False, bstate=None):
-        """ Carry out the time stepping
+        ''' Carry out the time stepping
 
         Parameters
         ----------
@@ -77,7 +77,7 @@ class time_stepper():
         bstate : state object, None, optional
             background state that will be added in advective terms
 
-        """
+        '''
         if self._verbose>1:
             print('<--- Start time stepping ', flush=True)
         _tstep=0
@@ -121,7 +121,7 @@ class time_stepper():
             # reset q at boundaries
             self._set_rhs_bdy(da, state)
             if self._verbose>0:
-                print('t = %.2f d, PV inv number of iteration= %.0f' % (self.t/86400., numit), flush=True)
+                print('t = %.2f d, PV inv number of iteration=%.0f' % (self.t/86400., numit), flush=True)
                 #print('t = %f d' % (self.t/86400.), flush=True)
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
@@ -140,19 +140,37 @@ class time_stepper():
 #
 
     def _computeADV(self, da, grid, Q, PSI):
-        """ Wrapper around RHS computation code
-        """
+        ''' Wrapper around RHS computation code
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        Q, PSI: Petsc Vec
+            potential vorticity and streamfunction used
+        '''
         if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
             self._computeADV_uniform(da, grid, Q, PSI)
         else:
             self._computeADV_curv(da, grid, Q, PSI)
 
     def _computeADV_uniform(self, da, grid, Q, PSI):
-        """ Compute the advection of the pv evolution equation i.e: J(psi,q)
+        ''' Compute the advection of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
-        """
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        Q, PSI: Petsc Vec
+            potential vorticity and streamfunction used
+        '''
         
         # declare local vectors
         local_Q  = da.createLocalVec()
@@ -208,11 +226,20 @@ class time_stepper():
                         dq[i, j, k] += ( J_pp + J_pc + J_cp )/3.
 
     def _computeADV_curv(self,da, grid, Q, PSI):
-        """ Compute the RHS of the pv evolution equation i.e: J(psi,q)
+        ''' Compute the RHS of the pv evolution equation i.e: J(psi,q)
         Jacobian 9 points (from Q-GCM):
         Arakawa and Lamb 1981:
         DOI: http://dx.doi.org/10.1175/1520-0493(1981)109<0018:APEAEC>2.0.CO;2
-        """
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        Q, PSI: Petsc Vec
+            potential vorticity and streamfunction used
+        '''
 
         # declare local vectors
         local_Q  = da.createLocalVec()
@@ -297,16 +324,34 @@ class time_stepper():
 #
 
     def _computeDISS(self, da, grid, Q):
-        """ Wrapper around RHS computation code
-        """
+        ''' Wrapper around RHS computation code
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        Q: Petsc Vec
+            potential vorticity used
+        '''
         if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
             self._computeDISS_uniform(da, grid, Q)
         else:
             self._computeDISS_curv(da, grid, Q)
 
     def _computeDISS_uniform(self, da, grid, Q):
-        """ Compute potential vorticity diffusion, uniform grid
-        """
+        ''' Compute potential vorticity diffusion, uniform grid
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        state: state object
+            qgsolver state object
+        '''
         
         # declare local vectors
         local_Q  = da.createLocalVec()
@@ -336,8 +381,17 @@ class time_stepper():
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
 
     def _computeDISS_curv(self,da, grid, Q):
-        """ Compute potential vorticity diffusion, curvilinear grid
-        """
+        ''' Compute potential vorticity diffusion, curvilinear grid
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        state: state object
+            qgsolver state object
+        '''
 
         # declare local vectors
         local_Q  = da.createLocalVec()
@@ -382,7 +436,15 @@ class time_stepper():
 #
 
     def _set_rhs_bdy(self, da, state):
-        """ Reset rhs at boundaries such that drhs/dn=0 """
+        ''' Reset rhs at boundaries such that drhs/dn=0
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        state: state object
+            qgsolver state object, must contain Q and RHO    
+        '''
         #
         rhs = da.getVecArray(state.Q)
         #
@@ -414,8 +476,17 @@ class time_stepper():
                     rhs[i, j, k] = rhs[i - 1, j, k]
 
     def _reset_topdown_rho(self, da, grid, state):
-        """ update top and down rho from time stepped Q for boundary conditions
-        """
+        ''' update top and down rho from time stepped Q for boundary conditions
+        
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        state: state object
+            qgsolver state object, must contain Q and RHO        
+        '''
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         kdown = grid.kdown
@@ -432,7 +503,7 @@ class time_stepper():
                 rho[i, j, kup-1] = q[i, j, kup]
 
     def _copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
-        """ Copy top and down rho into Q for easy implementation of rho time stepping
+        ''' Copy top and down rho into Q for easy implementation of rho time stepping
 
         Parameters
         ----------
@@ -445,7 +516,7 @@ class time_stepper():
         flag_PSI: boolean
             if True uses PSI to compute the upper/lower density
             if False uses RHO
-        """
+        '''
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         kdown = grid.kdown
@@ -468,8 +539,8 @@ class time_stepper():
                     q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
 
     def _reset_topdown_q(self, da, grid, state):
-        """ reset topdown Q with inner closest values
-        """
+        ''' reset topdown Q with inner closest values
+        '''
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #
         kdown = grid.kdown

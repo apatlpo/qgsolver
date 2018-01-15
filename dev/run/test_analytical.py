@@ -73,7 +73,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         qg.write_state(filename='data/output.nc')
         #
         if True:
-            bstate = qg.set_bstate(psi0=0., q0=0., beta=1.e-11, rho0=0.)
+            bstate = qg.set_bstate(psi0=0., q0=0., beta=1.e-11)
             #
             # bstate=None # turns off background state
             if False:

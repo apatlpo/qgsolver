@@ -365,7 +365,3 @@ if __name__ == "__main__":
     print('  mpirun -np 8  python run.py')
     print('  (the number of mpi processes may need to adjusted here or in the run script)')
 
-    
-
-
-

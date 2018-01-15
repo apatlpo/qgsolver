@@ -96,7 +96,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
             pass
         elif test==2:           # input
             Ndays = 100.     # in days
-            dt_out = 1.    # in days
+            dt_out = .1    # in days
             #
             idx=1
             di = int(dt_out * d2s/qg.tstepper.dt)
