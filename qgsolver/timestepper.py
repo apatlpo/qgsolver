@@ -50,6 +50,10 @@ class time_stepper():
         self._RHS1 = da.createGlobalVec()
         self._dRHS = da.createGlobalVec()
         
+        # declare local vectors
+        #self.local_Q  = da.createLocalVec()
+        #self.local_PSI  = da.createLocalVec()
+        
         if self._verbose>0:
             print('PV time stepper is set up')
 
@@ -118,8 +122,9 @@ class time_stepper():
                 self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
             #
             self._RHS1.copy(state.Q) # copies RHS1 into Q
-            # reset q at boundaries
-            self._set_rhs_bdy(da, state)
+            if self.petscBoundaryType is not 'periodic':
+                # reset q at boundaries
+                self._set_rhs_bdy(da, state)
             if self._verbose>0:
                 print('t = %.2f d, PV inv number of iteration=%.0f' % (self.t/86400., numit), flush=True)
                 #print('t = %f d' % (self.t/86400.), flush=True)
@@ -175,6 +180,8 @@ class time_stepper():
         # declare local vectors
         local_Q  = da.createLocalVec()
         local_PSI  = da.createLocalVec()
+        #local_Q = self.local_Q
+        #local_PSI = self.local_PSI
         #
         da.globalToLocal(Q, local_Q)
         da.globalToLocal(PSI, local_PSI)
@@ -187,7 +194,14 @@ class time_stepper():
         dx, dy, dz = grid.dx, grid.dy, grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
+        #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
         #
         # advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
@@ -195,8 +209,8 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i==0    or j==0 or
-                        i==mx-1 or j==my-1):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic':
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
@@ -261,8 +275,16 @@ class time_stepper():
         kdxv, kdyv = grid._k_dxv, grid._k_dyv
         kdxt, kdyt = grid._k_dxt, grid._k_dyt
         kf = grid._k_f
+        kmask = grid._k_mask
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        #
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
         #
         # advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
@@ -270,8 +292,9 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i==0    or j==0 or
-                        i==mx-1 or j==my-1):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic' \
+                        or D[i,j,kmask]==0.:
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
@@ -365,7 +388,14 @@ class time_stepper():
         dx, dy, dz = grid.dx, grid.dy, grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
+        #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
         #
         # PV dissipation
         # RHS= K*laplacian(q)
@@ -373,8 +403,11 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if not (i==0    or j==0 or
-                        i==mx-1 or j==my-1):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic':
+                        # lateral boundaries
+                        dq[i, j, k] = 0.
+                    else:
                         #
                         # Dissipation
                         dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
@@ -410,8 +443,15 @@ class time_stepper():
         kdxv, kdyv = grid._k_dxv, grid._k_dyv
         kdxt, kdyt = grid._k_dxt, grid._k_dyt
         kf = grid._k_f
+        kmask = grid._k_mask
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
         #
         # PV dissipation
         # RHS= K*laplacian(q)
@@ -419,8 +459,9 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if not (i==0    or j==0 or
-                        i==mx-1 or j==my-1):
+                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
+                        and self.petscBoundaryType is not 'periodic' \
+                        or D[i,j,kmask]==0.:
                         #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
                         #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
                         dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \

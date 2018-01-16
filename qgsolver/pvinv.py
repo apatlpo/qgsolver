@@ -433,7 +433,6 @@ class pvinversion():
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        #
         istart = grid.istart
         iend = grid.iend
         jstart = grid.jstart
