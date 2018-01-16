@@ -20,7 +20,7 @@ class time_stepper():
     4 steps explicit RungeKutta
     '''
     
-    def __init__(self, da, grid, dt, K, verbose=0, t0 = 0.):
+    def __init__(self, da, grid, dt, K, petscBoundaryType, verbose=0, t0 = 0.):
         
         self._verbose = verbose
         
@@ -29,6 +29,7 @@ class time_stepper():
         self.K = K
 
         # grid parameters
+        self.petscBoundaryType = petscBoundaryType
         self._flag_hgrid_uniform = grid._flag_hgrid_uniform
         self._flag_vgrid_uniform = grid._flag_vgrid_uniform
         self._kdown = grid.kdown

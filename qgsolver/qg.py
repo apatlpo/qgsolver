@@ -147,7 +147,7 @@ class qg_model():
 
         # initiate time stepper
         if dt is not None:
-            self.tstepper = time_stepper(self.da, self.grid, dt, K, verbose=self._verbose)
+            self.tstepper = time_stepper(self.da, self.grid, dt, K, self.petscBoundaryType, verbose=self._verbose)
 
 
 
