@@ -83,7 +83,7 @@ if __name__ == "__main__":
     
     # get useful dirs
     startdir=os.getcwd()
-    HOMEDIR = startdir+"/../.."
+    HOMEDIR = startdir+"/.."
     WORKDIR = os.getenv("DATAWORK")
     # WORKDIR = os.getenv("SCRATCH")
     # get args

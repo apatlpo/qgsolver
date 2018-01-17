@@ -174,6 +174,20 @@ class pvinversion():
 # ==================== utils methods for inversions ===================================
 #
 
+    def q_from_psi(self, Q, PSI):
+        ''' Compute PV from a streamfunction
+        
+        Parameters
+        ----------
+        Q : petsc Vec
+            output vector where data is stored
+        PSI : petsc Vec
+            input streamfunction used for the computation of PV
+        '''
+        self.L.mult(PSI, Q)
+        # should fix boundary conditions
+        
+
     def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
         ''' Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue

@@ -47,27 +47,16 @@ python create_input_roms.py -o roms_in/
 
 On datarmor, copy input files if necessary:
 ```csh
-cp -r /home/slyne/aponte/natl60/qgsolver/dev/input/roms_in /home1/datawork/aponte/qgsolver/
+cp -r /home/slyne/aponte/natl60/qgsolver/input/roms_in /home1/datawork/aponte/qgsolver/
 ```
 
 Run qgsolver on Datarmor:
 ```csh
 bash
 source activate petsc
-cd /home/slyne/aponte/natl60/qgsolver/
-cd dev/run/
+cd /home/slyne/aponte/natl60/qgsolver/run/
 python run_datarmor.py qgsolver/roms_out run_roms.py /home1/datawork/aponte/qgsolver/roms_in/
 ```
-
-
-old version:
-```csh
-bash
-source activate petsc
-cd .../qgsolver/dev
-python run_caparmor.py workdir
-```
-run\_caparmor.py creates "workdir" in directory /work/username with subdirectories dev and qgsolver.
 
 # API
 

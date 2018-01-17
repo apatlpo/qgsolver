@@ -101,7 +101,7 @@ def store_psi(background=False):
         print('create a file for background fields')
         bgout = create_nc(outdir+'roms_bg.nc', x, y, zt, zw)
         nc_psi = bgout.createVariable('psi',dtype,('zt','y','x'))
-        nc_psi[:] = np.tile(p[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_psi[:].shape[2])) \
+        nc_psi[:] = np.tile(p_bg[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_psi[:].shape[2])) \
                     /d.hgrid.f0/d.rho0
         return bgout
         
@@ -115,7 +115,7 @@ def store_rho(background=False):
     else:
         print('store background density')
         nc_rho = bgout.createVariable('rho',dtype,('zt','y','x'))
-        nc_rho[:] = np.tile(rho[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_rho[:].shape[2]))
+        nc_rho[:] = np.tile(rho_bg[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_rho[:].shape[2]))
 
 def store_pv(background=False):
     if not background:
@@ -261,8 +261,10 @@ if __name__ == "__main__":
     '''
 
     # default directories
-    romsdir = '/home2/pharos/othr/aponte/roms_ird/caparmor/jet_cfg1_wp5_4km_k3.2e8_0a1500j/'
-    outdir = './input/'    
+    #romsdir = '/home2/pharos/othr/aponte/roms_ird/caparmor/jet_cfg1_wp5_4km_k3.2e8_0a1500j/'
+    romsdir = '/home2/pharos/othr/aponte/roms_ird/sio/jet_cfg1_wp5_4km_0a2000j/'
+    #romsdir = '/home2/pharos/othr/aponte/roms_ird/telecom/jet_cfg1_w1_nospg_4km/'
+    outdir = './roms_in/'
 
     # parse input arguments
     parser = argparse.ArgumentParser(description='Create input files from ROMS output')
@@ -303,16 +305,43 @@ if __name__ == "__main__":
     #it=15
     
     # Create a lporun class
-    d=LPORun(romsdir,verbose=True, open_nc=[], tdir_max=10)
+    d=LPORun(romsdir,verbose=True, open_nc=[])
     
-    # metric terms
-    metricsout, ssh, x, y, zt, zw = metrics()
-            
     # compute the Coriolis frequency and a reference value
     g=9.81
     f = d.hgrid.f[1:-1,:-2]
     f0 = d.hgrid.f0
+        
+    # compute temporally averaged pressure and density
+    flag_compute_bg=True
+    if flag_compute_bg:
+        print(d.his.variables['ssh'+suff][:,:,:].shape)
+        t0 = 1000. # in days
+        t = d.his.variables['time_counter'][:]/86400.
+        igd = np.where(t>t0)[0]
+        Nt = len(igd)
+        print('Background fields are computed from a temporal averaged '+
+              'between day %.0f and %.0f'%(t[igd[0]],t[-1]))
+        print('Number of files averaged: %i' %Nt)
+        for i in igd:
+            ssh = d.his.variables['ssh'+suff][i,:,:]
+            rho = d.his.variables['T'+suff][i,...]
+            rho = tvs_to_s_fast(rho,ssh,d)
+            if i == igd[0]:
+                ssh_bg = ssh
+                rho_bg = rho
+            else:
+                ssh_bg += ssh
+                rho_bg += rho
+        ssh_bg = ssh_bg/Nt
+        rho_bg = rho_bg/Nt
+    else:
+        ssh_bg = d.his.variables['T'+suff][it,...]
+        rho_bg = d.his.variables['T'+suff][it,...]
     
+    # metric terms
+    metricsout, ssh, x, y, zt, zw = metrics()
+            
     # load density, and velocities 
     rho=d.his.variables['T'+suff][it,...]
     u=d.his.variables['u'+suff][it,...]
@@ -323,14 +352,20 @@ if __name__ == "__main__":
     rho=tvs_to_s(rho,ssh,d)
     
     # compute density reference profile and take it away from the 3D density
-    rho_a = rho.mean(axis=2).mean(axis=1)
+    rho_a = rho_bg.mean(axis=2).mean(axis=1)
     rho += -rho_a.reshape((d.N,1,1))
+    rho_bg += -rho_a.reshape((d.N,1,1))
     
     # compute p from rho manually (does not agree with ROMS)
     p = np.zeros_like(rho)
     p[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho[-1,...])*ssh[None,:,:]
     for k in range(d.N-2,-1,-1):
         p[k,...] = p[k+1,...] + g*(rho[k,...]+rho[k+1,...])*0.5*(zt[k+1,None,None]-zt[k,None,None])
+    # same for background state
+    p_bg = np.zeros_like(rho)
+    p_bg[-1,...] = g*(d.rho0+rho_a[-1,None,None]+rho_bg[-1,...])*ssh_bg[None,:,:]
+    for k in range(d.N-2,-1,-1):
+        p_bg[k,...] = p_bg[k+1,...] + g*(rho_bg[k,...]+rho_bg[k+1,...])*0.5*(zt[k+1,None,None]-zt[k,None,None])
 
     # store psi
     psiout = store_psi()
@@ -338,7 +373,7 @@ if __name__ == "__main__":
 
     # compute PV
     pvout, nc_q = store_pv()
-    store_pv(background=True)
+    #store_pv(background=True)
     
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
     print('store mask')
