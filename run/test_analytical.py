@@ -13,7 +13,7 @@ mpirun -n 4 python test_analytical.py
 import time
 import sys
 
-sys.path.append('../../')
+sys.path.append('../')
 from qgsolver.qg import qg_model
 from qgsolver.state import add
 
@@ -85,7 +85,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
                 #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
         
         #
-        test=1
+        test=-1
         if test==0:
             # one time step and store
             qg.tstep(1, bstate=bstate)

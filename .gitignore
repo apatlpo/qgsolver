@@ -19,14 +19,13 @@ __pycache__/
 
 # data files
 *.nc
-users/aurelien/run*/*.py
 
 # fig and movies
 *.jpg
 *.pdf
 *.mp4
-dev/output/movies/
-dev/output/img/
+output/movies/
+output/img/
 
 # openoffice
 *.odp#
