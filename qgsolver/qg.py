@@ -214,8 +214,8 @@ class qg_model():
         bstate = add(self.state, self.state, da=self.da, a1=0., a2=0.)
         bstate.set_psi(self.da, self.grid, **kwargs)
         bstate.set_rho(self.da, self.grid, **kwargs)
-        #bstate.set_q(self.da, self.grid, **kwargs) # read from file
-        self.pvinv.q_from_psi(bstate.Q,bstate.PSI)
+        bstate.set_q(self.da, self.grid, **kwargs) # read from file
+        #self.pvinv.q_from_psi(bstate.Q,bstate.PSI)
         return bstate
 
     def set_w(self, **kwargs):

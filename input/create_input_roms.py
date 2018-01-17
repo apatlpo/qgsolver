@@ -118,6 +118,7 @@ def store_rho(background=False):
         nc_rho[:] = np.tile(rho_bg[:,1:-1,:-2].mean(axis=2,keepdims=True),(1,1,nc_rho[:].shape[2]))
 
 def store_pv(background=False):
+    global pvout
     if not background:
         print('compute and store PV')
         
@@ -205,8 +206,8 @@ def store_pv(background=False):
                     S = np.zeros_like(xi)[1:-1,:-2]
                 else:
                     # interior pv
-                    S =  ( (d.hgrid.f0**2/nc_N2[k])*(nc_psi[k+1,:,:]-nc_psi[k,:,:])/(zt[k+1]-zt[k]) - \
-                           (d.hgrid.f0**2/nc_N2[k-1])*(nc_psi[k,:,:]-nc_psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
+                    S =  ( (d.hgrid.f0**2/nc_N2[k])*(psi[k+1,:,:]-psi[k,:,:])/(zt[k+1]-zt[k]) - \
+                           (d.hgrid.f0**2/nc_N2[k-1])*(psi[k,:,:]-psi[k-1,:,:])/(zt[k ]-zt[k-1]) \
                          )/(zw[k]-zw[k-1])
         
                 # assemble q
@@ -245,9 +246,53 @@ def store_pv(background=False):
         print('compute and store background PV')
         #
         nc_qbg = bgout.createVariable('q',dtype,('zt','y','x'))
-        nc_qbg[:] = np.tile(nc_q[:].mean(axis=2,keepdims=True),(1,1,nc_q[:].shape[2]))
-        
-   
+        #nc_qbg[:] = np.tile(nc_q[:].mean(axis=2,keepdims=True),(1,1,nc_qbg[:].shape[2]))
+        #
+        nc_psibg = bgout['psi']
+        N2 = pvout['N2'][:]
+        print(N2)
+        #
+        for k in np.arange(d.N):
+                
+            # compute relative vorticity
+            dx2 = d.hgrid.dx[:,:]*d.hgrid.dx[:,:]
+            dy2 = d.hgrid.dy[:,:]*d.hgrid.dy[:,:]
+            
+            psi = p_bg[k,:,:]/d.hgrid.f0/d.rho0
+            
+            psixx = np.zeros(dx2.shape)
+            psixx[:,1:-1] = np.diff(psi[:,:], n=2, axis=1)
+            psixx[:,0] = psixx[:,-2]
+            psixx[:,-1]= psixx[:,1]
+            psixx = np.divide(psixx,dx2)
+            
+            psiyy = np.zeros(dy2.shape)
+            psiyy[1:-1,:] = np.diff(psi[:,:], n=2, axis=0)
+            psiyy[0,:] = psiyy[1,:]
+            psiyy[-1,:] = psiyy[-2,:]
+            psiyy = np.divide(psiyy,dy2)
+            
+            xi = psixx + psiyy
+            
+            if (k == 0):
+                # bottom bdy condition not used in the solver
+                S = np.zeros_like(xi)[1:-1,:-2]
+            elif (k == d.N - 1):
+                # top bdy condition not used in the solver
+                S = np.zeros_like(xi)[1:-1,:-2]
+            else:
+                # interior pv
+                S =  ( (d.hgrid.f0**2/N2[k])*(nc_psibg[k+1,:,:]-nc_psibg[k,:,:])/(zt[k+1]-zt[k]) - \
+                       (d.hgrid.f0**2/N2[k-1])*(nc_psibg[k,:,:]-nc_psibg[k-1,:,:])/(zt[k ]-zt[k-1]) \
+                     )/(zw[k]-zw[k-1])
+            
+            # assemble q
+            pv= f-f0 + xi[1:-1,:-2] + S[:]
+            
+            # store q
+            nc_qbg[k,:,:] = np.tile(pv[None,:,:].mean(axis=2,keepdims=True),(1,1,nc_qbg[:].shape[2]))      
+            
+
 
 
 if __name__ == "__main__":
@@ -373,7 +418,7 @@ if __name__ == "__main__":
 
     # compute PV
     pvout, nc_q = store_pv()
-    #store_pv(background=True)
+    store_pv(background=True)
     
     #create 2D mask at reference level index_mask_depth (land=1, water=0)
     print('store mask')
