@@ -65,7 +65,11 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         # proceeds with computations
         qg = qg_model(hgrid = hgrid, vgrid = vgrid, boundary_types={'periodic': True}, 
                       K = 0.e0, dt = 0.5*86400.e0,
-                      ncores_x=ncores_x, ncores_y=ncores_y, verbose=1)
+                      ncores_x=ncores_x, ncores_y=ncores_y, verbose=1,
+                      solver='bcgsl')
+        # default is right preconditioning for: fgmres, qcg
+        # default is left  preconditioning for: gmres, bicg
+        # restart: can you see with one time step effect?
 
         # pv inversion
         qg.set_q()

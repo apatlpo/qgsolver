@@ -80,7 +80,12 @@ class pvinversion():
             self.ksp.getPC().setType(pc)
         # set tolerances
         self.ksp.setTolerances(rtol=1e-4)
-        self.ksp.setTolerances(max_it=1000)
+        self.ksp.setTolerances(max_it=100)
+        # tests:
+        #self.ksp.setPCSide(PETSc.PC.Side.R)
+        #self.ksp.setInitialGuessNonzero(False)
+        #self.ksp.setTolerances(atol=1e-1)
+        #self.ksp.setTolerances(max_it=100)
         #
         for opt in sys.argv[1:]:
             PETSc.Options().setValue(opt, None)

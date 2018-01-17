@@ -23,7 +23,7 @@ PV inversion solver
 We use `PETSc <http://www.mcs.anl.gov/petsc/documentation/index.html>`_ in order to solver PV or omega equation inversion.
 The `PETSc manual <http://www.mcs.anl.gov/petsc/petsc-current/docs/manual.pdf>`_ is very useful.
 
-The petsc4py `documentation <http://www.mcs.anl.gov/petsc/petsc4py-current/docs/>` and `API <http://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>` may also
+The petsc4py `documentation <http://www.mcs.anl.gov/petsc/petsc4py-current/docs/>`_ and `API <http://www.mcs.anl.gov/petsc/petsc4py-current/docs/apiref/index.html>`_ may also
 be helpful.
 
 In order to get details about the PV inversion solver, add the following options at run time:

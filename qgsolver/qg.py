@@ -33,7 +33,8 @@ class qg_model():
                  dt = None, K = 1.e2,
                  verbose = 1,
                  flag_pvinv=True,
-                 flag_omega=False
+                 flag_omega=False,
+                 **kwargs
                  ):
         '''
         QG model initializer
@@ -137,7 +138,7 @@ class qg_model():
         # initiate pv inversion solver
         if flag_pvinv:
             self.pvinv = pvinversion(self.da, self.grid, self.bdy_type, sparam=self.state._sparam,
-                                     verbose=self._verbose)
+                                     verbose=self._verbose, **kwargs)
 
         # initiate omega inversion
         if flag_omega:
