@@ -2,13 +2,10 @@
 # -*- encoding: utf8 -*-
 
 
-import sys
-import numpy as np
+from petsc4py import PETSc
 
-#from .set_L import *
-from .inout import write_nc
 from .utils import g, rho0
-
+import timestepper_adv as timestepper_adv
 
 #
 #==================== Time stepper ============================================
@@ -158,9 +155,28 @@ class time_stepper():
             potential vorticity and streamfunction used
         '''
         if self._flag_hgrid_uniform and self._flag_vgrid_uniform:
-            self._computeADV_uniform(da, grid, Q, PSI)
+            #self._computeADV_uniform(da, grid, Q, PSI)
+            self._computeADV_uniform_f(da, grid, Q, PSI)
         else:
             self._computeADV_curv(da, grid, Q, PSI)
+
+    def _computeADV_uniform_f(self, da, grid, Q, PSI):
+        ''' wraps computation of advection in fortran
+
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        Q, PSI: Petsc Vec
+            potential vorticity and streamfunction used
+        '''
+        petscBoundaryType=0 # not periodic
+        if self.petscBoundaryType is 'periodic': petscBoundaryType=1
+        ierr = timestepper_adv.uniform(da.fortran, self._dRHS, Q.fortran, PSI.fortran,
+                                       grid.dx, grid.dy, grid.dz, petscBoundaryType)
+        if ierr: raise PETSc.Error(ierr)
 
     def _computeADV_uniform(self, da, grid, Q, PSI):
         ''' Compute the advection of the pv evolution equation i.e: J(psi,q)

@@ -1,0 +1,22 @@
+! -*- f90 -*-
+
+python module timestepper_adv
+
+usercode '''
+#include "timestepper_advmodule.h"
+'''
+
+interface
+       
+   subroutine uniform(dm, rhs, q, psi, dx, dy, bdy, ierr)
+     !integer, parameter :: HANDLE_KIND=4
+     integer(kind=HANDLE_KIND) dm ! DM
+     integer(kind=HANDLE_KIND) rhs, q, psi  ! Vec
+     real(kind=8)              dx, dy
+     integer                   bdy
+     integer, intent(out) ::   ierr
+   end subroutine FormInitGuess
+
+end interface
+    
+end python module Bratu2D
