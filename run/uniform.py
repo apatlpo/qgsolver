@@ -7,7 +7,9 @@ Setup of uniform grid
 PV inversion of an analytical PV distribution
 Time stepping
 
-mpirun -n 4 python test_analytical.py
+mpirun -n 4 python uniform.py
+or
+mpirun -n 4 python uniform.py -mf -ksp_view -ksp_monitor -ksp_converged_reason
 """
 
 import time
@@ -119,8 +121,6 @@ def main(ping_mpi_cfg=False):
     elif qg._verbose>0:
         print('Test analytical done \n')
 
-    del qg
-
 if __name__ == "__main__":
     main()
-    
+

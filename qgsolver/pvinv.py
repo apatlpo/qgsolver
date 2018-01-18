@@ -170,7 +170,7 @@ class pvinversion():
             RHO += bstate.RHO
 
         if self._verbose>1:
-            print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()))
+            print('Inversion done (%i iterations)' %(self.ksp.getIterationNumber()), flush=True)
         if numit:
             return self.ksp.getIterationNumber()
 

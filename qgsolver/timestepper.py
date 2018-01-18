@@ -127,7 +127,7 @@ class time_stepper():
                 # reset q at boundaries
                 self._set_rhs_bdy(da, state)
             if self._verbose>0:
-                print('t = %.2f d, PV inv number of iteration=%.0f' % (self.t/86400., numit), flush=True)
+                print('t = %.2f d, PV inversion averaged number of iterations=%.0f' % (self.t/86400., numit), flush=True)
                 #print('t = %f d' % (self.t/86400.), flush=True)
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()

@@ -34,14 +34,14 @@ conda install -c conda-forge petsc
 conda install -c conda-forge petsc4py
 conda install -c conda-forge netcdf4
 conda install -c conda-forge matplotlib
-conda install -c conda-forge jupyter 
+conda install -c conda-forge snakeviz
 ```
 
 # Run on datarmor
 
 Generate input files if necessary on your workstation
 ```csh
-cd qgsolver/dev/input/
+cd qgsolver/input/
 python create_input_roms.py -o roms_in/
 ```
 
@@ -55,7 +55,7 @@ Run qgsolver on Datarmor:
 bash
 source activate petsc
 cd /home/slyne/aponte/natl60/qgsolver/run/
-python run_datarmor.py qgsolver/roms_out run_roms.py /home1/datawork/aponte/qgsolver/roms_in/
+python run_datarmor.py qgsolver/roms_out roms.py /home1/datawork/aponte/qgsolver/roms_in/
 ```
 
 # API
