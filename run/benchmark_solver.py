@@ -76,8 +76,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         with benchmark() as b:
             #
             # 100 time step and store
-            #qg.tstep(5, bstate=bstate)
-            pass
+            qg.tstep(5, bstate=bstate)
         #
         delt_compute = b.delt
 
