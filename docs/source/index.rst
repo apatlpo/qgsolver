@@ -31,12 +31,12 @@ In order to get details about the PV inversion solver, add the following options
    mpirun -n 4 python analytical.py -mf -ksp_view -ksp_monitor -ksp_converged_reason
 
 In order to profile with `snakeviz <https://jiffyclub.github.io/snakeviz/>`_
-you need first to generate a profile:
+you need first to generate a profile and then run snakeviz:
 
 .. code: bash
 
-   mpirun -n 4 python -m cProfile -o program.prof analytical.py
-
+   mpirun -n 4 python -m cProfile -o output.prof uniform.py
+   snakeviz output.prof
 
 Creating input files
 --------------------

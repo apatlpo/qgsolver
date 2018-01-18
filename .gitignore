@@ -19,6 +19,7 @@ __pycache__/
 
 # data files
 *.nc
+*.prof
 
 # fig and movies
 *.jpg

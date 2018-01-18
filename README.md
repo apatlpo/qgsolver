@@ -16,11 +16,9 @@ git clone https://github.com/apatlpo/qgsolver.git
 cd qgsolver
 ```
 
-## libraries required
+### Install dependencies with conda
 
-qgsolver requires [petsc4py](https://bitbucket.org/petsc/petsc4py) (and thus petsc) and netcdf4
-
-### Install with conda 
+The principal dependcy is [petsc4py](https://bitbucket.org/petsc/petsc4py)
 
 Download Miniconda3 from the [conda website](https://conda.io/miniconda.html)
 ```csh
