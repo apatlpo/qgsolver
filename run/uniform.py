@@ -92,7 +92,7 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
         test=-1
         if test==0:
             # one time step and store
-            qg.tstep(1, bstate=bstate)
+            qg.tstep(100, bstate=bstate)
             qg.write_state(filename='data/output.nc', append=True)
         elif test==1:
             while qg.tstepper.t/86400. < 200 :
@@ -118,6 +118,8 @@ def main(ping_mpi_cfg=False):
         return qg[0], qg[1]
     elif qg._verbose>0:
         print('Test analytical done \n')
+
+    del qg
 
 if __name__ == "__main__":
     main()

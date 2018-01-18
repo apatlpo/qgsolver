@@ -101,6 +101,10 @@ def move_input_files():
 if __name__ == "__main__":
 
 
+    print('This script needs to updated')
+    sys.exit()
+
+
     # check number of arguments
     if  len(sys.argv) < 2:
         print '[syntaxe] : run_linux workdir case'
