@@ -38,6 +38,8 @@ you need first to generate a profile and then run snakeviz:
    mpirun -n 4 python -m cProfile -o output.prof uniform.py
    snakeviz output.prof
 
+test
+
 Creating input files
 --------------------
 
