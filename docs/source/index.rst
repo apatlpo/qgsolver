@@ -33,7 +33,7 @@ In order to get details about the PV inversion solver, add the following options
 In order to profile with `snakeviz <https://jiffyclub.github.io/snakeviz/>`_
 you need first to generate a profile and then run snakeviz:
 
-.. code: bash
+.. code:: bash
 
    mpirun -n 4 python -m cProfile -o output.prof uniform.py
    snakeviz output.prof

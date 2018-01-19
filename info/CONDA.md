@@ -1,20 +1,19 @@
 # Install useful libraries for this project:
 
 
-Download Miniconda2 from the [conda website](https://conda.io/miniconda.html)
-```csh
-bash Miniconda2-4.2.12-Linux-x86_64.sh
-(specify .miniconda2 and not miniconda2 as target dir for conda)
+Download Miniconda3 from the [conda website](https://conda.io/miniconda.html)
+```
+bash Miniconda3-latest-MacOSX-x86_64.sh
+(specify .miniconda3 and not miniconda3 as target dir for conda)
 bash
 conda update conda
 conda create --name petsc python
 source activate petsc
-conda install -c conda-forge petsc=3.7.4
-conda install -c conda-forge petsc4py=3.7.0
-conda install -c conda-forge netcdf4=1.2.7
+conda install -c conda-forge petsc4py
+conda install -c conda-forge netcdf4
+conda install -c conda-forge matplotlib
+conda install -c conda-forge snakeviz
 ```
-
-
 # Miniconda in general:
 
 ## Overview
@@ -26,8 +25,8 @@ The other difference is that the Python 3 version of Miniconda will default to P
 Miniconda
 Installation
 
-After downloading Miniconda2-latest-Linux-x86_64.sh
-bash Miniconda2-latest-Linux-x86_64.sh
+After downloading Miniconda3-latest-Linux-x86_64.sh or Miniconda3-latest-MacOSX-x86_64.sh
+bash Miniconda3-latest-MacOSX-x86_64.sh
 
 Miniconda must be used with bash. If you want to use it with csh, add in your .cshrc (pas terrible!!!)
 ```
@@ -48,21 +47,37 @@ conda --version
 conda update conda
 ```
 Create new environment myenv
-```conda create --name myenv python```
+```
+conda create --name myenv python
+```
 Switch to another environment (activate/deactivate) (or source_activate in csh)
-```source activate myenv ```
+```
+source activate myenv
+```
 To change your path from the current environment back to the root (or source_deactivate in csh)
-```source deactivate```
+```
+source deactivate
+```
 List all environments
-```conda info --envs```
+```
+conda info --envs
+```
 Delete an environment
-```conda remove --name myenv --all```
+```
+conda remove --name myenv --all
+```
 View a list of packages and versions installed in an environmentSearch for a package
-```conda list```
+```
+conda list
+```
 Check to see if a package is available for conda to install
-```conda search packagename```
+```
+conda search packagename
+```
 Install a new package
-```conda install packagename```
+```
+conda install packagename
+```
 Remove conda
 ```
 rm -rf /home/mulroy/slgentil/miniconda2 
