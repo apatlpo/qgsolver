@@ -50,6 +50,9 @@ class pvinversion():
         else:
             self.petscBoundaryType = None
 
+        # store sparam
+        self.sparam = sparam
+
         # create the operator
         self.L = da.createMat()
         #
@@ -252,22 +255,22 @@ class pvinversion():
             rho = da.getVecArray(RHO)
            
         # lower ghost area
-        if zs < kdown:
+        if zs <= kdown:
             for k in range(zs,kdown):
                 for j in range(ys, ye):
                     for i in range(xs, xe):                    
                         # rhs[i,j,k]=sys.float_info.epsilon
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
-        k = kdown
+        k = kdown+1
         if self.bdy_type['bottom']=='N' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(rho0*state.f0)
+                    rhs[i, j, k] += -self.sparam[k]*g*rho[i, j, k-1]/(rho0*state.f0)/grid.dzt[k]
         elif self.bdy_type['bottom']=='NBG' :
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
+                    rhs[i, j, k] += self.sparam[k]*(psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]/grid.dzt[k]
         elif self.bdy_type['bottom']=='D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -318,15 +321,15 @@ class pvinversion():
                         rhs[i,j,k]= psi[i,j,k]            
         # upper bdy
         k = kup
-        if self.bdy_type['top']=='N' :
+        if self.bdy_type['top'] == 'N':
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(rho0*state.f0)
-        elif self.bdy_type['top']=='NBG' :
+                    rhs[i, j, k] += + g*rho[i, j, k]/(rho0*state.f0)
+        elif self.bdy_type['top'] == 'NBG':
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
-        elif self.bdy_type['top']=='D' :
+                    rhs[i, j, k] += (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
+        elif self.bdy_type['top'] == 'D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = psi[i,j,k]
@@ -476,14 +479,17 @@ class pvinversion():
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
-                    elif (k==kdown):
+                    elif (k==kdown+1):
                         if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
                             for index, value in [
-                                    ((i,j,k), -idz),
-                                    ((i,j,k+1),  idz)]:
+                                    ((i, j - 1, k), idy2),
+                                    ((i - 1, j, k), idx2),
+                                    ((i, j, k), -2. * (idx2 + idy2) - sparam[k] * idz2),
+                                    ((i + 1, j, k), idx2),
+                                    ((i, j + 1, k), idy2),
+                                    ((i, j, k + 1), sparam[k] * idz2)]:
                                 col.index = index
                                 col.field = 0
-                                L.setValueStencil(row, col, value)
                         elif self.bdy_type['bottom'] == 'D':
                             L.setValueStencil(row, row, 1.0)
                         else:
@@ -494,8 +500,12 @@ class pvinversion():
                     elif (k==kup):
                         if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
                             for index, value in [
-                                    ((i,j,k-1), -idz),
-                                    ((i,j,k),  idz)]:
+                                    ((i, j, k - 1), sparam[k - 1] * idz2),
+                                    ((i, j - 1, k), idy2),
+                                    ((i - 1, j, k), idx2),
+                                    ((i, j, k), -2. * (idx2 + idy2) - sparam[k - 1] * idz2),
+                                    ((i + 1, j, k), idx2),
+                                    ((i, j + 1, k), idy2)]:
                                 col.index = index
                                 col.field = 0
                                 L.setValueStencil(row, col, value)
@@ -506,19 +516,19 @@ class pvinversion():
                             sys.exit()
     
                     # points below and above the domain
-                    elif (k<kdown or k>kup):
+                    elif (k<=kdown or k>kup):
                         L.setValueStencil(row, row, 0.0)
     
                     # interior points: pv is prescribed
                     else:
                         for index, value in [
-                                ((i,j,k-1), sparam[k-1]*idz2),
-                                ((i,j-1,k), idy2),
-                                ((i-1,j,k), idx2),
-                                ((i, j, k), -2.*(idx2+idy2)-(sparam[k]*idz2+sparam[k-1]*idz2)),
-                                ((i+1,j,k), idx2),
-                                ((i,j+1,k), idy2),
-                                ((i,j,k+1), sparam[k]*idz2)]:
+                                    ((i,j,k-1), sparam[k-1]*idz2),
+                                    ((i,j-1,k), idy2),
+                                    ((i-1,j,k), idx2),
+                                    ((i, j, k), -2.*(idx2+idy2)-(sparam[k]*idz2+sparam[k-1]*idz2)),
+                                    ((i+1,j,k), idx2),
+                                    ((i,j+1,k), idy2),
+                                    ((i,j,k+1), sparam[k]*idz2)]:
                             col.index = index
                             col.field = 0
                             L.setValueStencil(row, col, value)

@@ -24,6 +24,20 @@ class grid(object):
     def __init__(self, hgrid_in, vgrid_in, hdom_in, vdom_in, mask=False, verbose=1):
         """ Builds a grid object
 
+        The vertical grid is Charney-Phillips (Arakawa and Moorthi 1988)
+
+        - q_N, rho_N
+        + psi_N
+        ...
+        - q_(i+1), rho_(i+1)
+        + psi_(i+1)
+        - q_i, rho_i
+        + psi_i
+        ...
+        - q_0, rho_0
+        + psi_0
+
+
         Parameters
         ----------
         hgrid_in : str, dict or None
