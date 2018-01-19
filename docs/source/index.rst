@@ -8,7 +8,7 @@ We recommend conda for dependencies, see README on
 `qgsolver github repository <https://github.com/apatlpo/qgsolver>`_
 
 Tutorial on a desktop
---------------------
+---------------------
 
 Tutorial on datarmor
 --------------------
@@ -38,7 +38,6 @@ you need first to generate a profile and then run snakeviz:
    mpirun -n 4 python -m cProfile -o output.prof uniform.py
    snakeviz output.prof
 
-test
 
 Creating input files
 --------------------
