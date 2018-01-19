@@ -5,7 +5,8 @@
 from petsc4py import PETSc
 
 from .utils import g, rho0
-import timestepper_adv as timestepper_adv
+import timestepper_adv.cpython-36m-darwin as timestepper_adv
+#import timestepper_adv as timestepper_adv
 
 #
 #==================== Time stepper ============================================

@@ -68,7 +68,7 @@ contains
 
     sc = 1.0/dx/dy*0.25/3.0
 
-    do k=grd%ks,grd%ke
+    do k=grd%zs,grd%ze
        do j=grd%ys,grd%ye
           do i=grd%xs,grd%xe
              if ((i==1 .or. j==1 .or. i==grd%mx .or. j==grd%my) .and. bdytype==0 ) then
@@ -78,16 +78,16 @@ contains
                 ! interior grid points
                 ! Arakawa Jacobian
                 rhs(i,j,k) = rhs(i,j,k) + &
-                             (  (q[i+1,j,k] - q[i-1,j,k] ) * ( psi[i,j+1,k] - psi[i,j-1,k] ) &
-                                -(q[i,j+1,k] - q[i,j-1,k] ) * ( psi[i+1,j,k] - psi[i-1,j,k] ) &
-                              +( q[i+1,j,k] * (psi[i+1,j+1,k]-psi[i+1,j-1,k]) &
-                                -q[i-1,j,k] * (psi[i-1,j+1,k]-psi[i-1,j-1,k]) &
-                                -q[i,j+1,k] * (psi[i+1,j+1,k]-psi[i-1,j+1,k]) &
-                                +q[i,j-1,k] * (psi[i+1,j-1,k]-psi[i-1,j-1,k]) ) &
-                              +( q[i+1,j+1,k] * (psi[i,j+1,k]-psi[i+1,j,k]) &
-                                -q[i-1,j-1,k] * (psi[i-1,j,k]-psi[i,j-1,k]) &
-                                -q[i-1,j+1,k] * (psi[i,j+1,k]-psi[i-1,j,k]) &
-                                +q[i+1,j-1,k] * (psi[i+1,j,k]-psi[i,j-1,k]) ) ) *sc
+                             (  (q(i+1,j,k) - q(i-1,j,k) ) * ( psi(i,j+1,k) - psi(i,j-1,k) ) &
+                                -(q(i,j+1,k) - q(i,j-1,k) ) * ( psi(i+1,j,k) - psi(i-1,j,k) ) &
+                              +( q(i+1,j,k) * (psi(i+1,j+1,k)-psi(i+1,j-1,k)) &
+                                -q(i-1,j,k) * (psi(i-1,j+1,k)-psi(i-1,j-1,k)) &
+                                -q(i,j+1,k) * (psi(i+1,j+1,k)-psi(i-1,j+1,k)) &
+                                +q(i,j-1,k) * (psi(i+1,j-1,k)-psi(i-1,j-1,k)) ) &
+                              +( q(i+1,j+1,k) * (psi(i,j+1,k)-psi(i+1,j,k)) &
+                                -q(i-1,j-1,k) * (psi(i-1,j,k)-psi(i,j-1,k)) &
+                                -q(i-1,j+1,k) * (psi(i,j+1,k)-psi(i-1,j,k)) &
+                                +q(i+1,j-1,k) * (psi(i+1,j,k)-psi(i,j-1,k)) ) ) *sc
              end if
           end do
        end do

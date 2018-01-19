@@ -38,6 +38,8 @@ def configuration(parent_package='',top_path=None):
     # PETSc for Python
     import petsc4py
     INCLUDE_DIRS += [petsc4py.get_include()]
+    #print(INCLUDE_DIRS)
+    #print(LIBRARY_DIRS)
 
     # Configuration
     from numpy.distutils.misc_util import Configuration
