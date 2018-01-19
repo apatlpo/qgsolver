@@ -26,7 +26,7 @@ by geostrophic currents:
 .. math::
 
    \partial_t q + J(\psi,q) + J(\Psi,q) + J(\psi,Q) &= 0 \\
-   \partial_t \partial_z \psi + J(\psi,\partial_z \psi) + J(\Psi,\partial_z \psi) + J(\psi,\partial_z \Psi) &= 0 \mathrm{at} z=0,-h
+   \partial_t \partial_z \psi + J(\psi,\partial_z \psi) + J(\Psi,\partial_z \psi) + J(\psi,\partial_z \Psi) &= 0 \mathrm{\;at\;} z=0,-h
 
 where capitals represent the large scale - slowly evolving background.
 
@@ -37,13 +37,13 @@ Following Arakawa and Moorthi 1988, we solve for a generalized potential vortici
    \tilde{q}(x,y,z) &= f-f_0 + \Delta \psi + \partial_z \Big ( \frac{f_0^2}{N^2} \partial_z \psi \Big ) - \frac{f_0^2}{N^2} \partial_z \psi \delta(z=0) + \frac{f_0^2}{N^2} \partial_z \psi \delta(z=-h) \\
    &= f-f_0 + \Delta \psi + \partial_z \Big ( \frac{f_0^2}{N^2} \partial_z \psi \Big ) + \frac{f_0}{N^2} \frac{g\rho}{\rho_0} \delta(z=0) - \frac{f_0}{N^2} \frac{g\rho}{\rho_0} \delta(z=-h)
 
-where :math:`\delta(z=0)=1/\delta z` at :math:`z=0` (corresponds to :math:`\rho_{kup}`, see description of the vertical grid) and :math:`\delta(z=-h)=1/\delta z` at :math:`z=-h` (corresponds to :math:`\rho_{kdown}`)  
+where :math:`\delta(z=0)=1/dz` at :math:`z=0` (corresponds to :math:`\rho_{kup}`, see description of the vertical grid) and :math:`\delta(z=-h)=1/dz` at :math:`z=-h` (corresponds to :math:`\rho_{kdown}`)  
 
 The quasi-geostrophic evolution is then solely described by the advection of :math:`\tilde{q}`:
 
 .. math::
 
-   \partial_t \tilde{q} + J(\psi,\tilde{q}) + J(\Psi,\tilde{q}) + J(\psi,\tilde{Q}) &= 0 
+   \partial_t \tilde{q} + J(\psi,\tilde{q}) + J(\Psi,\tilde{q}) + J(\psi,\tilde{Q}) = 0 
 
 
 Vertical grid
