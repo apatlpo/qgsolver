@@ -1,17 +1,23 @@
 qgsolver_doc's documentation
-========================================
+============================
+
+.. https://thomas-cokelaer.info/tutorials/sphinx/rest_syntax.html
+
+Equations of motion
+-------------------
+
+See this `equations`_
+
 
 Install
---------------------
+-------
 
 We recommend conda for dependencies, see README on
 `qgsolver github repository <https://github.com/apatlpo/qgsolver>`_
 
-Tutorial on a desktop
----------------------
+Tutorial
+--------
 
-Tutorial on datarmor
---------------------
 
 PV inversion solver
 --------------------
@@ -57,6 +63,7 @@ API
 .. toctree::
    :maxdepth: 2
 
+   equations
    api/qgsolver
 
 Indices and tables
