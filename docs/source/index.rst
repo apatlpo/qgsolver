@@ -6,7 +6,7 @@ qgsolver_doc's documentation
 Equations of motion
 -------------------
 
-See this `equations`_
+See this :doc:`equations`
 
 
 Install
