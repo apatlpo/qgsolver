@@ -223,7 +223,7 @@ class pvinversion():
 
         self.set_rhs_bdy_bottom(da, grid, state, PSI, RHO)
         self.set_rhs_bdy_top(da, grid, state, PSI, RHO, topdown_rho)
-        self.set_rhs_bdy_lat(da, grid, state)
+        self.set_rhs_bdy_lat(da, grid, PSI)
 
     def set_rhs_bdy_bottom(self, da, grid, state, PSI, RHO):
         ''' Set bottom boundary condition

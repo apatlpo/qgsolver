@@ -91,10 +91,10 @@ def uniform_grid_runs(ncores_x=16, ncores_y=16, ping_mpi_cfg=False):
                 #qg.invert_pv(bstate=bstate, addback_bstate=False) # test
         
         #
-        test=-1
+        test=0
         if test==0:
             # one time step and store
-            qg.tstep(100, bstate=bstate)
+            qg.tstep(10, bstate=bstate)
             qg.write_state(filename='data/output.nc', append=True)
         elif test==1:
             while qg.tstepper.t/86400. < 200 :
