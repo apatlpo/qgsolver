@@ -243,10 +243,10 @@ class qg_model():
         '''
         self.omegainv.solve(self)
 
-    def tstep(self, nt=1, rho_sb=False, bstate=None):
+    def tstep(self, nt=1, rho_sb=True, bstate=None):
         ''' Time step wrapper tstepper.go
         '''
-        self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb=rho_sb, bstate=bstate)
+        self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb, bstate=bstate)
 
 
 #

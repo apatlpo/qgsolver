@@ -43,12 +43,12 @@ class time_stepper():
         #print('t = %e d' % (self.t/86400.))
         
         ### 4 steps explicit RungeKutta parameters
-        self._a = [1./6., 1./3., 1./3., 1./6.]
-        self._b = [0.5, 0.5, 1.]
+        self._b = [1./6., 1./3., 1./3., 1./6.]
+        self._a = [0.5, 0.5, 1.]
 
         ### additional global vectors
-        self._RHS0 = da.createGlobalVec()
-        self._RHS1 = da.createGlobalVec()
+        self._Q0 = da.createGlobalVec()
+        self._Q1 = da.createGlobalVec()
         self._dRHS = da.createGlobalVec()
         
         # declare local vectors
@@ -62,7 +62,7 @@ class time_stepper():
 # ==================== time stepping method ============================================
 #
 
-    def go(self, nt, da, grid, state, pvinv, rho_sb=False, bstate=None):
+    def go(self, nt, da, grid, state, pvinv, rho_sb, bstate=None):
         ''' Carry out the time stepping
 
         Parameters
@@ -83,29 +83,33 @@ class time_stepper():
             background state that will be added in advective terms
 
         '''
+
         if self._verbose>1:
             print('<--- Start time stepping ', flush=True)
-        _tstep=0
 
         if rho_sb:
+            # check boundary conditions of PV inversion are Neumann
+            assert self.pvinv.bdy_type['bottom'] == 'N'
+            assert self.pvinv.bdy_type['top'] == 'N'
             # copy upper and lower density into Q
-            self._copy_topdown_rho_to_q(da, grid, state, flag_PSI=True)
+            self._copy_topdown_rho_to_q(da, grid, state, True)
             if bstate is not None:
-                self._copy_topdown_rho_to_q(da, grid, bstate, flag_PSI=True)
+                self._copy_topdown_rho_to_q(da, grid, bstate, True)
 
+        _tstep=0
         while _tstep < nt:
             # update time parameters and indexes
             self.t += self.dt
             _tstep += 1
             #
-            state.Q.copy(self._RHS0) # copies Q into RHS0
-            state.Q.copy(self._RHS1) # copies Q into RHS1
+            state.Q.copy(self._Q0) # copies Q into Q0
+            state.Q.copy(self._Q1) # copies Q into Ki
             numit=0
             for rk in range(4):
                 if rho_sb:
                     self._reset_topdown_rho(da, grid, state)
                 #
-                numit += pvinv.solve(da, grid, state, numit=True)/4.
+                numit += pvinv.solve(da, grid, state, topdown_rho=True, numit=True)/4.
                 #
                 self._dRHS.set(0.)
                 #
@@ -119,10 +123,12 @@ class time_stepper():
                 self._computeDISS(da, grid, state.Q)
                 #
                 if rk < 3:
-                    state.Q.waxpy(self._b[rk]*self.dt, self._dRHS, self._RHS0)
-                self._RHS1.axpy(self._a[rk]*self.dt, self._dRHS)
+                    # Q = a[rk]*dt*_dRHS + _Q0
+                    state.Q.waxpy(self._a[rk]*self.dt, self._dRHS, self._Q0)
+                # _Q1 = _Q1 + b[rk]*dt*_dRHS
+                self._Q1.axpy(self._b[rk]*self.dt, self._dRHS)
             #
-            self._RHS1.copy(state.Q) # copies RHS1 into Q
+            self._Q1.copy(state.Q) # copies Ki into Q
             if self.petscBoundaryType is not 'periodic':
                 # reset q at boundaries
                 self._set_rhs_bdy(da, state)
@@ -210,8 +216,8 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic':
+                    if (i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic':
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
@@ -293,9 +299,9 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic' \
-                        or D[i,j,kmask]==0.:
+                    if ( i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic' \
+                            or D[i,j,kmask] == 0.:
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
@@ -404,8 +410,8 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic':
+                    if (i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic':
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
@@ -414,7 +420,7 @@ class time_stepper():
                         dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])*idx2 \
                                        + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])*idy2  
 
-    def _computeDISS_curv(self,da, grid, Q):
+    def _computeDISS_curv(self, da, grid, Q):
         ''' Compute potential vorticity diffusion, curvilinear grid
         
         Parameters
@@ -460,9 +466,9 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic' \
-                        or D[i,j,kmask]==0.:
+                    if (i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic' \
+                            or D[i,j,kmask]==0.:
                         #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
                         #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
                         dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \
@@ -493,25 +499,25 @@ class time_stepper():
         mx, my, mz = da.getSizes()
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # south bdy
-        if (ys == 0):
+        if ys == 0:
             j = 0
             for k in range(zs, ze):
                 for i in range(xs, xe):
                     rhs[i, j, k] = rhs[i, j + 1, k]
         # north bdy
-        if (ye == my):
+        if ye == my:
             j = my - 1
             for k in range(zs, ze):
                 for i in range(xs, xe):
                     rhs[i, j, k] = rhs[i, j - 1, k]
         # west bdy
-        if (xs == 0):
+        if xs == 0:
             i = 0
             for k in range(zs, ze):
                 for j in range(ys, ye):
                     rhs[i, j, k] = rhs[i + 1, j, k]
         # east bdy
-        if (xe == mx):
+        if xe == mx:
             i = mx - 1
             for k in range(zs, ze):
                 for j in range(ys, ye):
@@ -540,11 +546,9 @@ class time_stepper():
         for j in range(ys, ye):
             for i in range(xs, xe):           
                 rho[i, j, kdown] = q[i, j, kdown]
-                rho[i, j, kdown+1] = q[i, j, kdown]
-                rho[i, j, kup] = q[i, j, kup]
                 rho[i, j, kup-1] = q[i, j, kup]
 
-    def _copy_topdown_rho_to_q(self, da, grid, state, flag_PSI=True):
+    def _copy_topdown_rho_to_q(self, da, grid, state, flag_PSI):
         ''' Copy top and down rho into Q for easy implementation of rho time stepping
 
         Parameters
@@ -577,11 +581,20 @@ class time_stepper():
             rho = da.getVecArray(state.RHO)
             for j in range(ys, ye):
                 for i in range(xs, xe):           
-                    q[i, j, kdown] = 0.5*(rho[i, j, kdown]+rho[i, j, kdown+1])
-                    q[i, j, kup] = 0.5*(rho[i, j, kup]+rho[i, j, kup-1])
+                    q[i, j, kdown] = rho[i, j, kdown]
+                    q[i, j, kup] = rho[i, j, kup-1]
 
     def _reset_topdown_q(self, da, grid, state):
         ''' reset topdown Q with inner closest values
+
+        Parameters
+        ----------
+        da: Petsc DMDA
+            holds Petsc grid
+        grid: grid object
+            qgsolver grid object
+        state: state object
+            qgsolver state object, must contain Q and RHO or PSI
         '''
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         #

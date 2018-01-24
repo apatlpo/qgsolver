@@ -99,7 +99,7 @@ class pvinversion():
 #
 
     def solve(self, da, grid, state, Q=None, PSI=None, RHO=None, \
-              bstate=None, addback_bstate=True, numit=False):
+              bstate=None, addback_bstate=True, topdown_rho=False, numit=False):
         ''' Compute the PV inversion
         Uses prioritarily optional Q, PSI, RHO for RHS and bdy conditions
 
@@ -121,6 +121,9 @@ class pvinversion():
             background state that will be added in advective terms
         addback_bstate : boolean
             if True, add background state back to output variables ()
+        topdown_rho : boolean
+            if True, indicates that RHO used for top down boundary conditions
+            is contained in state.Q at indices kdown and kup
         numit : boolean
             if True, returns the number of iterations
 
@@ -143,7 +146,10 @@ class pvinversion():
             print('!Error: pvinv.solve requires state.RHO or RHO')
             sys.exit()
         elif RHO is None:
-            RHO = state.RHO
+            if topdown_rho:
+                RHO = state.Q
+            else:
+                RHO = state.RHO
         #
         # substract background fields
         if bstate is not None:
@@ -154,7 +160,7 @@ class pvinversion():
         # copy Q into RHS
         Q.copy(self._RHS)
         # fix boundaries
-        self.set_rhs_bdy(da, grid, state, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy(da, grid, state, PSI, RHO, topdown_rho)
         # apply mask
         if grid.mask:
             # mask rhs
@@ -193,7 +199,7 @@ class pvinversion():
         # should fix boundary conditions
         
 
-    def set_rhs_bdy(self, da, grid, state, PSI=None, RHO=None):
+    def set_rhs_bdy(self, da, grid, state, PSI, RHO, topdown_rho):
         ''' Set South/North, East/West, Bottom/Top boundary conditions
         Set RHS along boundaries for inversion, may be an issue
         for time stepping
@@ -215,11 +221,11 @@ class pvinversion():
         if self._verbose>1:
             print('  Set RHS along boudaries for inversion ')
 
-        self.set_rhs_bdy_bottom(da, grid, state, PSI=PSI, RHO=RHO)
-        self.set_rhs_bdy_top(da, grid, state, PSI=PSI, RHO=RHO)
+        self.set_rhs_bdy_bottom(da, grid, state, PSI, RHO)
+        self.set_rhs_bdy_top(da, grid, state, PSI, RHO, topdown_rho)
         self.set_rhs_bdy_lat(da, grid, state)
 
-    def set_rhs_bdy_bottom(self, da, grid, state, PSI=None, RHO=None):
+    def set_rhs_bdy_bottom(self, da, grid, state, PSI, RHO):
         ''' Set bottom boundary condition
 
         Parameters
@@ -242,14 +248,8 @@ class pvinversion():
         kdown = grid.kdown
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = da.getVecArray(state.PSI)
-        else:
-            psi = da.getVecArray(PSI)
-        if RHO is None:
-            rho = da.getVecArray(state.RHO)
-        else:
-            rho = da.getVecArray(RHO)
+        psi = da.getVecArray(PSI)
+        rho = da.getVecArray(RHO)
            
         # lower ghost area
         if zs < kdown:
@@ -260,15 +260,15 @@ class pvinversion():
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
         k = kdown
-        if self.bdy_type['bottom']=='N' :
+        if self.bdy_type['bottom'] == 'N':
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k+1])/(rho0*state.f0)
-        elif self.bdy_type['bottom']=='NBG' :
+                    rhs[i, j, k] = - g*rho[i, j, k]/(rho0*state.f0)
+        elif self.bdy_type['bottom'] == 'NBG':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
-        elif self.bdy_type['bottom']=='D':
+        elif self.bdy_type['bottom'] == 'D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = psi[i,j,k]
@@ -278,7 +278,7 @@ class pvinversion():
                 
         return
 
-    def set_rhs_bdy_top(self, da, grid, state, PSI=None, RHO=None):
+    def set_rhs_bdy_top(self, da, grid, state, PSI, RHO, topdown_rho):
         '''Set top boundary condition
 
         Parameters
@@ -301,14 +301,8 @@ class pvinversion():
         kup = grid.kup
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = da.getVecArray(state.PSI)
-        else:
-            psi = da.getVecArray(PSI)
-        if RHO is None:
-            rho = da.getVecArray(state.RHO)
-        else:
-            rho = da.getVecArray(RHO)
+        psi = da.getVecArray(PSI)
+        rho = da.getVecArray(RHO)
 
         if ze > kup+1:
             for k in range(kup+1,ze):
@@ -318,15 +312,19 @@ class pvinversion():
                         rhs[i,j,k]= psi[i,j,k]            
         # upper bdy
         k = kup
-        if self.bdy_type['top']=='N' :
+        if self.bdy_type['top'] == 'N':
+            if topdown_rho:
+                krho = k
+            else:
+                krho = k-1
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = - g*0.5*(rho[i, j, k]+rho[i, j, k-1])/(rho0*state.f0)
-        elif self.bdy_type['top']=='NBG' :
+                    rhs[i, j, k] = - g*rho[i, j, krho]/(rho0*state.f0)
+        elif self.bdy_type['top'] == 'NBG':
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
-        elif self.bdy_type['top']=='D' :
+                    rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/grid.dzw[k-1]
+        elif self.bdy_type['top'] == 'D':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = psi[i,j,k]
@@ -334,7 +332,7 @@ class pvinversion():
             print(self.bdy_type['top']+" unknown top boundary condition")
             sys.exit()
 
-    def set_rhs_bdy_lat(self, da, grid, state, PSI=None):
+    def set_rhs_bdy_lat(self, da, grid, PSI):
         '''Set lateral boundary condition
 
         Parameters
@@ -343,8 +341,6 @@ class pvinversion():
             holds the petsc grid
         grid : qgsolver grid object
             grid data holder
-        state : state object
-            ocean state
         PSI : petsc Vec, None, optional
             streamfunction, use state.PSI if None
         '''
@@ -358,10 +354,7 @@ class pvinversion():
         jend = grid.jend
 
         # load vector used to compute boundary conditions
-        if PSI is None:
-            psi = da.getVecArray(state.PSI)
-        else:
-            psi = da.getVecArray(PSI)
+        psi = da.getVecArray(PSI)
 
         # south bdy
         if ys <= jstart and self.petscBoundaryType is not 'periodic':
@@ -417,7 +410,7 @@ class pvinversion():
         for k in range(zs,ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if mask[i,j,kmask]==0.:
+                    if mask[i,j,kmask] == 0.:
                         rhs[i, j, k] = psi[i,j,k]
 
         if self._verbose>1:
@@ -471,12 +464,12 @@ class pvinversion():
                     row.field = 0
 
                     # lateral points outside the domain: dirichlet, psi=...
-                    if (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic':
+                    if (i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
-                    elif (k==kdown):
+                    elif k == kdown:
                         if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
                             for index, value in [
                                     ((i,j,k), -idz),
@@ -491,7 +484,7 @@ class pvinversion():
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
-                    elif (k==kup):
+                    elif k == kup:
                         if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
                             for index, value in [
                                     ((i,j,k-1), -idz),
@@ -506,7 +499,7 @@ class pvinversion():
                             sys.exit()
     
                     # points below and above the domain
-                    elif (k<kdown or k>kup):
+                    elif k < kdown or k > kup:
                         L.setValueStencil(row, row, 0.0)
     
                     # interior points: pv is prescribed
@@ -573,20 +566,22 @@ class pvinversion():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    row.index = (i,j,k)
+
+                    # row index
+                    row.index = (i, j, k)
                     row.field = 0
     
                     # masked points (land=0), L=1
-                    if D[i,j,kmask]==0.:
+                    if D[i,j,kmask] == 0.:
                         L.setValueStencil(row, row, 1.)
    
                     # domain edges 
-                    elif (i<=istart or i>=iend or j<=jstart or j>=jend) \
-                        and self.petscBoundaryType is not 'periodic':
+                    elif (i <= istart or i >= iend or j <= jstart or j >= jend) \
+                            and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
-                    elif (k==kdown):
+                    elif k == kdown:
                         if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
                             for index, value in [
                                     ((i,j,k), -idzw[k]),
@@ -601,8 +596,8 @@ class pvinversion():
                             sys.exit()
     
                     # top bdy condition: default Neuman dpsi/dz=...
-                    elif (k==kup):
-                        if self.bdy_type['top']=='N' or self.bdy_type['top']=='NBG':
+                    elif k == kup:
+                        if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
                             for index, value in [
                                     ((i,j,k-1), -idzw[k-1]),
                                     ((i,j,k),  idzw[k-1])]:
@@ -616,7 +611,7 @@ class pvinversion():
                             sys.exit()
     
                     # points below and above the domain
-                    elif (k<kdown) or (k>kup):
+                    elif k < kdown or k > kup:
                         L.setValueStencil(row, row, 1.0)
 
                     # interior points: pv is prescribed
