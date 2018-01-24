@@ -49,7 +49,7 @@ class time_stepper():
         ### additional global vectors
         self._Q0 = da.createGlobalVec()
         self._Q1 = da.createGlobalVec()
-        self._dRHS = da.createGlobalVec()
+        self._RHS = da.createGlobalVec()
         
         # declare local vectors
         #self.local_Q  = da.createLocalVec()
@@ -81,7 +81,6 @@ class time_stepper():
             turn on advection of surface and bottom densities, default if false
         bstate : state object, None, optional
             background state that will be added in advective terms
-
         '''
 
         if self._verbose>1:
@@ -102,8 +101,8 @@ class time_stepper():
             self.t += self.dt
             _tstep += 1
             #
-            state.Q.copy(self._Q0) # copies Q into Q0
-            state.Q.copy(self._Q1) # copies Q into Ki
+            state.Q.copy(self._Q0) # copies Q into _Q0, will contain initial Q (in each RK cycle)
+            state.Q.copy(self._Q1) # copies Q into _Q1, will contain updated Q
             numit=0
             for rk in range(4):
                 if rho_sb:
@@ -111,7 +110,7 @@ class time_stepper():
                 #
                 numit += pvinv.solve(da, grid, state, topdown_rho=True, numit=True)/4.
                 #
-                self._dRHS.set(0.)
+                self._RHS.set(0.)
                 #
                 if bstate is None:
                     self._computeADV(da, grid, state.Q, state.PSI)
@@ -123,10 +122,10 @@ class time_stepper():
                 self._computeDISS(da, grid, state.Q)
                 #
                 if rk < 3:
-                    # Q = a[rk]*dt*_dRHS + _Q0
-                    state.Q.waxpy(self._a[rk]*self.dt, self._dRHS, self._Q0)
-                # _Q1 = _Q1 + b[rk]*dt*_dRHS
-                self._Q1.axpy(self._b[rk]*self.dt, self._dRHS)
+                    # Q = a[rk]*dt*_RHS + _Q0
+                    state.Q.waxpy(self._a[rk]*self.dt, self._RHS, self._Q0)
+                # _Q1 = _Q1 + b[rk]*dt*_RHS
+                self._Q1.axpy(self._b[rk]*self.dt, self._RHS)
             #
             self._Q1.copy(state.Q) # copies Ki into Q
             if self.petscBoundaryType is not 'periodic':
@@ -195,7 +194,7 @@ class time_stepper():
         #
         q = da.getVecArray(local_Q)
         psi = da.getVecArray(local_PSI)
-        dq = da.getVecArray(self._dRHS)
+        dq = da.getVecArray(self._RHS)
         #
         mx, my, mz = da.getSizes()
         dx, dy, dz = grid.dx, grid.dy, grid.dz
@@ -271,7 +270,7 @@ class time_stepper():
         #
         q = da.getVecArray(local_Q)
         psi = da.getVecArray(local_PSI)
-        dq = da.getVecArray(self._dRHS)
+        dq = da.getVecArray(self._RHS)
         #
         mx, my, mz = da.getSizes()
         #
@@ -389,7 +388,7 @@ class time_stepper():
         da.globalToLocal(Q, local_Q)
         #
         q = da.getVecArray(local_Q)
-        dq = da.getVecArray(self._dRHS)
+        dq = da.getVecArray(self._RHS)
         #
         mx, my, mz = da.getSizes()
         dx, dy, dz = grid.dx, grid.dy, grid.dz
@@ -439,7 +438,7 @@ class time_stepper():
         da.globalToLocal(Q, local_Q)
         #
         q = da.getVecArray(local_Q)
-        dq = da.getVecArray(self._dRHS)
+        dq = da.getVecArray(self._RHS)
         #
         mx, my, mz = da.getSizes()
         #
