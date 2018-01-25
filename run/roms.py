@@ -63,7 +63,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         # start filling in variables    
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
-        qg.set_rho(file=file_rho)
+        #qg.set_rho(file=file_rho)
         #qg.write_state(filename=outdir+'output0.nc')
         qg.write_state(filename=outdir+'input_bg.nc')
         #
