@@ -488,7 +488,7 @@ class pvinversion():
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif k == kdown:
-                        if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
+                        if self.bdy_type['bottom'] in ['N_RHO', 'N_PSI']:
                             for index, value in [
                                     ((i,j,k), -idz),
                                     ((i,j,k+1),  idz)]:
@@ -503,7 +503,7 @@ class pvinversion():
     
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif k == kup:
-                        if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
+                        if self.bdy_type['top'] in ['N_RHO', 'N_PSI']:
                             for index, value in [
                                     ((i,j,k-1), -idz),
                                     ((i,j,k),  idz)]:
@@ -600,7 +600,7 @@ class pvinversion():
     
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif k == kdown:
-                        if self.bdy_type['bottom'] == 'N' or self.bdy_type['bottom'] == 'NBG':
+                        if self.bdy_type['bottom'] in ['N_RHO', 'N_PSI']:
                             for index, value in [
                                     ((i,j,k), -idzw[k]),
                                     ((i,j,k+1),  idzw[k])]:
@@ -615,7 +615,7 @@ class pvinversion():
     
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif k == kup:
-                        if self.bdy_type['top'] == 'N' or self.bdy_type['top'] == 'NBG':
+                        if self.bdy_type['top'] in ['N_RHO', 'N_PSI']:
                             for index, value in [
                                     ((i,j,k-1), -idzw[k-1]),
                                     ((i,j,k),  idzw[k-1])]:

@@ -232,8 +232,12 @@ class qg_model():
         ''' wrapper around pv inversion solver pvinv.solve
         '''
         if hasattr(self,'state'):
+            if hasattr(self.state,'RHO'):
+                RHO = self.state.RHO
+            else:
+                RHO = None
             self.pvinv.solve(self.da, self.grid, self.state, \
-                             Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO, \
+                             Q=self.state.Q, PSI=self.state.PSI, RHO=RHO, \
                              bstate=bstate, addback_bstate=addback_bstate)
         else:
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
