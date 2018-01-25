@@ -147,7 +147,7 @@ class pvinversion():
             sys.exit()
         elif RHO is None:
             if topdown_rho:
-                RHO = state.Q
+                RHO = Q
             else:
                 RHO = state.RHO
         #

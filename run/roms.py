@@ -51,7 +51,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         vgrid = datapath+'roms_metrics.nc'
         file_q = datapath+'roms_pv.nc'
         file_psi = datapath+'roms_psi.nc'
-        file_rho = datapath+'roms_rho.nc'
+        #file_rho = datapath+'roms_rho.nc'
         file_bg = datapath+'roms_bg.nc'
                
         qg = qg_model(ncores_x=ncores_x, ncores_y=ncores_y,
@@ -94,8 +94,8 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
             #    qg.tstep(50, rho_sb=True, bstate=bstate)
             #    qg.write_state(filename=outdir+'output.nc', append=True)
             pass
-        elif test==2:           # input
-            Ndays = 100.     # in days
+        elif test==2:
+            Ndays = 100.   # in days
             dt_out = .1    # in days
             #
             idx=1

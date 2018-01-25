@@ -105,10 +105,10 @@ class time_stepper():
             state.Q.copy(self._Q1) # copies Q into _Q1, will contain updated Q
             numit=0
             for rk in range(4):
-                if rho_sb:
-                    self._reset_topdown_rho(da, grid, state)
+                #if rho_sb:
+                #    self._reset_topdown_rho(da, grid, state)
                 #
-                numit += pvinv.solve(da, grid, state, topdown_rho=True, numit=True)/4.
+                numit += pvinv.solve(da, grid, state, Q=self._Q1, topdown_rho=True, numit=True)/4.
                 #
                 self._RHS.set(0.)
                 #
@@ -127,7 +127,7 @@ class time_stepper():
                 # _Q1 = _Q1 + b[rk]*dt*_RHS
                 self._Q1.axpy(self._b[rk]*self.dt, self._RHS)
             #
-            self._Q1.copy(state.Q) # copies Ki into Q
+            self._Q1.copy(state.Q) # copies _Q1 into Q
             if self.petscBoundaryType is not 'periodic':
                 # reset q at boundaries
                 self._set_rhs_bdy(da, state)
@@ -136,13 +136,13 @@ class time_stepper():
                 #print('t = %f d' % (self.t/86400.), flush=True)
         # need to invert PV one final time in order to get right PSI
         da.getComm().barrier()
+        pvinv.solve(da, grid, state, topdown_rho=True)
         if rho_sb:
-            self._reset_topdown_rho(da, grid, state)
-        pvinv.solve(da, grid, state)
-        # reset q
-        self._reset_topdown_q(da, grid, state)
-        if bstate is not None:
-            self._reset_topdown_q(da, grid, bstate)
+            #self._reset_topdown_rho(da, grid, state)
+            # reset q
+            self._reset_topdown_q(da, grid, state)
+            if bstate is not None:
+                self._reset_topdown_q(da, grid, bstate)
         if self._verbose>1:
             print('Time stepping done --->')
 
@@ -574,8 +574,8 @@ class time_stepper():
             psi2rho = -(rho0*state.f0)/g
             for j in range(ys, ye):
                 for i in range(xs, xe):           
-                    q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/grid.dzw[kdown] *psi2rho
-                    q[i, j, kup] = (psi[i,j,kup]-psi[i,j,kup-1])/grid.dzw[kup-1] *psi2rho
+                    q[i, j, kdown] = (psi[i,j,kdown+1]-psi[i,j,kdown])/grid.dzw[kdown] * psi2rho
+                    q[i, j, kup] = (psi[i,j,kup]-psi[i,j,kup-1])/grid.dzw[kup-1] * psi2rho
         else:
             rho = da.getVecArray(state.RHO)
             for j in range(ys, ye):
