@@ -35,7 +35,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         cur_time = start_time
         
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
-        bdy_type = {'top':'N', 'bottom':'N', 'periodic':True}
+        bdy_type = {'top':'N_PSI', 'bottom':'N_PSI', 'periodic':True}
 
         # vertical subdomain
         vdom = {'Nz': 50}

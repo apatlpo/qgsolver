@@ -216,16 +216,19 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
+        topdown_rho : boolean
+            if True, indicates that RHO used for top down boundary conditions
+            is contained in state.Q at indices kdown and kup
         '''
         
         if self._verbose>1:
             print('  Set RHS along boudaries for inversion ')
 
-        self.set_rhs_bdy_bottom(da, grid, state, PSI, RHO)
+        self.set_rhs_bdy_bottom(da, grid, state, PSI, RHO, topdown_rho)
         self.set_rhs_bdy_top(da, grid, state, PSI, RHO, topdown_rho)
         self.set_rhs_bdy_lat(da, grid, PSI)
 
-    def set_rhs_bdy_bottom(self, da, grid, state, PSI, RHO):
+    def set_rhs_bdy_bottom(self, da, grid, state, PSI, RHO, topdown_rho):
         ''' Set bottom boundary condition
 
         Parameters
@@ -240,6 +243,9 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
+        topdown_rho : boolean
+            if True, indicates that RHO used for top down boundary conditions
+            is contained in state.Q at indices kdown and kup
         '''
 
         rhs = da.getVecArray(self._RHS)
@@ -249,7 +255,11 @@ class pvinversion():
 
         # load vector used to compute boundary conditions
         psi = da.getVecArray(PSI)
-        rho = da.getVecArray(RHO)
+        if RHO is not None:
+            rho = da.getVecArray(RHO)
+        elif self.bdy_type['bottom'] == 'N_RHO' or topdown_rho:
+            print('!Error: pvinv.set_rhs_bdy_bottom requires RHO, none provided')
+            sys.exit()
            
         # lower ghost area
         if zs < kdown:
@@ -260,11 +270,11 @@ class pvinversion():
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
         k = kdown
-        if self.bdy_type['bottom'] == 'N':
+        if self.bdy_type['bottom'] == 'N_RHO' or topdown_rho:
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = - g*rho[i, j, k]/(rho0*state.f0)
-        elif self.bdy_type['bottom'] == 'NBG':
+        elif self.bdy_type['bottom'] == 'N_PSI':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = (psi[i,j,k+1]-psi[i,j,k])/grid.dzw[k]
@@ -293,6 +303,9 @@ class pvinversion():
             streamfunction, use state.PSI if None
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
+        topdown_rho : boolean
+            if True, indicates that RHO used for top down boundary conditions
+            is contained in state.Q at indices kdown and kup
         '''
         
         rhs = da.getVecArray(self._RHS)
@@ -302,7 +315,11 @@ class pvinversion():
 
         # load vector used to compute boundary conditions
         psi = da.getVecArray(PSI)
-        rho = da.getVecArray(RHO)
+        if RHO is not None:
+            rho = da.getVecArray(RHO)
+        elif self.bdy_type['top'] == 'N_RHO':
+            print('!Error: pvinv.set_rhs_bdy_top requires RHO, none provided')
+            sys.exit()
 
         if ze > kup+1:
             for k in range(kup+1,ze):
@@ -312,7 +329,7 @@ class pvinversion():
                         rhs[i,j,k]= psi[i,j,k]            
         # upper bdy
         k = kup
-        if self.bdy_type['top'] == 'N':
+        if self.bdy_type['top'] == 'N_RHO' or topdown_rho:
             if topdown_rho:
                 krho = k
             else:
@@ -320,7 +337,7 @@ class pvinversion():
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = - g*rho[i, j, krho]/(rho0*state.f0)
-        elif self.bdy_type['top'] == 'NBG':
+        elif self.bdy_type['top'] == 'N_PSI':
             for j in range(ys, ye):
                 for i in range(xs, xe):
                     rhs[i, j, k] = (psi[i,j,k]-psi[i,j,k-1])/grid.dzw[k-1]
