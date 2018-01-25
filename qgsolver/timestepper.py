@@ -88,8 +88,8 @@ class time_stepper():
 
         if rho_sb:
             # check boundary conditions of PV inversion are Neumann
-            assert pvinv.bdy_type['bottom'] == 'N'
-            assert pvinv.bdy_type['top'] == 'N'
+            assert pvinv.bdy_type['bottom'] in ['N_PSI','N_RHO']
+            assert pvinv.bdy_type['top'] in ['N_PSI','N_RHO']
             # copy upper and lower density into Q
             self._copy_topdown_rho_to_q(da, grid, state, True)
             if bstate is not None:

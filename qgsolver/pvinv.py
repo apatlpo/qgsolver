@@ -270,7 +270,6 @@ class pvinversion():
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
         k = kdown
-        print(self.bdy_type['bottom'])
         if self.bdy_type['bottom'] == 'N_RHO' or topdown_rho:
             for j in range(ys, ye):
                 for i in range(xs, xe):
