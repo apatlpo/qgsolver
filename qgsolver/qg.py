@@ -79,9 +79,9 @@ class qg_model():
             self.petscBoundaryType = 'periodic'
         else:
             self.petscBoundaryType = None
-        # default top and bottom boudary condition = 'N' pour Neumann.
-        # Other possibility 'D' for Direchlet
-        self.bdy_type = {'top':'N','bottom':'N'}
+        # default top and bottom boudary condition = 'N_PSI', i.e. Neumann using PSI to compute boundary values.
+        # Other possibility 'D' for Dirichlet
+        self.bdy_type = {'top':'N_PSI','bottom':'N_PSI'}
         self.bdy_type.update(boundary_types)
 
 

@@ -35,7 +35,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         cur_time = start_time
         
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
-        bdy_type = {'top':'N_PSI', 'bottom':'N_PSI', 'periodic':True}
+        bdy_type = {'top': 'N_PSI', 'bottom': 'N_PSI', 'periodic': True}
 
         # vertical subdomain
         vdom = {'Nz': 50}
@@ -65,17 +65,16 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         qg.set_psi(file=file_psi)   
         #qg.set_rho(file=file_rho)
         #qg.write_state(filename=outdir+'output0.nc')
-        qg.write_state(filename=outdir+'input_bg.nc')
-        #
+        qg.write_state(filename=outdir+'input.nc')
+        # substract background state
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state,bstate,da=None,a2=-1.)
         #qg.state += -bstate
-        qg.write_state(filename=outdir+'input_nobg.nc')
-        #
+        qg.write_state(filename=outdir+'input.nc', append=True)
+        # after PV inversion
         qg.invert_pv()
-        #qg.write_state(filename=outdir+'output.nc', append=True)
-        #qg.write_state(filename=outdir+'output2.nc')
-        
+        qg.write_state(filename=outdir+'input.nc', append=True)
+
         # compute CFL
         CFL = qg.compute_CFL()
         if qg._verbose>0: print('CFL='+str(CFL))

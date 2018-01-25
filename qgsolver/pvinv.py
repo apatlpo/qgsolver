@@ -27,8 +27,8 @@ class pvinversion():
         bdy_type : dict
             prescribe vertical and lateral boundary conditions. Examples
                 bdy_type = {'bottom': 'D', 'top': 'D'}    for Dirichlet bdy conditions
-                bdy_type = {'bottom': 'N', 'top': 'N'}    for Neumann bdy conditions
-                bdy_type = {'bottom': 'N', 'top': 'N'}    for Neumann bdy conditions using PSI instead of RHO
+                bdy_type = {'bottom': 'N_RHO', 'top': 'N_RHO'}    for Neumann bdy conditions with RHO
+                bdy_type = {'bottom': 'N_PSI', 'top': 'N_PSI'}    for Neumann bdy conditions using PSI instead of RHO
                 bdy_type = {'periodic': None}             for horizontal periodicity
         sparam : ndarray
             numpy array containing f^2/N^2
@@ -270,6 +270,7 @@ class pvinversion():
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
         k = kdown
+        print(self.bdy_type['bottom'])
         if self.bdy_type['bottom'] == 'N_RHO' or topdown_rho:
             for j in range(ys, ye):
                 for i in range(xs, xe):
