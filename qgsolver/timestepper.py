@@ -468,6 +468,9 @@ class time_stepper():
                     if (i <= istart or i >= iend or j <= jstart or j >= jend) \
                             and self.petscBoundaryType is not 'periodic' \
                             or D[i,j,kmask]==0.:
+                        # lateral boundaries
+                        dq[i, j, k] = 0.
+                    else:
                         #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
                         #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
                         dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \

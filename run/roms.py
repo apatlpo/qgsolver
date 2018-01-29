@@ -57,7 +57,7 @@ def roms_input_runs(ncores_x=32, ncores_y=12, ping_mpi_cfg=False):
         qg = qg_model(ncores_x=ncores_x, ncores_y=ncores_y,
                       hgrid=hgrid, vgrid=vgrid, vdom=vdom, hdom=hdom, mask=True,
                       boundary_types=bdy_type,
-                      f0N2_file=file_q, K=20.e0, dt=0.02 * d2s,
+                      f0N2_file=file_q, K=200.e0, dt=0.02 * d2s,
                       verbose=1)
 
         # start filling in variables    
