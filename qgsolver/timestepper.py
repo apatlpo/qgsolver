@@ -272,13 +272,9 @@ class time_stepper():
         psi = da.getVecArray(local_PSI)
         dq = da.getVecArray(self._RHS)
         #
-        mx, my, mz = da.getSizes()
-        #
         local_D  = da.createLocalVec()
         da.globalToLocal(grid.D, local_D)
         D = da.getVecArray(local_D)
-        kdxu, kdyu = grid._k_dxu, grid._k_dyu
-        kdxv, kdyv = grid._k_dxv, grid._k_dyv
         kdxt, kdyt = grid._k_dxt, grid._k_dyt
         kf = grid._k_f
         kmask = grid._k_mask
@@ -289,8 +285,6 @@ class time_stepper():
         iend = grid.iend
         jstart = grid.jstart
         jend = grid.jend
-        kdown = grid.kdown
-        kup = grid.kup
         #
         # advect PV:
         # RHS= -u x dq/dx - v x dq/dy = -J(psi,q) = - (-dpsi/dy x dq/dx + dpsi/dx x dq/dy)
@@ -298,8 +292,8 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if ( i <= istart or i >= iend or j <= jstart or j >= jend) \
-                            and self.petscBoundaryType is not 'periodic' \
+                    if (( i <= istart or i >= iend or j <= jstart or j >= jend)
+                            and self.petscBoundaryType is not 'periodic') \
                             or D[i,j,kmask] == 0.:
                         # lateral boundaries
                         dq[i, j, k] = 0.
@@ -390,9 +384,7 @@ class time_stepper():
         q = da.getVecArray(local_Q)
         dq = da.getVecArray(self._RHS)
         #
-        mx, my, mz = da.getSizes()
         dx, dy, dz = grid.dx, grid.dy, grid.dz
-        idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
         idx2, idy2, idz2 = [1.0/dl**2 for dl in [dx, dy, dz]]
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -400,8 +392,6 @@ class time_stepper():
         iend = grid.iend
         jstart = grid.jstart
         jend = grid.jend
-        kdown = grid.kdown
-        kup = grid.kup
         #
         # PV dissipation
         # RHS= K*laplacian(q)
@@ -440,15 +430,12 @@ class time_stepper():
         q = da.getVecArray(local_Q)
         dq = da.getVecArray(self._RHS)
         #
-        mx, my, mz = da.getSizes()
-        #
-        local_D  = da.createLocalVec()
+        local_D = da.createLocalVec()
         da.globalToLocal(grid.D, local_D)
         D = da.getVecArray(local_D)
         kdxu, kdyu = grid._k_dxu, grid._k_dyu
         kdxv, kdyv = grid._k_dxv, grid._k_dyv
         kdxt, kdyt = grid._k_dxt, grid._k_dyt
-        kf = grid._k_f
         kmask = grid._k_mask
         #
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
@@ -456,8 +443,6 @@ class time_stepper():
         iend = grid.iend
         jstart = grid.jstart
         jend = grid.jend
-        kdown = grid.kdown
-        kup = grid.kup
         #
         # PV dissipation
         # RHS= K*laplacian(q)
@@ -465,20 +450,17 @@ class time_stepper():
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    if (i <= istart or i >= iend or j <= jstart or j >= jend) \
-                            and self.petscBoundaryType is not 'periodic' \
+                    if ((i <= istart or i >= iend or j <= jstart or j >= jend)   \
+                            and self.petscBoundaryType is not 'periodic')        \
                             or D[i,j,kmask]==0.:
                         # lateral boundaries
                         dq[i, j, k] = 0.
                     else:
-                        #dq[i, j, k] +=   self.K*(q[i+1,j,k]-2.*q[i,j,k]+q[i-1,j,k])/D[i,j,kdxt]/D[i,j,kdxt] \
-                        #               + self.K*(q[i,j+1,k]-2.*q[i,j,k]+q[i,j-1,k])/D[i,j,kdyt]/D[i,j,kdyt]
-                        dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * ( \
-                                                q[i+1,j,k] * D[i,j,kdyu]/D[i,j,kdxu] \
-                                               -q[i-1,j,k] * D[i-1,j,kdyu]/D[i-1,j,kdxu] \
-                                               +q[i,j+1,k] * D[i,j,kdxv]/D[i,j,kdyv] \
-                                               -q[i,j-1,k] * D[i,j-1,kdxv]/D[i,j-1,kdyv] \
-                                                )
+                        dq[i, j, k] += self.K/D[i,j,kdxt]/D[i,j,kdyt] * (
+                                                (q[i+1,j,k]-q[i,j,k]) * D[i,j,kdyu]/D[i,j,kdxu]
+                                               -(q[i,j,k]-q[i-1,j,k]) * D[i-1,j,kdyu]/D[i-1,j,kdxu]
+                                               +(q[i,j+1,k]-q[i,j,k]) * D[i,j,kdxv]/D[i,j,kdyv]
+                                               -(q[i,j,k]-q[i,j-1,k]) * D[i,j-1,kdxv]/D[i,j-1,kdyv])
 
 
 #
