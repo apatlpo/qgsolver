@@ -7,6 +7,7 @@
 import sys, os
 import xarray as xr
 import matplotlib.pyplot as plt
+plt.switch_backend('agg')
 import re
 
 g=9.1
@@ -66,7 +67,7 @@ if __name__ == "__main__":
     
     # data path
     rdir = '/home1/datawork/aponte/qgsolver/'
-    datadir = rdir+'roms_out_200/'
+    datadir = rdir+'roms_out_20/'
     pref = datadir.split('/')[-2]+'_'
 
     # read files
@@ -76,23 +77,23 @@ if __name__ == "__main__":
     #print(d.bg)
     #print(d.m)
     
-    for it,t in enumerate(d.t):
+    for it,t in enumerate(d.t[:]):
         # clear the figure
-        plt.close()
-        f, ax = plt.subplots(1,1, figsize=(5,7))
+        fig, ax = plt.subplots(1,1, figsize=(5,7))
         toplt = d.ds['psi'].sel(t=t)*d.f0/g
         toplt.plot(ax=ax,vmin=-.5,vmax=.5)
         toplt.plot.contour(ax=ax,levels=[0.],color='w')
         ax.set_aspect('equal')
         ax.set_title('t = %.1f' %t)
         plt.tight_layout()
-        plt.savefig('img/fig%04d.png'%it, dpi=300)
+        fig.savefig('img/fig%04d.png'%it, dpi=300)
+        plt.close(fig)
         print('%d/%d'%(it,d.Nt))
     
     movie=pref+"psi"
     # clean pre-existing movies
-    os.system("rm -rf  movies/"+movie+".gif  movies/"+movie+".mp4 >& /dev/null ")
-    com = "ffmpeg -y -r 4 -i img/fig*.png  movies/"+movie+".mp4"
-    print(com)
-    os.system("ffmpeg -y -r 4 -i img/fig*.png  movies/"+movie+".mp4")
+    os.system("rm -rf movies/"+movie+".mp4 >& /dev/null ")
+    #com = "ffmpeg -y -r 4 -pattern_type glob -i img/fig*.png  movies/"+movie+".mp4"
+    #os.system("ffmpeg -y -r 4 -i img/fig*.png  movies/"+movie+".mp4")
+    #print(com)
 
