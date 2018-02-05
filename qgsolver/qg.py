@@ -79,9 +79,9 @@ class qg_model():
             self.petscBoundaryType = 'periodic'
         else:
             self.petscBoundaryType = None
-        # default top and bottom boudary condition = 'N' pour Neumann.
-        # Other possibility 'D' for Direchlet
-        self.bdy_type = {'top':'N','bottom':'N'}
+        # default top and bottom boudary condition = 'N_PSI', i.e. Neumann using PSI to compute boundary values.
+        # Other possibility 'D' for Dirichlet
+        self.bdy_type = {'top':'N_PSI','bottom':'N_PSI'}
         self.bdy_type.update(boundary_types)
 
 
@@ -232,8 +232,12 @@ class qg_model():
         ''' wrapper around pv inversion solver pvinv.solve
         '''
         if hasattr(self,'state'):
+            if hasattr(self.state,'RHO'):
+                RHO = self.state.RHO
+            else:
+                RHO = None
             self.pvinv.solve(self.da, self.grid, self.state, \
-                             Q=self.state.Q, PSI=self.state.PSI, RHO=self.state.RHO, \
+                             Q=self.state.Q, PSI=self.state.PSI, RHO=RHO, \
                              bstate=bstate, addback_bstate=addback_bstate)
         else:
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
@@ -243,10 +247,10 @@ class qg_model():
         '''
         self.omegainv.solve(self)
 
-    def tstep(self, nt=1, rho_sb=False, bstate=None):
+    def tstep(self, nt=1, rho_sb=True, bstate=None):
         ''' Time step wrapper tstepper.go
         '''
-        self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb=rho_sb, bstate=bstate)
+        self.tstepper.go(nt, self.da, self.grid, self.state, self.pvinv, rho_sb, bstate=bstate)
 
 
 #

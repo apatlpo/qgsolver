@@ -1,17 +1,23 @@
 qgsolver_doc's documentation
-========================================
+============================
+
+.. https://thomas-cokelaer.info/tutorials/sphinx/rest_syntax.html
+
+Equations of motion
+-------------------
+
+See this :doc:`equations`
+
 
 Install
---------------------
+-------
 
 We recommend conda for dependencies, see README on
 `qgsolver github repository <https://github.com/apatlpo/qgsolver>`_
 
-Tutorial on a desktop
---------------------
+Tutorial
+--------
 
-Tutorial on datarmor
---------------------
 
 PV inversion solver
 --------------------
@@ -33,10 +39,11 @@ In order to get details about the PV inversion solver, add the following options
 In order to profile with `snakeviz <https://jiffyclub.github.io/snakeviz/>`_
 you need first to generate a profile and then run snakeviz:
 
-.. code: bash
+.. code:: bash
 
    mpirun -n 4 python -m cProfile -o output.prof uniform.py
    snakeviz output.prof
+
 
 Creating input files
 --------------------
@@ -56,6 +63,7 @@ API
 .. toctree::
    :maxdepth: 2
 
+   equations
    api/qgsolver
 
 Indices and tables

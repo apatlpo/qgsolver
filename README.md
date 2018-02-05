@@ -28,7 +28,6 @@ bash
 conda update conda
 conda create --name petsc python
 source activate petsc
-conda install -c conda-forge petsc
 conda install -c conda-forge petsc4py
 conda install -c conda-forge netcdf4
 conda install -c conda-forge matplotlib

@@ -184,8 +184,14 @@ class grid(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         # compute metric terms
-        self.dz=self.H/(self.Nz-1.)
-    
+        #self.zt = np.ones(self.Nz)
+        #self.zw = np.ones(self.Nz)
+        self.dz = self.H/(self.Nz-1.)
+        self.dzt = np.ones(self.Nz) * self.dz
+        self.dzw = np.ones(self.Nz) * self.dz
+        self.zt = np.cumsum(self.dzt) - .5*self.dz
+        self.zw = np.cumsum(self.dzw) - self.dz
+
     #
     # Curvilinear horizontal grid
     #
@@ -213,14 +219,14 @@ class grid(object):
         v[:] = 0.
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
         # indexes along the third dimension of 
-        self._k_dxt =zs
-        self._k_dyt =zs+1
-        self._k_dxu =zs+2
-        self._k_dyu =zs+3
-        self._k_dxv =zs+4
-        self._k_dyv =zs+5
-        self._k_lon=zs+6
-        self._k_lat=zs+7
+        self._k_dxt = zs
+        self._k_dyt = zs+1
+        self._k_dxu = zs+2
+        self._k_dyu = zs+3
+        self._k_dxv = zs+4
+        self._k_dyv = zs+5
+        self._k_lon = zs+6
+        self._k_lat = zs+7
 
 
         # Initialize xt,yt,dxt,dyt
@@ -264,27 +270,29 @@ class grid(object):
  
         rootgrp.close()
 
-        if self._flag_vgrid_uniform:
-            self.zt = np.ones(self.Nz)
-            self.zw = np.ones(self.Nz)
-            for k in range(zs,ze):
-                self.zt[k]=(k-0.5)*self.dz
-                self.zw[k]=k*self.dz
-        else:
-            # open netdc file
-            rootgrp = Dataset(self.vgrid_file, 'r')
-            self.zt = rootgrp.variables['zt'][zs+self.k0:ze+self.k0]
-            self.zw = rootgrp.variables['zw'][zs+self.k0:ze+self.k0]
-            try:
-                self.dzt = rootgrp.variables['dzt'][zs+self.k0:ze+self.k0] 
-            except:
-                print('!Error: must init dzt ')
-                sys.exit()   
-            try:
-                self.dzw = rootgrp.variables['dzw'][zs+self.k0:ze+self.k0] 
-            except:
-                print('!Error: must init dzw ')
-                sys.exit()   
+        #if self._flag_vgrid_uniform:
+        #    self.zt = np.ones(self.Nz)
+        #    self.zw = np.ones(self.Nz)
+        #    self.dzt = np.ones(self.Nz)*self.dz
+        #    self.dzw = np.ones(self.Nz)*self.dz
+        #    for k in range(zs,ze):
+        #        self.zt[k]=(k-0.5)*self.dz
+        #        self.zw[k]=k*self.dz
+        #else:
+        # open netdc file
+        rootgrp = Dataset(self.vgrid_file, 'r')
+        self.zt = rootgrp.variables['zt'][zs+self.k0:ze+self.k0]
+        self.zw = rootgrp.variables['zw'][zs+self.k0:ze+self.k0]
+        try:
+            self.dzt = rootgrp.variables['dzt'][zs+self.k0:ze+self.k0]
+        except:
+            print('!Error: must init dzt ')
+            sys.exit()
+        try:
+            self.dzw = rootgrp.variables['dzw'][zs+self.k0:ze+self.k0]
+        except:
+            print('!Error: must init dzw ')
+            sys.exit()
 
             rootgrp.close()
         #
