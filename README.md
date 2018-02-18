@@ -24,14 +24,15 @@ Download Miniconda3 from the [conda website](https://conda.io/miniconda.html)
 ```csh
 bash Miniconda3-latest-Linux-x86_64.sh
 (specify .miniconda3 and not miniconda3 as target dir for conda)
-bash
+
 conda update conda
-conda create --name petsc python
+```
+
+Create the conda environment from the `enviroment.yml` file, and activate the new environment for use.
+```csh
+conda env create -f environment.yml
+
 source activate petsc
-conda install -c conda-forge petsc4py
-conda install -c conda-forge netcdf4
-conda install -c conda-forge matplotlib
-conda install -c conda-forge snakeviz
 ```
 
 # Run on datarmor
