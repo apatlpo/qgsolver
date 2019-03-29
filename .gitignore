@@ -3,6 +3,7 @@ docs/build
 clean~
 clean
 *.swp
+*.so
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
@@ -16,6 +17,9 @@ __pycache__/
 
 # pycharm files
 .idea/
+
+# jupyter files
+*.ipynb_checkpoints/
 
 # data files
 *.nc

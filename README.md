@@ -26,12 +26,8 @@ bash Miniconda3-latest-Linux-x86_64.sh
 (specify .miniconda3 and not miniconda3 as target dir for conda)
 bash
 conda update conda
-conda create --name petsc python
+conda create -n petsc -c conda-forge python=3.6 petsc4py netcdf4 matplotlib snakeviz xarray
 source activate petsc
-conda install -c conda-forge petsc4py
-conda install -c conda-forge netcdf4
-conda install -c conda-forge matplotlib
-conda install -c conda-forge snakeviz
 ```
 
 # Run on datarmor
