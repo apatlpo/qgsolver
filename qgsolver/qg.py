@@ -228,7 +228,7 @@ class qg_model():
 #==================== useful wrappers for solvers ============================================
 #
                  
-    def invert_pv(self, bstate=None, addback_bstate=True):
+    def invert_pv(self, **kwargs):
         ''' wrapper around pv inversion solver pvinv.solve
         '''
         if hasattr(self,'state'):
@@ -236,9 +236,10 @@ class qg_model():
                 RHO = self.state.RHO
             else:
                 RHO = None
-            self.pvinv.solve(self.da, self.grid, self.state, \
-                             Q=self.state.Q, PSI=self.state.PSI, RHO=RHO, \
-                             bstate=bstate, addback_bstate=addback_bstate)
+            dkwargs = {'Q': self.state.Q, 'PSI': self.state.PSI, 'RHO': RHO,
+                       'bstate': None, 'addback_bstate': True}
+            dkwargs.update(kwargs)
+            self.pvinv.solve(self.da, self.grid, self.state, **dkwargs)
         else:
             print('!Error qg.inver_pv requires qg.state (with Q/PSI and RHO depending on bdy conditions)')
 

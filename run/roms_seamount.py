@@ -4,7 +4,8 @@
 """
 Run qgsolver with outputs from idealized ROMS numerical simulations
 
-python run_datarmor.py seamount roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
+python run_datarmor.py seamount/case0 roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
+#python run_datarmor.py seamount roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
 
 """
 
@@ -67,15 +68,23 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
         qg.write_state(filename=outdir+'input.nc')
+
         # substract background state
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state, bstate, da=None, a2=-1.)
         #qg.state += -bstate
         qg.write_state(filename=outdir+'input.nc', append=True)
+        
         # after PV inversion
         qg.invert_pv()
-        qg.write_state(filename=outdir+'output0.nc')
+        qg.write_state(filename=outdir+'output_full.nc')
 
+        # after PV inversion with 0 PV
+        qg.state.Q = qg.state.Q*0
+        qg.invert_pv()
+        qg.write_state(filename=outdir+'output_bsqg.nc')
+
+        
         if qg._verbose>0:
             print('----------------------------------------------------')
             print('Elapsed time for all ',str(time.time() - cur_time))
