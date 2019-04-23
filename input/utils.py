@@ -165,7 +165,7 @@ def get_pv(u, v, rho, rho_a, f, f0, zr, zw, ds):
     xi = ds.grd.psi2rho(xi_u+xi_v)
 
     # stretching term
-    drho = (rho.shift(z_r=1)+rho)*0.5 * zr.diff('z_r')/zr.diff('z_r')
+    drho = (rho.shift(z_r=1)+rho)*0.5 * zr.diff('z_r')/rho_a.diff('z_r')
     drho = drho.rename({'z_r':'z_w'}).assign_coords(z_w=zw[:-1])
     Sint = drho.diff('z_w')/zw[:-1].diff('z_w')
     Sint = Sint.rename({'z_w':'z_r'}).assign_coords(z_r=zr[1:-1])
