@@ -171,7 +171,8 @@ def get_pv(u, v, rho, rho_a, f, f0, zr, zw, ds):
     Sint = Sint.rename({'z_w':'z_r'}).assign_coords(z_r=zr[1:-1])
 
     # note that top and bottom values are not used in the solver
-    S = f0 * xr.concat([0.*rho.isel(z_r=0), Sint, 0.*rho.isel(z_r=-1)], dim='z_r') #.transpose('z_r','eta_rho','xi_rho')
+    S = f0 * xr.concat([0.*rho.isel(z_r=0), Sint, 0.*rho.isel(z_r=-1)], dim='z_r') 
+    #.transpose('z_r','eta_rho','xi_rho')
 
     # assemble pb
     q = (xi + S + f - f0 ).rename('q') # order of variable conditions dimension order
