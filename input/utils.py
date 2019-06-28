@@ -8,134 +8,93 @@ import numpy as np
 # useful parameters
 g=9.81
 
-
 def fix_coords(ds):
-    ''' fix coordinates in ROMS output files
-    '''
     # indices are wrong in netcdf files
+    
     ds = (ds.reset_index(['xi_rho','eta_rho','xi_u','eta_v'])
-                 .drop(['xi_rho_','eta_rho_','xi_u_','eta_v_']))
-
-    xrho = ds.x_rho.isel(eta_rho=0).drop('y_rho').rename('xi_rho')
+          .drop(['xi_rho_','eta_rho_','xi_u_','eta_v_']))
+    
+    xr = ds.x_rho.isel(eta_rho=0).drop('y_rho').rename('xi_rho')
     yr = ds.y_rho.isel(xi_rho=0).drop('x_rho').rename('eta_rho')
-
-    xu = ( ((xrho.shift(xi_rho=1)+xrho)*0.5)
+    
+    xu = ( ((xr.shift(xi_rho=1)+xr)*0.5)
           .isel(xi_rho=slice(1,None))
           .rename({'xi_rho':'xi_u'}) )
 
     yv = ( ((yr.shift(eta_rho=1)+yr)*0.5)
           .isel(eta_rho=slice(1,None))
           .rename({'eta_rho':'eta_v'}) )
-
+    
     # cannot add xi_psi and eta_psi, they are not dimensions
     #xp = xu.rename({'xi_u': 'xi_psi'})
     #yp = yv.rename({'eta_v': 'eta_psi'})
-
-    return ds.assign_coords(xi_rho=xrho,eta_rho=yr, xi_u=xu, eta_v=yv)
-
-
-@xr.register_dataset_accessor('grd')
-class datasetgrd(object):
-    ''' add grd accessor in order to perform common manipulations on ROMS outputs
-    '''
-    def __init__(self, xarray_obj):
-        self._obj = xarray_obj
-        # does not work from here
-        #self.fix_coords()
         
-    def rho2u(self, vin):
-        ds = self._obj
-        if isinstance(vin, str):
-            v = self._obj[vin]
-        else:
-            v = vin
-        vout = (v.shift(xi_rho=1)+v)*0.5
-        vout = vout.isel(xi_rho=slice(1,None))
-        vout = vout.rename({'xi_rho':'xi_u'}).assign_coords(xi_u=ds.xi_u)
-        return vout
-
-    def rho2v(self, vin):
-        ds = self._obj
-        if isinstance(vin, str):
-            v = self._obj[vin]
-        else:
-            v = vin
-        vout = (v.shift(eta_rho=1)+v)*0.5
-        vout = vout.isel(eta_rho=slice(1,None))
-        vout = vout.rename({'eta_rho':'eta_v'}).assign_coords(eta_v=ds.eta_v)
-        return vout
-
-    def rho2psi(self, vin):
-        ds = self._obj
-        if isinstance(vin, str):
-            v = self._obj[vin]
-        else:
-            v = vin
-        vpsi = (v.shift(xi_rho=1)+v+v.shift(xi_rho=1,eta_rho=1)+v.shift(eta_rho=1))*0.25
-        vpsi = vpsi.isel(xi_rho=slice(1,None), eta_rho=slice(1,None))
-        vpsi = vpsi.rename({'xi_rho':'xi_psi', 'eta_rho':'eta_psi'})
-        vpsi = vpsi.assign_coords(xi_psi=ds.xi_psi, eta_psi=ds.eta_psi)
-        return vpsi
-
-    def psi2rho(self, vin):
-        ds = self._obj
-        if isinstance(vin, str):
-            v = self._obj[vin]
-        else:
-            v = vin
-        vout = (v.shift(xi_psi=1)+v+v.shift(xi_psi=1,eta_psi=1)+v.shift(eta_psi=1))*0.25
-        vout = vout.isel(xi_psi=slice(1,None), eta_psi=slice(1,None))
-        vout = vout.rename({'xi_psi':'xi_rho', 'eta_psi':'eta_rho'})
-        vout = vout.assign_coords(xi_rho=ds.xi_rho[1:-1], eta_rho=ds.eta_rho[1:-1])
-        vout, _ = xr.align(vout, ds.h, join='outer')
-        return vout
-
-    def get_z(self, zeta=None, h=None, vgrid='r', hgrid='rho'):
-        ''' compute vertical coordinates
-            zeta should have the size of the final output
-            vertical coordinate should be first
-        '''
-        ds = self._obj
-        if zeta is not None:
-            _zeta = zeta
-        else:
-            _zeta = ds.zeta
-        if h is not None:
-            _h = h
-        else:
-            _h = ds.h
-        #
-        if hgrid is 'u':
-            _zeta = self.rho2u(_zeta)
-            _h = self.rho2u(_h)
-        elif hgrid is 'v':
-            _zeta = self.rho2v(_zeta)
-            _h = self.rho2v(_h)
-        #
-        sc=ds['sc_'+vgrid]
-        cs=ds['Cs_'+vgrid]
-        #
-        z0 = (ds.hc * sc + _h * cs) / (ds.hc + _h)
-        z = _zeta + (_zeta + _h) * z0
-        # manually swap dims, could also perform align with T,S
-        if z.ndim == 3:
-            z = z.transpose(sc.dims[0], _zeta.dims[0], _zeta.dims[1])
-        elif z.ndim == 2:
-            z = z.transpose(sc.dims[0], _zeta.dims[0])            
-        return z.rename('z_'+vgrid)
-
-    def get_uv_from_psi(self, psi):
-        # note that u, v are computed at rho points
-        ds = self._obj
-        x, y = ds.xi_rho, ds.eta_rho
-        #
-        u = - 0.5*(psi.shift(eta_rho=1)-psi)/(y.shift(eta_rho=1)-y) \
-            - 0.5*(psi-psi.shift(eta_rho=-1))/(y-y.shift(eta_rho=-1))
-        #
-        v =   0.5*(psi.shift(xi_rho=1)-psi)/(x.shift(xi_rho=1)-x) \
-            + 0.5*(psi-psi.shift(xi_rho=-1))/(x-x.shift(xi_rho=-1))
-        return u, v
+    ds = ds.assign_coords(xi_rho=xr,eta_rho=yr, 
+                          xi_u=xu, eta_v=yv)
     
+    return ds
+
+
+def rho2u(v, ds):
+    vout = (v.shift(xi_rho=1)+v)*0.5
+    vout = vout.isel(xi_rho=slice(1,None))
+    vout = vout.rename({'xi_rho':'xi_u'}).assign_coords(xi_u=ds.xi_u)
+    return vout
+
+def rho2v(v, ds):
+    vout = (v.shift(eta_rho=1)+v)*0.5
+    vout = vout.isel(eta_rho=slice(1,None))
+    vout = vout.rename({'eta_rho':'eta_v'}).assign_coords(eta_v=ds.eta_v)
+    return vout
+
+def rho2psi(v, ds):
+    vpsi = (v.shift(xi_rho=1)+v+v.shift(xi_rho=1,eta_rho=1)+v.shift(eta_rho=1))*0.25
+    vpsi = vpsi.isel(xi_rho=slice(1,None), eta_rho=slice(1,None))
+    vpsi = vpsi.rename({'xi_rho':'xi_psi', 'eta_rho':'eta_psi'})
+    vpsi = vpsi.assign_coords(xi_psi=ds.xi_psi, eta_psi=ds.eta_psi)
+    return vpsi
+
+def psi2rho(v, ds):
+    vout = (v.shift(xi_psi=1)+v+v.shift(xi_psi=1,eta_psi=1)+v.shift(eta_psi=1))*0.25
+    vout = vout.isel(xi_psi=slice(1,None), eta_psi=slice(1,None))
+    vout = vout.rename({'xi_psi':'xi_rho', 'eta_psi':'eta_rho'})
+    vout = vout.assign_coords(xi_rho=ds.xi_rho[1:-1], eta_rho=ds.eta_rho[1:-1])
+    vout, _ = xr.align(vout, ds.h, join='outer')
+    return vout
+
+def get_z(ds, zeta=None, h=None, vgrid='r', hgrid='rho'):
+    ''' compute vertical coordinates
+        zeta should have the size of the final output
+        vertical coordinate should be first
+    '''
+    if zeta is not None:
+        _zeta = zeta
+    else:
+        _zeta = ds.zeta
+    if h is not None:
+        _h = h
+    else:
+        _h = ds.h
+    #
+    if hgrid is 'u':
+        _zeta = rho2u(_zeta, ds)
+        _h = rho2u(_h, ds)
+    elif hgrid is 'v':
+        _zeta = rho2v(_zeta, ds)
+        _h = rho2v(_h, ds)
+    #
+    sc=ds['sc_'+vgrid]
+    cs=ds['Cs_'+vgrid]
+    #
+    z0 = (ds.hc * sc + _h * cs) / (ds.hc + _h)
+    z = _zeta + (_zeta + _h) * z0
+    # manually swap dims, could also perform align with T,S
+    if z.ndim == 3:
+        z = z.transpose(sc.dims[0], _zeta.dims[0], _zeta.dims[1])
+    elif z.ndim == 2:
+        z = z.transpose(sc.dims[0], _zeta.dims[0])            
+    return z.rename('z_'+vgrid)
+        
 def get_p(rho, zeta, rho0, rho_a=None):
     #
     if rho_a is None:
@@ -150,6 +109,17 @@ def get_p(rho, zeta, rho0, rho_a=None):
     p = p.rename('p')
     return p
 
+def get_uv_from_psi(psi, ds):
+    # note that u, v are computed at rho points
+    x, y = ds.xi_rho, ds.eta_rho
+    #
+    u = - 0.5*(psi.shift(eta_rho=1)-psi)/(y.shift(eta_rho=1)-y) \
+        - 0.5*(psi-psi.shift(eta_rho=-1))/(y-y.shift(eta_rho=-1))
+    #
+    v =   0.5*(psi.shift(xi_rho=1)-psi)/(x.shift(xi_rho=1)-x) \
+        + 0.5*(psi-psi.shift(xi_rho=-1))/(x-x.shift(xi_rho=-1))
+    return u, v
+
 def get_pv(u, v, rho, rho_a, f, f0, zr, zw, ds):
 
     # relative vorticity
@@ -162,7 +132,7 @@ def get_pv(u, v, rho, rho_a, f, f0, zr, zw, ds):
              .rename({'eta_rho':'eta_psi', 'xi_u':'xi_psi'})
              .assign_coords(xi_psi=ds.xi_u.rename({'xi_u':'xi_psi'}), 
                             eta_psi=ds.eta_v.rename({'eta_v':'eta_psi'})))
-    xi = ds.grd.psi2rho(xi_u+xi_v)
+    xi = psi2rho(xi_u+xi_v, ds)
 
     # stretching term
     drho = (rho.shift(z_r=1)+rho)*0.5 * zr.diff('z_r')/rho_a.diff('z_r')
@@ -171,12 +141,11 @@ def get_pv(u, v, rho, rho_a, f, f0, zr, zw, ds):
     Sint = Sint.rename({'z_w':'z_r'}).assign_coords(z_r=zr[1:-1])
 
     # note that top and bottom values are not used in the solver
-    S = f0 * xr.concat([0.*rho.isel(z_r=0), Sint, 0.*rho.isel(z_r=-1)], dim='z_r') 
-    #.transpose('z_r','eta_rho','xi_rho')
+    S = f0 * xr.concat([0.*rho.isel(z_r=0), Sint, 0.*rho.isel(z_r=-1)], dim='z_r') #.transpose('z_r','eta_rho','xi_rho')
 
     # assemble pb
     q = (xi + S + f - f0 ).rename('q') # order of variable conditions dimension order
-
+    
     return q
 
 def interp2z(z0, z, v, extrap):
@@ -210,7 +179,6 @@ def interp2z_xr(z0, z, v,  hgrid='rho', extrap=True):
                          dims=['z_r','eta_'+_ygrid,'xi_'+_xgrid],
                          coords={'z_r': z0.values, 'xi_'+_xgrid: v['xi_'+_xgrid], 
                                  'eta_'+_ygrid: v['eta_'+_ygrid]}) )
-
 
 # ------------------------------------------------------------------------------------------------
 

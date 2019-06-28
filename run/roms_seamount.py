@@ -39,7 +39,9 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         cur_time = start_time
         
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
-        bdy_type = {'top': 'N_PSI', 'bottom': 'N_PSI'}
+        #bdy_type = {'top': 'N_PSI', 'bottom': 'N_PSI'}
+        #bdy_type = {'top': 'D', 'bottom': 'N_PSI'} # dirichlet on top
+        bdy_type = {'top': 'D', 'bottom': 'D'} # dirichlet on top/bottom        
 
         # vertical subdomain
         vdom = {'Nz': 48}
@@ -64,7 +66,7 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         ##               
         qg = qg_model(boundary_types=bdy_type, **params)
 
-        # start filling in variables    
+        # start filling in variables
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
         qg.write_state(filename=outdir+'input.nc')
@@ -72,13 +74,15 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         # substract background state
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state, bstate, da=None, a2=-1.)
-        #qg.state += -bstate
         qg.write_state(filename=outdir+'input.nc', append=True)
+        
+        # reset PV from psi
+        qg.pvinv.q_from_psi(qg.state.Q, qg.state.PSI)
         
         # after PV inversion
         qg.invert_pv()
         qg.write_state(filename=outdir+'output_full.nc')
-
+        
         # after PV inversion with 0 PV
         qg.state.Q = qg.state.Q*0
         qg.invert_pv()
