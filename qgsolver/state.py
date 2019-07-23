@@ -91,6 +91,16 @@ class state():
     def __sub__(self,other):
         return None
 
+    def copy(self, da):
+        ''' copy state 
+
+        Parameters
+        ----------
+        da : None or petsc DMDA
+            if None state1 is updated; otherwise a new state is created
+        '''
+        return add(self, self, da, a1=1., a2=0.)
+        
 #
 # ==================== fill state variables ============================================
 #
@@ -509,4 +519,3 @@ def add(state1, state2, da=None, a1=1., a2=1.):
 
     if da is not None:
         return new_state
-

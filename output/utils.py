@@ -51,6 +51,21 @@ def vorticity(psi):
          + (psi.shift(y=1)-2.*psi+psi.shift(y=-1))/dy/dy
     return xi.rename('zeta')
 
+def xrsel(da, coord, x, threshold=1.):
+    ''' select xarray object around coordinate that is not a dimension
+
+    Parameters
+    ----------
+    da: xarray DataArray/Dataset
+    coord: str
+        coordinate used for selection
+    x: float/int
+        value selected
+    threshold: float/int
+        threshold value for selection, optional, default to 1
+    '''
+    return da.where( abs(da[coord]-x)<threshold, drop=True).isel(**{da[coord].dims[0]: 0})
+
 
 # ----------------------------------- netcdf4 ------------------------------------
 

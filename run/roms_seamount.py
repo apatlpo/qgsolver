@@ -4,7 +4,7 @@
 """
 Run qgsolver with outputs from idealized ROMS numerical simulations
 
-python run_datarmor.py seamount/case0 roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
+python run_datarmor.py seamount/pvfpsi_tD_bD roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
 #python run_datarmor.py seamount roms_seamount.py /home1/datahome/aponte/qgsolver/input/seamount/
 
 """
@@ -40,6 +40,7 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         
         # Top and Bottom boundary condition type: 'N' for Neumann, 'D' for Dirichlet
         #bdy_type = {'top': 'N_PSI', 'bottom': 'N_PSI'}
+        #bdy_type = {'top': 'N_PSI', 'bottom': 'D'}
         #bdy_type = {'top': 'D', 'bottom': 'N_PSI'} # dirichlet on top
         bdy_type = {'top': 'D', 'bottom': 'D'} # dirichlet on top/bottom        
 
@@ -70,24 +71,42 @@ def roms_input_runs(ncores_x=4, ncores_y=6, ping_mpi_cfg=False):
         qg.set_q(file=file_q)
         qg.set_psi(file=file_psi)   
         qg.write_state(filename=outdir+'input.nc')
-
+        
         # substract background state
         bstate = qg.set_bstate(file=file_bg)
         add(qg.state, bstate, da=None, a2=-1.)
         qg.write_state(filename=outdir+'input.nc', append=True)
-        
+
         # reset PV from psi
-        qg.pvinv.q_from_psi(qg.state.Q, qg.state.PSI)
+        #qg.pvinv.q_from_psi(qg.state.Q, qg.state.PSI)
+
+        # make copy of the original state
+        state0 = qg.state.copy(qg.da)
         
-        # after PV inversion
+        ## PV inversion
+
         qg.invert_pv()
         qg.write_state(filename=outdir+'output_full.nc')
         
-        # after PV inversion with 0 PV
+        # set lateral boundary conditions to 0
+        # this does not work as top and bottom boundary conditions are also using the PSI provided
+        #qg.state = state0.copy(qg.da)
+        #qg.invert_pv(PSI=qg.state.PSI*0)
+        #qg.write_state(filename=outdir+'output_full_lat0.nc')
+        
+        ## PV inversion without PV
+    
+        qg.state = state0.copy(qg.da)
         qg.state.Q = qg.state.Q*0
         qg.invert_pv()
         qg.write_state(filename=outdir+'output_bsqg.nc')
 
+        # set lateral boundary conditions to 0
+        # this does not work as top and bottom boundary conditions are also using the PSI provided
+        #qg.state = state0.copy(qg.da)
+        #qg.state.Q = qg.state.Q*0
+        #qg.invert_pv(PSI=qg.state.PSI*0)
+        #qg.write_state(filename=outdir+'output_bsqg_lat0.nc')
         
         if qg._verbose>0:
             print('----------------------------------------------------')

@@ -34,7 +34,6 @@ def fix_coords(ds):
     
     return ds
 
-
 def rho2u(v, ds):
     vout = (v.shift(xi_rho=1)+v)*0.5
     vout = vout.isel(xi_rho=slice(1,None))
@@ -220,7 +219,6 @@ def create_nc(filename, lon, lat, zt, zw):
     nc_zw[:] = zw
         
     return rootgrp
-
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.

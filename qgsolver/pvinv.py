@@ -118,7 +118,7 @@ class pvinversion():
         RHO : petsc Vec, None, optional
             density, use state.RHO if None
         bstate : state object, None, optional
-            background state that will be added in advective terms
+            background state that will be substracted prior to PV inversion
         addback_bstate : boolean
             if True, add background state back to output variables ()
         topdown_rho : boolean
