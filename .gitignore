@@ -6,12 +6,13 @@ clean
 *.swp
 *.so
 .DS_Store
+*.egg-info
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 
-# eclipse related files 
+# eclipse related files
 .project
 .pydevproject
 .settings/
@@ -35,4 +36,3 @@ output/img/
 
 # openoffice
 *.odp#
-

@@ -5,28 +5,35 @@ import sys
 import numpy as np
 from .inout import read_nc, read_hgrid_dimensions
 # for curvilinear grids
+
 from netCDF4 import Dataset
+import xarray as xr
 
 class grid(object):
     """
     Grid object
     """
 
-
-
 #
 #==================== Builders ============================================
-# 
-    
+#
+
     #
     # object init
     #
-    def __init__(self, hgrid_in, vgrid_in, hdom_in, vdom_in, mask=False, verbose=1):
+    def __init__(self,
+                 hgrid,
+                 vgrid,
+                 hdom,
+                 vdom,
+                 mask=False,
+                 verbose=1,
+                 ):
         """ Builds a grid object
 
         Parameters
         ----------
-        hgrid_in : str, dict or None
+        hgrid : str, dict or None
             horizontal grid file name or analytical grid if dict or None
             Example:
             hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':150, 'Ny':100}
@@ -34,129 +41,123 @@ class grid(object):
             vertical grid file name or analytical grid if dict or None
             Example:
             vgrid = {'H':4.e3, 'Nz':10}
-        hdom_in : dict
+        hdom : dict
             horizontal grid dimension description
             Example:
-            hdom_in = {'Nx': 100, 'Ny': 200}
-            hdom_in = {'Nx': 100, 'Ny': 200, 'i0': 10, 'j0': 20}
+            hdom = {'Nx': 100, 'Ny': 200}
+            hdom = {'Nx': 100, 'Ny': 200, 'i0': 10, 'j0': 20}
             i0 and j0 are start indices in grid input netcdf file
             missing parameters are deduced but one should have: Nx=iend-istart+1, Ny=jend-jstart+1
-        vdom_in : dict
+        vdom : dict
             vertical grid dimension description
             Example:
-            vdom_in = {'Nz': 10, 'k0': 10}
+            vdom = {'Nz': 10, 'k0': 10}
             k0 is the start index in grid input netcdf file
             missing parameters are deduced but one should have: kup-kdown+1
         mask : boolean, optional
             activates the use of a mask, default is false
         verbose : int, optional
             degree of verbosity, 0 means no outputs, default is 1
-            
+
         """
         self._verbose = verbose
-        
+
         #
         # horizontal global grids
         #
         self._flag_hgrid_uniform = False
-        if hgrid_in is None or isinstance(hgrid_in,dict):
+        if hgrid is None or isinstance(hgrid,dict):
             # uniform grid
-            self._flag_hgrid_uniform = True            
+            self._flag_hgrid_uniform = True
             #
-            hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':150, 'Ny':100}
-            hgrid.update(hgrid_in)
-            self._build_hgrid_uniform(**hgrid)
+            _hgrid = {'Lx':300.*1.e3, 'Ly':200.*1.e3, 'Nx':200, 'Ny':100}
+            _hgrid.update(hgrid)
+            self._build_hgrid_uniform(**_hgrid)
         else:
             # curvilinear grid
             #print('!!! need to determine Nx and Ny from files')
-            self._build_hgrid_curvilinear(hgrid_in)
+            self._build_hgrid_curvilinear(hgrid)
         # mask
         self.mask=mask
 
-        #   
+        #
         # vertical grid
         #
         self._flag_vgrid_uniform = False
-        if vgrid_in is None or isinstance(vgrid_in,dict):
+        if vgrid is None or isinstance(vgrid,dict):
             # uniform grid
             self._flag_vgrid_uniform = True
             #
-            vgrid = {'H':4.e3, 'Nz':10}
-            vgrid.update(vgrid_in)
-            self._build_vgrid_uniform(**vgrid)
+            _vgrid = {'H':4.e3, 'Nz':10}
+            _vgrid.update(vgrid)
+            self._build_vgrid_uniform(**_vgrid)
         else:
             # curvilinear grid
             #print('!!! need to determine Nz from files')
-            self._build_vgrid_stretched(vgrid_in)
+            self._build_vgrid_stretched(vgrid)
 
 
         # check that Nx, Ny, Nz can be derived or that they are provided
-        if 'Nx' in hdom_in.keys():
-            self.Nx=hdom_in['Nx']
+        if 'Nx' in hdom:
+            self.Nx=hdom['Nx']
         else:
             if not hasattr(self,'Nx'):
                 try:
-                    self.Nx = hdom_in['iend']-hdom_in['istart']+1
+                    self.Nx = hdom['iend']-hdom['istart']+1
                 except:
                     print('!Error: you need to prescribe one of the two variables: Nx, iend')
                     sys.exit()
-        if 'Ny' in hdom_in.keys():
-            self.Ny=hdom_in['Ny']      
-        else:      
+        if 'Ny' in hdom:
+            self.Ny=hdom['Ny']
+        else:
             if not hasattr(self,'Ny'):
                 try:
-                    self.Ny = hdom_in['jend']-hdom_in['jstart']+1
+                    self.Ny = hdom['jend']-hdom['jstart']+1
                 except:
                     print('!Error: you need to prescribe one of the two variables: Ny, jend')
                     sys.exit()
-        if 'Nz' in vdom_in.keys():
-            self.Nz=vdom_in['Nz']
+        if 'Nz' in vdom:
+            self.Nz=vdom['Nz']
         else:
             if not hasattr(self,'Nz'):
                 try:
-                    self.Nz = vdom_in['kup']-vdom_in['kdown']+1
+                    self.Nz = vdom['kup']-vdom['kdown']+1
                 except:
                     print('!Error: you need to prescribe one of the two variables: Nz, kup')
                     sys.exit()
 
-
         #
         # deals with subdomains
         #
-        self._flag_vdom=False
-        if vdom_in:
-            self._flag_vdom=True
-        vdom = {'kdown': 0, 'kup': self.Nz-1, 'k0': 0}
-        vdom.update(vdom_in)
-        for key, value in vdom.items():
-            exec ('self.' + key + '=' + str(value))
+        self._flag_vdom=True if vdom else False
+        _vdom = {'kdown': 0, 'kup': self.Nz-1, 'k0': 0}
+        _vdom.update(vdom)
 
-        self._flag_hdom=False
-        if hdom_in:
-            self._flag_hdom=True
-        hdom = {'istart': 0, 'iend': self.Nx-1, 'i0': 0,
+        self._flag_hdom=True if hdom else False
+        _hdom = {'istart': 0, 'iend': self.Nx-1, 'i0': 0,
                 'jstart': 0, 'jend': self.Ny-1, 'j0': 0}
-        hdom.update(hdom_in)
-        for key, value in hdom.items():
-            exec ('self.' + key + '=' + str(value))
+        _hdom.update(hdom)
+
+        # set as attributes
+        for key, value in {**_hdom, **_vdom}.items():
+            setattr(self, key, value)
 
         # fills in jend, iend, or kup if necessary
-        if 'iend' not in hdom_in:
+        if 'iend' not in hdom:
             try:
                 self.iend=self.istart+self.Nx-1
             except:
                 print('!Error: iend cannot be determined')
-        if 'jend' not in hdom_in:
+        if 'jend' not in hdom:
             try:
                 self.jend=self.jstart+self.Ny-1
             except:
                 print('!Error: jend cannot be determined')
-        if 'kup' not in vdom_in:
+        if 'kup' not in vdom:
             try:
                 self.kup=self.kdown+self.Nz-1
             except:
                 print('!Error: kup cannot be determined')
-                 
 
         # check consistency between subdomain indices and Nx, Ny and Nz
         if self.iend-self.istart+1!=self.Nx:
@@ -179,7 +180,7 @@ class grid(object):
         # compute metric terms
         self.dx=self.Lx/(self.Nx-1.)
         self.dy=self.Ly/(self.Ny-1.)
-        
+
     def _build_vgrid_uniform(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -200,8 +201,8 @@ class grid(object):
         self.hgrid_file = hgrid_file
         # loads dimensions for dmda creation
         #self.Nx0, self.Ny0 = read_hgrid_dimensions(self.hgrid_file)
-    
-    
+
+
     def load_metric_terms(self, da):
         """ Load metric terms from self.hgrid_file
 
@@ -212,13 +213,15 @@ class grid(object):
 
         """
 
+        #if not hasattr(self, D):
         # create a 3D vector containing metric terms
-        self.D = da.createGlobalVec()
+        #self.D = da.createGlobalVec()
+
         # load curvilinear metric terms
         v = da.getVecArray(self.D)
         v[:] = 0.
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        # indexes along the third dimension of 
+        # indexes along the third dimension of
         self._k_dxt = zs
         self._k_dyt = zs+1
         self._k_dxu = zs+2
@@ -236,8 +239,8 @@ class grid(object):
             v[:, :, self._k_dyt] = self.dy
             lx, ly = np.meshgrid(self.dx*np.arange(xs,xe,1.),self.dy*np.arange(ys,ye,1.),indexing='ij')
             v[:, :, self._k_lon] = lx
-            v[:, :, self._k_lat] = ly        
-                    
+            v[:, :, self._k_lat] = ly
+
         else:
             # open and read netcdf file
             rootgrp = Dataset(self.hgrid_file, 'r')
@@ -254,20 +257,20 @@ class grid(object):
                 sys.exit()
             try:
                 v[:, :, self._k_dyu] = np.transpose(rootgrp.variables['dyu'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
-            except:                        
+            except:
                 print('!Error: must init dyu')
-                sys.exit()    
+                sys.exit()
             try:
                 v[:, :, self._k_dxv] = np.transpose(rootgrp.variables['dxv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:
                 print('!Error: must init dxv ')
-                sys.exit()    
+                sys.exit()
             try:
                 v[:, :, self._k_dyv] = np.transpose(rootgrp.variables['dyv'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
             except:
                 print('!Error:  must init dyv')
                 sys.exit()
- 
+
         rootgrp.close()
 
         #if self._flag_vgrid_uniform:
@@ -298,7 +301,7 @@ class grid(object):
         #
         comm = da.getComm()
         comm.barrier()
-    
+
     def load_coriolis_parameter(self, coriolis_file, da):
         """ Load the Coriolis parameter
 
@@ -310,9 +313,12 @@ class grid(object):
             holds the petsc grid
 
         """
+        if not hasattr(self, D):
+            # create a 3D vector containing metric terms
+            self.D = da.createGlobalVec()
         v = da.getVecArray(self.D)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        # indexes along the third dimension 
+        # indexes along the third dimension
         self._k_f=zs+9
         # open and read netcdf file
         rootgrp = Dataset(coriolis_file, 'r')
@@ -321,8 +327,13 @@ class grid(object):
         #
         comm=da.getComm()
         comm.barrier()
-     
-    def load_mask(self, mask_file, da, mask3D=False):
+
+    def load_mask(self,
+                  mask_file,
+                  da,
+                  mask3D=False,
+                  dims=("x", "y"),
+                  ):
         """Load reference mask from metrics file
         grid.D[grid._k_mask,:,:] will contain the mask
 
@@ -336,29 +347,32 @@ class grid(object):
             flag for 3D masks, default is False
 
         """
-        self.mask3D = mask3D
+        if not hasattr(self, "D"):
+            # create a 3D vector containing metric terms
+            self.D = da.createGlobalVec()
         if not mask3D:
+            self.mask3D = False
             v = da.getVecArray(self.D)
         else:
             self.mask3D = da.createGlobalVec()
             v = da.getVecArray(self.mask3D)
-
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
-        # index of the mask along the third dimension 
+        # index of the mask along the third dimension
         self._k_mask=zs+8
+        ds = xr.open_dataset(mask_file)
+        assert "mask" in ds, \
+            "No mask variable found in {}".format(mask_file)
         if not mask3D:
-            try:
-                # open the netcdf file and read the mask
-                rootgrp = Dataset(mask_file, 'r')
-                v[:, :, self._k_mask] = np.transpose(rootgrp.variables['mask'][ys+self.j0:ye+self.j0,xs+self.i0:xe+self.i0],(1,0))
-                rootgrp.close()
-                if self._verbose>0:
-                    print('    The mask is 2D and loaded')
-            except:
-                # no mask found, only sea
-                v[:, :, self._k_mask] = 1.   
-                if self._verbose>0:
-                    print('    The mask is 2D but no data was found')
+            _ma = (ds["mask"]
+                  .isel(x=slice(xs+self.i0, xe+self.i0),
+                        y=slice(ys+self.j0, ye+self.j0))
+                  .transpose("x", "y")
+                  )
+            v[:, :, self._k_mask] = _ma
+            if self._verbose>0:
+                print('    The mask is 2D and loaded')
+            # no mask found, only sea
+            #v[:, :, self._k_mask] = 1.
         else:
             try:
                 # open the netcdf file and read the mask
@@ -366,7 +380,7 @@ class grid(object):
                 for k in range(zs, ze):
                     for j in range(ys, ye):
                         for i in range(xs, xe):
-                            v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]               
+                            v[i, j, k] = rootgrp.variables['mask'][k+self.k0,j+self.j0,i+self.i0]
                 rootgrp.close()
                 if self._verbose>0:
                     print('    The mask is 3D and loaded')
@@ -378,7 +392,7 @@ class grid(object):
         #
         comm=da.getComm()
         comm.barrier()
-        pass   
+        pass
 
     #
     # Vertically stretched grid
@@ -395,10 +409,10 @@ class grid(object):
 
 #
 #==================== Grid information ============================================
-#             
-              
+#
+
     def __str__(self):
-        
+
         if self._flag_hgrid_uniform:
             out = '  The horizontal grid is uniform with:\n' \
                 + '    Nx = %i , Ny = %i \n' % (self.Nx, self.Ny) \
@@ -411,7 +425,7 @@ class grid(object):
                 + '    Nx = %i , Ny = %i\n' % (self.Nx, self.Ny)
             #    + '  min(dx) = %e , mean(dx) = %e, max(dx) = %e \n' % (np.min(self.dx), np.mean(self.dx), np.max(self.dx)) \
             #    + '  min(dy) = %e , mean(dy) = %e, max(dy) = %e \n' % (np.min(self.dy), np.mean(self.dy), np.max(self.dy))
-                
+
         if self._flag_vgrid_uniform:
             out += '  The vertical grid is uniform with:\n' \
                 +  '    Nz = %i' % (self.Nz) \
@@ -428,12 +442,12 @@ class grid(object):
         if self._flag_hdom:
             print('\n  Horizontal subdomain: (istart, iend) = (%d, %d), (jstart, jend) = (%d, %d)' \
                          %(self.istart, self.iend, self.jstart, self.jend))
-                         
+
         if self._flag_vdom:
             print('\n  Vertical subdomain: kdown=%d, kup=%d' %(self.kdown, self.kup))
 
         return out
-      
+
 
 #
 #==================== extract grid data ============================================
@@ -459,6 +473,3 @@ class grid(object):
         else:
             z=self.zt
         return z
-
-
-

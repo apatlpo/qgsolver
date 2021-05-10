@@ -46,9 +46,13 @@ class qg_model():
         ncores_y : int
             number of MPI tilings in y direction
         hgrid : dict or str
-            defines horizontal grid choice
+            defines horizontal grid choice, see grid doc
         vgrid : dict or str
-            defines vertical grid choice
+            defines vertical grid choice, see grid doc
+        hdom : dict
+            select subdomain, see grid doc
+        vdom : dict
+            select subdomain, see grid doc
         boundary_types : dict
             may be used to turn on periodic boundary conditions {'periodic'}
         N2 : float, optional
@@ -227,7 +231,7 @@ class qg_model():
 #
 #==================== useful wrappers for solvers ============================================
 #
-                 
+
     def invert_pv(self, **kwargs):
         ''' wrapper around pv inversion solver pvinv.solve
         '''
@@ -317,24 +321,21 @@ class qg_model():
 
         kdxu = self.grid._k_dxu
         (xs, xe), (ys, ye), (zs, ze) = self.da.getRanges()
-    
+
         for k in range(zs,ze):
             u[:,:,k] = u[:,:,k]/D[:,:,kdxu]
 
     def compute_KE(self, PSI=None):
         ''' Compute the domain averaged kinetic energy, wrapper around state.compute_KE
-        
+
         Parameters
         ----------
         PSI: petsc Vec, optional
             PSI vector used for velocity computation
-            
+
         Returns
         -------
         KE: float
-            Kinetic energy in m/s                    
+            Kinetic energy in m/s
         '''
         return self.state.compute_KE(self.da, self.grid, PSI=PSI)
-        
-        
-        

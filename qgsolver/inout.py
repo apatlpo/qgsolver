@@ -29,7 +29,7 @@ def write_nc(V, vname, filename, da, grid, append=False):
         holds the petsc grid
     grid : qgsolver grid object
         grid data holder
-    append: boolean
+    append: boolean, optional
         append data to an existing file if True, create new file otherwise
         default is False
 
@@ -46,7 +46,7 @@ def write_nc(V, vname, filename, da, grid, append=False):
 
     # test file existence
     if not os.path.isfile(filename):
-        append=False 
+        append=False
 
     if rank == 0 and not append:
 
@@ -59,7 +59,7 @@ def write_nc(V, vname, filename, da, grid, append=False):
         rootgrp.createDimension('y', grid.Ny)
         rootgrp.createDimension('z', grid.Nz)
         rootgrp.createDimension('t', None)
-        
+
         # create variables
         dtype='f8'
         nc_x = rootgrp.createVariable('x',dtype,('x'))
@@ -83,10 +83,10 @@ def write_nc(V, vname, filename, da, grid, append=False):
         nc_V=[]
         for name in vname:
             nc_V.append(rootgrp.variables[name])
-        
+
     # loop around variables now and store them
     for i in range(Nv):
-        #  get global variable for rank 0 (None for other proc) 
+        #  get global variable for rank 0 (None for other proc)
         vglobal = get_global(V[i], da, rank)
         if rank == 0:
             if not append:
@@ -94,7 +94,7 @@ def write_nc(V, vname, filename, da, grid, append=False):
             else:
                 if i==0: it=nc_V[i].shape[0]
                 nc_V[i][it,...] = vglobal[:]
-         
+
     if rank == 0:
         # close the netcdf file
         rootgrp.close()
@@ -133,7 +133,7 @@ def read_nc_petsc(V, vname, filename, da, grid, fillmask=None):
     kdown = zs + grid.k0
     kup = ze + grid.k0
 
-    if os.path.isfile(filename): 
+    if os.path.isfile(filename):
         v = da.getVecArray(V)
         rootgrp = Dataset(filename, 'r')
         ndim=len(rootgrp.variables[vname].shape)
@@ -144,7 +144,7 @@ def read_nc_petsc(V, vname, filename, da, grid, fillmask=None):
         # https://github.com/Unidata/netcdf4-python/issues/306
             vread = rootgrp.variables[vname][rootgrp.variables[vname].shape[0]-1,kdown:kup,jstart:jend,istart:iend]
         else:
-            vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]        
+            vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]
         #vread = rootgrp.variables[vname][kdown:kup,jstart:jend,istart:iend]
         # replace the default fill value of netCDF by the input fillmask value
         if fillmask is not None:
@@ -153,8 +153,8 @@ def read_nc_petsc(V, vname, filename, da, grid, fillmask=None):
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
-                    v[i, j, k] = vread[k-zs,j-ys,i-xs]                  
-    
+                    v[i, j, k] = vread[k-zs,j-ys,i-xs]
+
         rootgrp.close()
     else:
         print('Error: read '+vname+': '+filename+' does not exist. Program will stop.')
@@ -187,7 +187,7 @@ def read_nc_petsc_2D(V, vname, filename, level, da, grid):
     jstart = ys + grid.j0
     jend = ye + grid.j0
 
-    if os.path.isfile(filename): 
+    if os.path.isfile(filename):
         rootgrp = Dataset(filename, 'r')
         ndim=len(rootgrp.variables[vname].shape)
         if ndim==2:
@@ -197,11 +197,11 @@ def read_nc_petsc_2D(V, vname, filename, level, da, grid):
             sys.exit()
         for j in range(ys, ye):
             for i in range(xs, xe):
-                v[i, j, level] = vread[j-ys,i-xs]                  
+                v[i, j, level] = vread[j-ys,i-xs]
         rootgrp.close()
     else:
         print('Error: read '+vname+': '+filename+' does not exist. Program will stop.')
-        sys.exit()         
+        sys.exit()
 
 def read_nc(vnames, filename, grid):
     """ Read variables from a netcdf file
@@ -217,15 +217,15 @@ def read_nc(vnames, filename, grid):
         grid data holder
 
     """
-   
+
     if os.path.isfile(filename):
         # open netdc file
         rootgrp = Dataset(filename, 'r')
-        
+
         # loop around variables to load
         kstart = grid.k0
         kend = grid.k0 + grid.Nz
-    
+
         if isinstance(vnames, list):
             V=[]
             for name in vnames:
@@ -248,10 +248,10 @@ def read_nc(vnames, filename, grid):
             else:
                 print('error in read_nc: unknown variable '+vnames)
                 sys.exit()
-    
+
         # close the netcdf file
         rootgrp.close()
-        
+
         return V
     else:
         print('!Error: read '+vnames+': '+filename+' does not exist. Program will stop.')
@@ -276,7 +276,7 @@ def read_hgrid_dimensions(hgrid_file):
     # open netcdf file
     rootgrp = Dataset(hgrid_file, 'r')
     Nx = len(rootgrp.dimensions['x'])
-    Ny = len(rootgrp.dimensions['y'])    
+    Ny = len(rootgrp.dimensions['y'])
     return Nx, Ny
 
 def get_global(V, da, rank):
@@ -296,7 +296,7 @@ def get_global(V, da, rank):
     Vf : ndarray
         Copyt of the global array
 
-    """    
+    """
     Vn = da.createNaturalVec()
     da.globalToNatural(V, Vn)
     scatter, Vn0 = PETSc.Scatter.toZero(Vn)
@@ -317,7 +317,7 @@ def get_global(V, da, rank):
 
 class input(object):
     '''
-    Hold data that will be used 
+    Hold data that will be used
     Interpolate data in time
     '''
 
@@ -328,17 +328,9 @@ class input(object):
         # browses files in order to figure out available times
         #self.data = da.createGlobalVec()
         pass
-    
-    
+
+
     def update(self,time):
         ''' interpolate input data at a given time
         '''
         pass
-
-
-
-
-
-
-
-
