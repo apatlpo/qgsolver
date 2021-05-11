@@ -14,7 +14,7 @@ from .utils import g, rho0
 class pvinversion():
     ''' PV inversion solver
     '''
-    
+
     def __init__(self, da, grid, bdy_type, sparam, verbose=0, solver='gmres', pc=None):
         ''' Setup the PV inversion solver
 
@@ -90,7 +90,7 @@ class pvinversion():
         for opt in sys.argv[1:]:
             PETSc.Options().setValue(opt, None)
         self.ksp.setFromOptions()
-        
+
         if self._verbose>0:
             print('  PV inversion is set up')
 
@@ -187,7 +187,7 @@ class pvinversion():
 
     def q_from_psi(self, Q, PSI):
         ''' Compute PV from a streamfunction
-        
+
         Parameters
         ----------
         Q : petsc Vec
@@ -197,7 +197,7 @@ class pvinversion():
         '''
         self.L.mult(PSI, Q)
         # should fix boundary conditions
-        
+
 
     def set_rhs_bdy(self, da, grid, state, PSI, RHO, topdown_rho):
         ''' Set South/North, East/West, Bottom/Top boundary conditions
@@ -220,7 +220,7 @@ class pvinversion():
             if True, indicates that RHO used for top down boundary conditions
             is contained in state.Q at indices kdown and kup
         '''
-        
+
         if self._verbose>1:
             print('  Set RHS along boudaries for inversion ')
 
@@ -260,12 +260,12 @@ class pvinversion():
         elif self.bdy_type['bottom'] == 'N_RHO' or topdown_rho:
             print('!Error: pvinv.set_rhs_bdy_bottom requires RHO, none provided')
             sys.exit()
-           
+
         # lower ghost area
         if zs < kdown:
             for k in range(zs,kdown):
                 for j in range(ys, ye):
-                    for i in range(xs, xe):                    
+                    for i in range(xs, xe):
                         # rhs[i,j,k]=sys.float_info.epsilon
                         rhs[i,j,k]=psi[i, j, k]
         # bottom bdy
@@ -285,7 +285,7 @@ class pvinversion():
         else:
             print(self.bdy_type['bottom']+" unknown bottom boundary condition")
             sys.exit()
-                
+
         return
 
     def set_rhs_bdy_top(self, da, grid, state, PSI, RHO, topdown_rho):
@@ -307,7 +307,7 @@ class pvinversion():
             if True, indicates that RHO used for top down boundary conditions
             is contained in state.Q at indices kdown and kup
         '''
-        
+
         rhs = da.getVecArray(self._RHS)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
@@ -325,8 +325,8 @@ class pvinversion():
             for k in range(kup+1,ze):
                 for j in range(ys, ye):
                     for i in range(xs, xe):
-                        # rhs[i,j,k]=sys.float_info.epsilon   
-                        rhs[i,j,k]= psi[i,j,k]            
+                        # rhs[i,j,k]=sys.float_info.epsilon
+                        rhs[i,j,k]= psi[i,j,k]
         # upper bdy
         k = kup
         if self.bdy_type['top'] == 'N_RHO' or topdown_rho:
@@ -361,7 +361,7 @@ class pvinversion():
         PSI : petsc Vec, None, optional
             streamfunction, use state.PSI if None
         '''
-        
+
         rhs = da.getVecArray(self._RHS)
         (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
@@ -422,7 +422,7 @@ class pvinversion():
         kmask = grid._k_mask
 
         psi = da.getVecArray(PSI)
-        
+
         # interior
         for k in range(zs,ze):
             for j in range(ys, ye):
@@ -436,7 +436,7 @@ class pvinversion():
 #
 # ==================== Define elliptical operators ===================================
 #
-    
+
     def _set_L(self,L, da, grid, sparam):
         ''' Builds the laplacian operator along with boundary conditions
             Horizontally uniform grid
@@ -452,10 +452,10 @@ class pvinversion():
         sparam : ndarray
             f0^2/N^2/ array
         '''
-        
+
         if self._verbose>0:
             print('  ... assumes a uniform horizontal and vertical grid')
-        
+
         #
         dx, dy, dz = grid.dx, grid.dy, grid.dz
         idx, idy, idz = [1.0/dl for dl in [dx, dy, dz]]
@@ -473,7 +473,7 @@ class pvinversion():
         row = PETSc.Mat.Stencil()
         col = PETSc.Mat.Stencil()
         #
-    
+
         for k in range(zs, ze):
             for j in range(ys, ye):
                 for i in range(xs, xe):
@@ -484,7 +484,7 @@ class pvinversion():
                     if (i <= istart or i >= iend or j <= jstart or j >= jend) \
                             and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
-    
+
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif k == kdown:
                         if self.bdy_type['bottom'] in ['N_RHO', 'N_PSI']:
@@ -499,7 +499,7 @@ class pvinversion():
                         else:
                             print('unknown bottom boundary condition')
                             sys.exit()
-    
+
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif k == kup:
                         if self.bdy_type['top'] in ['N_RHO', 'N_PSI']:
@@ -514,11 +514,11 @@ class pvinversion():
                         else:
                             print('unknown top boundary condition')
                             sys.exit()
-    
+
                     # points below and above the domain
                     elif k < kdown or k > kup:
                         L.setValueStencil(row, row, 0.0)
-    
+
                     # interior points: pv is prescribed
                     else:
                         for index, value in [
@@ -550,7 +550,7 @@ class pvinversion():
         sparam : ndarray
             f0^2/N^2/ array
         '''
-        
+
         if self._verbose>0:
             print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
@@ -587,16 +587,16 @@ class pvinversion():
                     # row index
                     row.index = (i, j, k)
                     row.field = 0
-    
+
                     # masked points (land=0), L=1
                     if D[i,j,kmask] == 0.:
                         L.setValueStencil(row, row, 1.)
-   
-                    # domain edges 
+
+                    # domain edges
                     elif (i <= istart or i >= iend or j <= jstart or j >= jend) \
                             and self.petscBoundaryType is not 'periodic':
                         L.setValueStencil(row, row, 1.0)
-    
+
                     # bottom bdy condition: default Neuman dpsi/dz=...
                     elif k == kdown:
                         if self.bdy_type['bottom'] in ['N_RHO', 'N_PSI']:
@@ -611,7 +611,7 @@ class pvinversion():
                         else:
                             print('unknown bottom boundary condition')
                             sys.exit()
-    
+
                     # top bdy condition: default Neuman dpsi/dz=...
                     elif k == kup:
                         if self.bdy_type['top'] in ['N_RHO', 'N_PSI']:
@@ -626,14 +626,14 @@ class pvinversion():
                         else:
                             print('unknown top boundary condition')
                             sys.exit()
-    
+
                     # points below and above the domain
                     elif k < kdown or k > kup:
                         L.setValueStencil(row, row, 1.0)
 
                     # interior points: pv is prescribed
                     else:
-                        
+
                         for index, value in [
                                 ((i,j,k-1), sparam[k-1]*idzt[k]*idzw[k-1]),
                                 ((i,j-1,k), 1./D[i,j,kdxt]/D[i,j,kdyt] * D[i,j-1,kdxv]/D[i,j-1,kdyv]),

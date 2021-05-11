@@ -30,6 +30,15 @@ class window():
                  ):
         """ Window model creation
 
+        The window \psi satisfies:
+
+        \psi = \psi_0 / max(\psi_0)
+
+        where:
+
+        \Delta \psi_0 - k^2 \psi_0 = 1
+        \psi_0 = 0 on frontiers and land
+
         Parameters
         ----------
         ncores_x : int
@@ -263,16 +272,18 @@ class wininversion():
         :param win: win_model instance
         """
 
-        rhs = win.da.getVecArray(self._RHS)
-        mx, my, mz = win.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
+        da, grid = win.da, win.grid
 
-        istart = win.grid.istart
-        iend = win.grid.iend
-        jstart = win.grid.jstart
-        jend = win.grid.jend
-        kdown = win.grid.kdown
-        kup = win.grid.kup
+        rhs = da.getVecArray(self._RHS)
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
 
         # lower ghost area
         if zs < kdown:
@@ -330,23 +341,25 @@ class wininversion():
         :param win: win_model instance
         """
 
-        rhs = win.da.getVecArray(self._RHS)
+        da, grid = win.da, win.grid
+
+        rhs = da.getVecArray(self._RHS)
         #
         if not win.mask3D:
-            mask = win.da.getVecArray(win.grid.D)
-            kmask = win.grid._k_mask
+            mask = da.getVecArray(grid.D)
+            kmask = grid._k_mask
         else:
-            mask = win.da.getVecArray(win.grid.mask3D)
+            mask = da.getVecArray(grid.mask3D)
         #
-        mx, my, mz = win.da.getSizes()
-        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
+        mx, my, mz = da.getSizes()
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
 
-        istart = win.grid.istart
-        iend = win.grid.iend
-        jstart = win.grid.jstart
-        jend = win.grid.jend
-        kdown = win.grid.kdown
-        kup = win.grid.kup
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
 
         # interior
         if not win.mask3D:
@@ -380,7 +393,7 @@ class wininversion():
         da.globalToLocal(grid.D, local_D)
         D = da.getVecArray(local_D)
         if not win.mask3D:
-            #mask = win.da.getVecArray(win.grid.D)
+            #mask = da.getVecArray(grid.D)
             kmask = grid._k_mask
         else:
             mask = da.getVecArray(grid.mask3D)
@@ -448,35 +461,37 @@ class wininversion():
             Horizontally uniform grid
         """
 
+        da, grid = win.da, win.grid
+
         if win._verbose>0:
             print('  ... assumes a curvilinear and/or vertically stretched grid')
         #
-        mx, my, mz = win.da.getSizes()
+        mx, my, mz = da.getSizes()
         #
-        local_D  = win.da.createLocalVec()
-        win.da.globalToLocal(win.grid.D, local_D)
-        D = win.da.getVecArray(local_D)
+        local_D  = da.createLocalVec()
+        da.globalToLocal(grid.D, local_D)
+        D = da.getVecArray(local_D)
         if not win.mask3D:
-            #mask = win.da.getVecArray(win.grid.D)
-            kmask = win.grid._k_mask
+            #mask = da.getVecArray(grid.D)
+            kmask = grid._k_mask
         else:
-            mask = win.da.getVecArray(win.grid.mask3D)
-        kdxu = win.grid._k_dxu
-        kdyu = win.grid._k_dyu
-        kdxv = win.grid._k_dxv
-        kdyv = win.grid._k_dyv
-        kdxt = win.grid._k_dxt
-        kdyt = win.grid._k_dyt
+            mask = da.getVecArray(grid.mask3D)
+        kdxu = grid._k_dxu
+        kdyu = grid._k_dyu
+        kdxv = grid._k_dxv
+        kdyv = grid._k_dyv
+        kdxt = grid._k_dxt
+        kdyt = grid._k_dyt
         #
 
         #
-        (xs, xe), (ys, ye), (zs, ze) = win.da.getRanges()
-        istart = win.grid.istart
-        iend = win.grid.iend
-        jstart = win.grid.jstart
-        jend = win.grid.jend
-        kdown = win.grid.kdown
-        kup = win.grid.kup
+        (xs, xe), (ys, ye), (zs, ze) = da.getRanges()
+        istart = grid.istart
+        iend = grid.iend
+        jstart = grid.jstart
+        jend = grid.jend
+        kdown = grid.kdown
+        kup = grid.kup
         #
         L.zeroEntries()
         row = PETSc.Mat.Stencil()

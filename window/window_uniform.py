@@ -3,9 +3,19 @@
 """
 Create a window for spectral computations in the presence of a mask
 
+The window \psi satisfies:
+
+\psi = \psi_0 / max(\psi_0)
+
+where:
+
+\Delta \psi_0 - k^2 \psi_0 = 1
+\psi_0 = 0 on frontiers and land
+
+Run with:
 mpirun -n 2 python window_uniform.py
-or
 mpirun -n 2 python window_uniform.py -mf -ksp_view -ksp_monitor -ksp_converged_reason
+
 """
 
 import time
@@ -42,10 +52,11 @@ def window_runs(ncores_x=2, ncores_y=6, ping_mpi_cfg=False):
     casename = "window_uniform"
 
     #datapath = "data/"
-    #hgrid = datapath+"window_metrics.nc"
-    #vgrid = datapath+"window_metrics.nc"
-    #hgrid = {"Lx": 1000*1e3, "Nx":256, "Ny":256}
-    hgrid = {"Lx": 1000*1e3, "Nx":200, "Ny":200}
+
+    # from notebook:
+    hgrid = {"Lx": (200-1)*11100, "Nx":200,
+             "Ly": (200-1)*9618,"Ny":200}
+
     vgrid = {"H": 1000, "Nz":10}
     # horizontal subdomain
     hdom = {"istart": 0, "iend": 100-1, "i0": 0,
